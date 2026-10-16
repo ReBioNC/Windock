@@ -9,6 +9,7 @@ using Windock.Core.Settings;
 using Windock.Core.Taskbar;
 using Windock.Dock;
 using Windock.Interop;
+using Windock.Settings;
 using Windock.Tray;
 
 namespace Windock.Composition;
@@ -19,10 +20,14 @@ internal sealed class AppHost
     public static readonly string DataDirectory =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Windock");
 
+    /// Present while Windock runs; left behind only by an unclean exit.
+    private static readonly string SessionMarker = Path.Combine(DataDirectory, "session.lock");
+
     private bool _paused;
     private bool _fullscreen;
     private bool _exiting;
     private uint _taskbarCreatedMessage;
+    private SettingsWindow? _settingsWindow;
 
     public AppHost(ILog log) => Log = log;
 
@@ -56,9 +61,16 @@ internal sealed class AppHost
         }
 
         // Undo anything a killed previous session left on the taskbar before showing anything (A-04).
-        Taskbar = new TaskbarModeCoordinator(new Win32TaskbarController(Log, Application.Current.Dispatcher, Windows),
-            new RecoveryStateStore(DataDirectory), Environment.ProcessId);
-        Taskbar.RecoverFromPreviousSession();
+        var taskbarController = new Win32TaskbarController(Log, Application.Current.Dispatcher, Windows);
+        Taskbar = new TaskbarModeCoordinator(taskbarController, new RecoveryStateStore(DataDirectory), Environment.ProcessId);
+        var recovered = Taskbar.RecoverFromPreviousSession();
+        if (File.Exists(SessionMarker) && !recovered)
+        {
+            Log.Info("previous session ended uncleanly: clearing its reserved screen space");
+            taskbarController.RefreshWorkArea();
+        }
+        Directory.CreateDirectory(DataDirectory);
+        File.WriteAllText(SessionMarker, Environment.ProcessId.ToString());
 
         Tray = new TrayIcon(OpenSettings, TogglePause, Exit);
         Messages = new MessageWindow("WindockMessages");
@@ -107,8 +119,28 @@ internal sealed class AppHost
 
     public void OpenSettings()
     {
-        Log.Info("open settings requested");
+        if (Icons is null) return;
+        if (_settingsWindow is not null)
+        {
+            if (_settingsWindow.WindowState == WindowState.Minimized) _settingsWindow.WindowState = WindowState.Normal;
+            _settingsWindow.Activate();
+            return;
+        }
+        var context = new SettingsContext(Settings, Icons, PinResolver, DetectDefaultPins, text => RegisterHotkey(text, notify: false), SuspendHotkey, DataDirectory, Log);
+        _settingsWindow = new SettingsWindow(context);
+        _settingsWindow.Closed += (_, _) =>
+        {
+            _settingsWindow = null;
+            Settings.Flush();
+        };
+        _settingsWindow.Show();
+        _settingsWindow.Activate();
     }
+
+    public static IReadOnlyList<PinEntry> DetectDefaultPins() => DefaultPins.Detect(File.Exists,
+        Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+        Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms),
+        Environment.GetFolderPath(Environment.SpecialFolder.Programs));
 
     public void TogglePause()
     {
@@ -146,6 +178,7 @@ internal sealed class AppHost
         Try(() => Taskbar?.Restore());
         Try(() => AppBar?.Release());
         Try(() => Hotkey?.Unregister());
+        Try(() => File.Delete(SessionMarker));
     }
 
     private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
@@ -157,12 +190,18 @@ internal sealed class AppHost
     }
 
     /// Registers the emergency hotkey; returns false (and tells the user) when it is invalid or taken.
-    public bool RegisterHotkey(string text)
+    public bool RegisterHotkey(string text, bool notify = true)
     {
         if (Hotkey is not null && HotkeyGesture.TryParse(text, out var gesture) && Hotkey.TryRegister(gesture)) return true;
         Log.Error($"emergency hotkey '{text}' could not be registered");
-        Tray?.ShowBalloon("Shortcut darurat tidak aktif", "Shortcut dipakai aplikasi lain atau tidak valid. Ganti di Pengaturan.");
+        if (notify) Tray?.ShowBalloon("Shortcut darurat tidak aktif", "Shortcut dipakai aplikasi lain atau tidak valid. Ganti di Pengaturan.");
         return false;
+    }
+
+    private void SuspendHotkey(bool suspend)
+    {
+        if (suspend) Hotkey?.Unregister();
+        else RegisterHotkey(Settings.Current.Safety.EmergencyHotkey, notify: false);
     }
 
     private void ReserveSpace()
@@ -207,9 +246,7 @@ internal sealed class AppHost
     {
         foreach (var w in Windows.Snapshot())
             Log.Info($"window 0x{w.Handle:X} app={w.AppId} aumid={ShellInterop.WindowAppUserModelId(w.Handle)} name='{w.DisplayName}' title='{w.Title}' min={w.IsMinimized}");
-        var pins = DefaultPins.Detect(File.Exists, Environment.GetFolderPath(Environment.SpecialFolder.Windows),
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms), Environment.GetFolderPath(Environment.SpecialFolder.Programs));
-        foreach (var pin in pins.Concat(extraPins.Select(p => new PinEntry(p))))
+        foreach (var pin in DetectDefaultPins().Concat(extraPins.Select(p => new PinEntry(p))))
         {
             var r = PinResolver.Resolve(pin);
             Log.Info($"pin {pin.Path} -> app={r.AppId} name='{r.DisplayName}' exists={r.TargetExists}");

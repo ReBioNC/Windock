@@ -11,6 +11,16 @@ internal static class WindowEffects
     public static void SetBlur(IntPtr hwnd, BlurMode mode) =>
         Native.SetAccent(hwnd, mode == BlurMode.Off ? Native.ACCENT_DISABLED : Native.ACCENT_ENABLE_BLURBEHIND);
 
+    /// Dark caption on Windows 10 20H1+ (attribute 20; older builds used 19). Ignored where unsupported.
+    public static void UseDarkTitleBar(IntPtr hwnd)
+    {
+        var on = 1;
+        if (DwmSetWindowAttribute(hwnd, 20, ref on, sizeof(int)) != 0) DwmSetWindowAttribute(hwnd, 19, ref on, sizeof(int));
+    }
+
+    [System.Runtime.InteropServices.DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+
     /// Region in window-relative physical pixels.
     public static void SetRoundRectRegion(IntPtr hwnd, RectD physicalRect, double radiusPx)
     {

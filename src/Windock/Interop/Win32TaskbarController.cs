@@ -52,6 +52,16 @@ internal sealed class Win32TaskbarController : ITaskbarController
         _log.Info($"taskbar state set to {state}");
     }
 
+    /// A killed app bar keeps its screen space until the taskbar state changes; flipping auto-hide
+    /// off and on (or on and off) makes the shell recompute the work area. Used only after an unclean exit.
+    public void RefreshWorkArea()
+    {
+        var state = GetAppBarState();
+        SetAppBarState(state ^ TaskbarStates.AutoHide);
+        Thread.Sleep(300);
+        SetAppBarState(state);
+    }
+
     public void HideTaskbarWindows()
     {
         _hideTimer.Stop();

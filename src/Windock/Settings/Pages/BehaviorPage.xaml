@@ -1,0 +1,23 @@
+<UserControl x:Class="Windock.Settings.Pages.BehaviorPage" x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel>
+        <TextBlock Text="Perilaku" Style="{StaticResource PageTitle}" />
+
+        <Grid Style="{StaticResource Row}">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+            <TextBlock Text="Taskbar Windows" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+            <StackPanel Grid.Column="1">
+                <RadioButton x:Name="Hidden" GroupName="Taskbar" Content="Sembunyikan total" Margin="0,0,0,8" />
+                <RadioButton x:Name="AutoHide" GroupName="Taskbar" Content="Auto-hide" Margin="0,0,0,8" />
+                <RadioButton x:Name="Visible" GroupName="Taskbar" Content="Biarkan tampil" Margin="0,0,0,8" />
+                <TextBlock x:Name="HiddenHint" Style="{StaticResource Hint}" Margin="0,6,0,0" />
+            </StackPanel>
+        </Grid>
+
+        <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"
+                   Text="Dock auto-hide, animasi memantul, dan jalan saat Windows nyala hadir di versi berikutnya." />
+
+        <Button Content="Kembalikan ke default" HorizontalAlignment="Right" Margin="0,18,0,0" Click="OnReset" />
+    </StackPanel>
+</UserControl>

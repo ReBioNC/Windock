@@ -10,13 +10,14 @@ public sealed class TaskbarModeCoordinator(ITaskbarController controller, Recove
 
     public TaskbarMode? CurrentMode { get; private set; }
 
-    /// Undo whatever a previous, killed Windock session left behind.
-    public void RecoverFromPreviousSession()
+    /// Undo whatever a previous, killed Windock session left behind. True when something was restored.
+    public bool RecoverFromPreviousSession()
     {
-        if (store.Read() is not { TaskbarModified: true } stale) return;
+        if (store.Read() is not { TaskbarModified: true } stale) return false;
         controller.ShowTaskbarWindows();
         controller.SetAppBarState(stale.OriginalAbState);
         store.Clear();
+        return true;
     }
 
     public void Apply(TaskbarMode mode)

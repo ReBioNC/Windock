@@ -1,0 +1,15 @@
+<UserControl x:Class="Windock.Settings.Pages.AboutPage" x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel>
+        <TextBlock Text="Tentang" Style="{StaticResource PageTitle}" />
+        <TextBlock x:Name="Version" Style="{StaticResource Label}" Margin="0,0,0,10" />
+        <TextBlock Style="{StaticResource Label}" Margin="0,0,0,18">
+            <Hyperlink NavigateUri="https://github.com/ReBioNC/Windock" RequestNavigate="OnLink" Foreground="#FF6EA2FF">github.com/ReBioNC/Windock</Hyperlink>
+        </TextBlock>
+        <TextBlock Text="File pengaturan" Style="{StaticResource Hint}" />
+        <TextBlock x:Name="SettingsPath" Style="{StaticResource Label}" Margin="0,2,0,12" TextWrapping="Wrap" />
+        <TextBlock Text="Log" Style="{StaticResource Hint}" />
+        <TextBlock x:Name="LogPath" Style="{StaticResource Label}" Margin="0,2,0,0" TextWrapping="Wrap" />
+    </StackPanel>
+</UserControl>

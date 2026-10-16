@@ -1,0 +1,31 @@
+<UserControl x:Class="Windock.Settings.Pages.PinsPage" x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel>
+        <TextBlock Text="Isi Dock" Style="{StaticResource PageTitle}" />
+        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,10"
+                   Text="Aplikasi yang selalu ada di dock. Seret untuk mengatur urutan." />
+
+        <ListBox x:Name="List" Height="250" AllowDrop="True" SelectionMode="Single"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Margin="4,3">
+                        <Image Source="{Binding Icon}" Width="28" Height="28" Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Name}" Foreground="{StaticResource Settings.Text}" />
+                            <TextBlock Text="{Binding Path}" Foreground="{StaticResource Settings.Muted}" FontSize="11" TextTrimming="CharacterEllipsis" MaxWidth="420" />
+                        </StackPanel>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+            <Button Content="Tambah…" Click="OnAdd" Margin="0,0,8,0" />
+            <Button x:Name="RemoveButton" Content="Hapus" Click="OnRemove" Margin="0,0,8,0" />
+            <Button Content="Kembalikan pin default" Click="OnResetPins" />
+        </StackPanel>
+        <TextBlock x:Name="Message" Style="{StaticResource Hint}" Foreground="{StaticResource Settings.Error}" Margin="0,10,0,0" />
+    </StackPanel>
+</UserControl>

@@ -98,8 +98,9 @@ public sealed class TaskbarModeCoordinatorTests : IDisposable
         _store.Write(new TaskbarRecoveryState(true, 2, 999));
         _controller.State = 3;
 
-        New().RecoverFromPreviousSession();
+        var recovered = New().RecoverFromPreviousSession();
 
+        Assert.True(recovered);
         Assert.Equal(new[] { "Show", "Set:2" }, _controller.Calls);
         Assert.Null(_store.Read());
     }
@@ -107,7 +108,7 @@ public sealed class TaskbarModeCoordinatorTests : IDisposable
     [Fact]
     public void Recover_does_nothing_without_state_file()
     {
-        New().RecoverFromPreviousSession();
+        Assert.False(New().RecoverFromPreviousSession());
 
         Assert.Empty(_controller.Calls);
     }
