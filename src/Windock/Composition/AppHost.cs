@@ -1,9 +1,12 @@
 using System.IO;
 using System.Windows;
+using Microsoft.Win32;
 using Windock.Core.Apps;
+using Windock.Core.Input;
 using Windock.Core.Layout;
 using Windock.Core.Logging;
 using Windock.Core.Settings;
+using Windock.Core.Taskbar;
 using Windock.Dock;
 using Windock.Interop;
 using Windock.Tray;
@@ -19,6 +22,7 @@ internal sealed class AppHost
     private bool _paused;
     private bool _fullscreen;
     private bool _exiting;
+    private uint _taskbarCreatedMessage;
 
     public AppHost(ILog log) => Log = log;
 
@@ -34,20 +38,8 @@ internal sealed class AppHost
     public AppLauncher? Launcher { get; private set; }
     public AppBarService? AppBar { get; private set; }
     public MessageWindow? Messages { get; private set; }
-
-    /// --dump-windows: log what the tracker and resolver see, for manual verification.
-    private void DumpDiagnostics(IEnumerable<string> extraPins)
-    {
-        foreach (var w in Windows.Snapshot())
-            Log.Info($"window 0x{w.Handle:X} app={w.AppId} aumid={ShellInterop.WindowAppUserModelId(w.Handle)} name='{w.DisplayName}' title='{w.Title}' min={w.IsMinimized}");
-        var pins = DefaultPins.Detect(File.Exists, Environment.GetFolderPath(Environment.SpecialFolder.Windows),
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms), Environment.GetFolderPath(Environment.SpecialFolder.Programs));
-        foreach (var pin in pins.Concat(extraPins.Select(p => new PinEntry(p))))
-        {
-            var r = PinResolver.Resolve(pin);
-            Log.Info($"pin {pin.Path} -> app={r.AppId} name='{r.DisplayName}' exists={r.TargetExists}");
-        }
-    }
+    public TaskbarModeCoordinator? Taskbar { get; private set; }
+    public HotkeyService? Hotkey { get; private set; }
 
     public void Start(string[] args)
     {
@@ -62,14 +54,22 @@ internal sealed class AppHost
             Application.Current.Shutdown();
             return;
         }
+
+        // Undo anything a killed previous session left on the taskbar before showing anything (A-04).
+        Taskbar = new TaskbarModeCoordinator(new Win32TaskbarController(Log, Application.Current.Dispatcher, Windows),
+            new RecoveryStateStore(DataDirectory), Environment.ProcessId);
+        Taskbar.RecoverFromPreviousSession();
+
         Tray = new TrayIcon(OpenSettings, TogglePause, Exit);
+        Messages = new MessageWindow("WindockMessages");
+        Messages.Message += OnSystemMessage;
+        _taskbarCreatedMessage = Native.RegisterWindowMessage("TaskbarCreated");
 
         Icons = new IconProvider(Log, Application.Current.Dispatcher);
         Model = new DockModel(Windows, PinResolver);
         Model.SetPins(Settings.Current.Pins);
         Backdrop = new BackdropWindow();
         Dock = new DockController(Model, new StopwatchClock(), Settings, Icons, new DockWindow(), Backdrop, Log);
-        Settings.Changed += (_, e) => Dock.ApplySettings(e);
         Launcher = new AppLauncher(Log, (title, text) => Tray?.ShowBalloon(title, text));
         var menus = new DockContextMenu(Launcher, Settings, PinResolver, OpenSettings, Exit);
         Dock.ItemClicked += (item, shift) => Launcher.Execute(DockClickPolicy.Decide(item, Windows.Foreground, shift), item);
@@ -89,14 +89,19 @@ internal sealed class AppHost
             Log.Info($"fullscreen app: {fullscreen}");
             UpdateDockVisibility();
         };
-        Settings.Changed += (_, e) =>
-        {
-            if (e.Sections.HasFlag(SettingsSection.Appearance) && e.New.Appearance.IconSize != e.Old.Appearance.IconSize) ReserveSpace();
-        };
         ReserveSpace();
+        Taskbar.Apply(Settings.Current.Behavior.TaskbarMode);
 
-        Messages = new MessageWindow("WindockMessages");
-        Messages.Message += OnSystemMessage;
+        Hotkey = new HotkeyService(Messages);
+        Hotkey.Pressed += () =>
+        {
+            Log.Info("emergency hotkey pressed");
+            Exit();
+        };
+        RegisterHotkey(Settings.Current.Safety.EmergencyHotkey);
+
+        Settings.Changed += OnSettingsChanged;
+        SystemEvents.PowerModeChanged += OnPowerModeChanged;
         Log.Info("dock started");
     }
 
@@ -109,8 +114,16 @@ internal sealed class AppHost
     {
         _paused = !_paused;
         Tray?.SetPaused(_paused);
-        if (_paused) AppBar?.Release();
-        else ReserveSpace();
+        if (_paused)
+        {
+            Taskbar?.Restore();
+            AppBar?.Release();
+        }
+        else
+        {
+            ReserveSpace();
+            Taskbar?.Apply(Settings.Current.Behavior.TaskbarMode);
+        }
         UpdateDockVisibility();
         Log.Info(_paused ? "dock paused" : "dock resumed");
     }
@@ -126,11 +139,30 @@ internal sealed class AppHost
         Application.Current.Shutdown();
     }
 
-    /// Puts Windows back the way it was. Safe to call repeatedly and from crash handlers.
+    /// Puts Windows back the way it was. Safe to call repeatedly and from crash handlers on any thread.
     public void RestoreAll()
     {
         Log.Info("restore all");
+        Try(() => Taskbar?.Restore());
         Try(() => AppBar?.Release());
+        Try(() => Hotkey?.Unregister());
+    }
+
+    private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
+    {
+        Dock?.ApplySettings(e);
+        if (e.Sections.HasFlag(SettingsSection.Appearance) && e.New.Appearance.IconSize != e.Old.Appearance.IconSize) ReserveSpace();
+        if (e.Sections.HasFlag(SettingsSection.Behavior) && !_paused) Taskbar?.Apply(e.New.Behavior.TaskbarMode);
+        if (e.Sections.HasFlag(SettingsSection.Safety)) RegisterHotkey(e.New.Safety.EmergencyHotkey);
+    }
+
+    /// Registers the emergency hotkey; returns false (and tells the user) when it is invalid or taken.
+    public bool RegisterHotkey(string text)
+    {
+        if (Hotkey is not null && HotkeyGesture.TryParse(text, out var gesture) && Hotkey.TryRegister(gesture)) return true;
+        Log.Error($"emergency hotkey '{text}' could not be registered");
+        Tray?.ShowBalloon("Shortcut darurat tidak aktif", "Shortcut dipakai aplikasi lain atau tidak valid. Ganti di Pengaturan.");
+        return false;
     }
 
     private void ReserveSpace()
@@ -145,9 +177,42 @@ internal sealed class AppHost
     {
         if (msg is Native.WM_DISPLAYCHANGE or Native.WM_DPICHANGED)
         {
-            Log.Info($"display/settings change 0x{msg:X}");
+            Log.Info($"display change 0x{msg:X}");
             Dock?.Relayout();
             ReserveSpace();
+        }
+        else if (msg == _taskbarCreatedMessage && _taskbarCreatedMessage != 0)
+        {
+            // Explorer restarted: it forgot our app bar and shows its taskbar again.
+            Log.Info("TaskbarCreated: re-applying");
+            AppBar?.Release();
+            ReserveSpace();
+            if (!_paused) Taskbar?.Reapply();
+        }
+    }
+
+    private void OnPowerModeChanged(object? sender, PowerModeChangedEventArgs e)
+    {
+        if (e.Mode != PowerModes.Resume) return;
+        Application.Current.Dispatcher.BeginInvoke(() =>
+        {
+            Log.Info("resumed from sleep: re-applying");
+            ReserveSpace();
+            if (!_paused) Taskbar?.Reapply();
+        });
+    }
+
+    /// --dump-windows: log what the tracker and resolver see, for manual verification.
+    private void DumpDiagnostics(IEnumerable<string> extraPins)
+    {
+        foreach (var w in Windows.Snapshot())
+            Log.Info($"window 0x{w.Handle:X} app={w.AppId} aumid={ShellInterop.WindowAppUserModelId(w.Handle)} name='{w.DisplayName}' title='{w.Title}' min={w.IsMinimized}");
+        var pins = DefaultPins.Detect(File.Exists, Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms), Environment.GetFolderPath(Environment.SpecialFolder.Programs));
+        foreach (var pin in pins.Concat(extraPins.Select(p => new PinEntry(p))))
+        {
+            var r = PinResolver.Resolve(pin);
+            Log.Info($"pin {pin.Path} -> app={r.AppId} name='{r.DisplayName}' exists={r.TargetExists}");
         }
     }
 
