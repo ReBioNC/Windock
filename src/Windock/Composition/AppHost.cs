@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using Windock.Core.Logging;
 using Windock.Core.Settings;
+using Windock.Interop;
 using Windock.Tray;
 
 namespace Windock.Composition;
@@ -20,12 +21,36 @@ internal sealed class AppHost
     public ILog Log { get; }
     public SettingsStore Settings { get; private set; } = null!;
     public TrayIcon? Tray { get; private set; }
+    public WindowTracker Windows { get; private set; } = null!;
+    public PinResolver PinResolver { get; private set; } = null!;
+
+    /// --dump-windows: log what the tracker and resolver see, for manual verification.
+    private void DumpDiagnostics(IEnumerable<string> extraPins)
+    {
+        foreach (var w in Windows.Snapshot())
+            Log.Info($"window 0x{w.Handle:X} app={w.AppId} aumid={ShellInterop.WindowAppUserModelId(w.Handle)} name='{w.DisplayName}' title='{w.Title}' min={w.IsMinimized}");
+        var pins = DefaultPins.Detect(File.Exists, Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms), Environment.GetFolderPath(Environment.SpecialFolder.Programs));
+        foreach (var pin in pins.Concat(extraPins.Select(p => new PinEntry(p))))
+        {
+            var r = PinResolver.Resolve(pin);
+            Log.Info($"pin {pin.Path} -> app={r.AppId} name='{r.DisplayName}' exists={r.TargetExists}");
+        }
+    }
 
     public void Start(string[] args)
     {
         Log.Info($"Windock starting (args: {string.Join(' ', args)})");
         Settings = new SettingsStore(DataDirectory, new DispatcherDelayScheduler(Application.Current.Dispatcher), Log);
         Settings.Load();
+        Windows = new WindowTracker(Log);
+        PinResolver = new PinResolver(Log);
+        if (args.Contains("--dump-windows"))
+        {
+            DumpDiagnostics(args.Where(a => !a.StartsWith("--")));
+            Application.Current.Shutdown();
+            return;
+        }
         Tray = new TrayIcon(OpenSettings, TogglePause, Exit);
     }
 
