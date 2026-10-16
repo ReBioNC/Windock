@@ -28,6 +28,7 @@ internal sealed class DockController
     private readonly DockRenderer _renderer;
     private readonly ILog _log;
     private readonly Dictionary<string, ImageSource> _iconImages = new();
+    private readonly HashSet<string> _iconRequested = new();
     private readonly Dictionary<string, DockItem> _lastKnown = new();  // keeps leaving (ghost) items drawable
     private readonly DispatcherTimer _tooltipTimer;
 
@@ -39,6 +40,7 @@ internal sealed class DockController
     private string? _hoverKey;
     private string? _pressedKey;
     private int _iconPixels;
+    private double? _bottomEdge;
 
     public DockController(DockModel model, IClock clock, SettingsStore settings, IconProvider icons, DockWindow window, BackdropWindow backdrop, ILog log)
     {
@@ -64,10 +66,28 @@ internal sealed class DockController
 
     public UIElement MenuAnchor => _window.Root;
 
+    public double DpiScale => _window.DpiScale;
+
+    public void SetBottomEdge(double bottomDip)
+    {
+        if (_bottomEdge == bottomDip) return;
+        _bottomEdge = bottomDip;
+        Relayout();
+    }
+
+    /// After resolution or DPI changes: refit the window to the screen edge.
+    public void Relayout()
+    {
+        var a = _settings.Current.Appearance;
+        _window.Place(DockMetrics.WindowHeight(a.IconSize, a.Magnification.Size), _bottomEdge);
+        RefreshIcons();
+        Invalidate();
+    }
+
     public void Start()
     {
         var appearance = _settings.Current.Appearance;
-        _window.Place(DockMetrics.WindowHeight(appearance.IconSize, appearance.Magnification.Size));
+        _window.Place(DockMetrics.WindowHeight(appearance.IconSize, appearance.Magnification.Size), _bottomEdge);
         _window.Show();
         _backdrop.SetBlur(appearance.Blur);
         _animator.AnimationsEnabled = SystemParameters.ClientAreaAnimation;
@@ -96,7 +116,7 @@ internal sealed class DockController
         if (!e.Sections.HasFlag(SettingsSection.Appearance)) return;
 
         var a = e.New.Appearance;
-        _window.Place(DockMetrics.WindowHeight(a.IconSize, a.Magnification.Size));
+        _window.Place(DockMetrics.WindowHeight(a.IconSize, a.Magnification.Size), _bottomEdge);
         if (a.Blur != e.Old.Appearance.Blur) _backdrop.SetBlur(a.Blur);
         RefreshIcons();
         Invalidate();
@@ -135,6 +155,7 @@ internal sealed class DockController
         {
             _iconPixels = px;
             _iconImages.Clear();
+            _iconRequested.Clear();
         }
         foreach (var item in _model.Items) RequestIcon(item.Key);
     }
@@ -143,7 +164,7 @@ internal sealed class DockController
     {
         if (_model.Find(key) is not { } item || item.Kind == DockItemKind.Separator) return;
         _lastKnown[key] = item;
-        if (_iconImages.ContainsKey(key)) return;
+        if (!_iconRequested.Add(key)) return;
         var path = item.Kind == DockItemKind.RecycleBin ? RecycleBinParsingName : item.IconPath;
         var hwnd = item.Windows.Count > 0 ? item.Windows[0].Handle : IntPtr.Zero;
         _icons.Request(key, path, hwnd, _iconPixels, (k, image) =>

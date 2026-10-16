@@ -46,6 +46,7 @@ internal static class Native
     public const int ACCENT_DISABLED = 0, ACCENT_ENABLE_BLURBEHIND = 3;
 
     public const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
+    public const int SM_CXSCREEN = 0, SM_CYSCREEN = 1;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT
@@ -137,6 +138,7 @@ internal static class Native
     [DllImport("gdi32.dll")] public static extern IntPtr GetStockObject(int obj);
     [DllImport("gdi32.dll")] public static extern IntPtr CreateRoundRectRgn(int x1, int y1, int x2, int y2, int w, int h);
     [DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute(IntPtr hWnd, int attr, out int value, int size);
+    [DllImport("user32.dll")] public static extern int GetSystemMetrics(int index);
     [DllImport("shell32.dll")] public static extern UIntPtr SHAppBarMessage(uint msg, ref APPBARDATA data);
 
     public static string WindowText(IntPtr hWnd)

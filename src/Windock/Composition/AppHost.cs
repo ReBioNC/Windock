@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using Windock.Core.Apps;
+using Windock.Core.Layout;
 using Windock.Core.Logging;
 using Windock.Core.Settings;
 using Windock.Dock;
@@ -16,6 +17,7 @@ internal sealed class AppHost
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Windock");
 
     private bool _paused;
+    private bool _fullscreen;
     private bool _exiting;
 
     public AppHost(ILog log) => Log = log;
@@ -30,6 +32,8 @@ internal sealed class AppHost
     public BackdropWindow? Backdrop { get; private set; }
     public DockController? Dock { get; private set; }
     public AppLauncher? Launcher { get; private set; }
+    public AppBarService? AppBar { get; private set; }
+    public MessageWindow? Messages { get; private set; }
 
     /// --dump-windows: log what the tracker and resolver see, for manual verification.
     private void DumpDiagnostics(IEnumerable<string> extraPins)
@@ -76,6 +80,23 @@ internal sealed class AppHost
             menu.IsOpen = true;
         };
         Dock.Start();
+
+        AppBar = new AppBarService(Log);
+        AppBar.Reserved += bottomPx => Dock.SetBottomEdge(bottomPx / Dock.DpiScale);
+        AppBar.FullscreenChanged += fullscreen =>
+        {
+            _fullscreen = fullscreen;
+            Log.Info($"fullscreen app: {fullscreen}");
+            UpdateDockVisibility();
+        };
+        Settings.Changed += (_, e) =>
+        {
+            if (e.Sections.HasFlag(SettingsSection.Appearance) && e.New.Appearance.IconSize != e.Old.Appearance.IconSize) ReserveSpace();
+        };
+        ReserveSpace();
+
+        Messages = new MessageWindow("WindockMessages");
+        Messages.Message += OnSystemMessage;
         Log.Info("dock started");
     }
 
@@ -88,7 +109,9 @@ internal sealed class AppHost
     {
         _paused = !_paused;
         Tray?.SetPaused(_paused);
-        Dock?.SetHidden(_paused);
+        if (_paused) AppBar?.Release();
+        else ReserveSpace();
+        UpdateDockVisibility();
         Log.Info(_paused ? "dock paused" : "dock resumed");
     }
 
@@ -107,5 +130,36 @@ internal sealed class AppHost
     public void RestoreAll()
     {
         Log.Info("restore all");
+        Try(() => AppBar?.Release());
+    }
+
+    private void ReserveSpace()
+    {
+        if (_paused || Dock is null) return;
+        AppBar?.Reserve(DockMetrics.ReservedThickness(Settings.Current.Appearance.IconSize), Dock.DpiScale);
+    }
+
+    private void UpdateDockVisibility() => Dock?.SetHidden(_paused || _fullscreen);
+
+    private void OnSystemMessage(int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg is Native.WM_DISPLAYCHANGE or Native.WM_DPICHANGED)
+        {
+            Log.Info($"display/settings change 0x{msg:X}");
+            Dock?.Relayout();
+            ReserveSpace();
+        }
+    }
+
+    private void Try(Action action)
+    {
+        try
+        {
+            action();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("restore step failed", ex);
+        }
     }
 }

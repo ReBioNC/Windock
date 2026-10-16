@@ -29,13 +29,13 @@ internal sealed class DockWindow : Window
 
     public double DpiScale => VisualTreeHelper.GetDpi(this).DpiScaleX;
 
-    /// Fit to the primary screen bottom edge with the given height (DIP).
-    public void Place(double height)
+    /// Fit to the primary screen width with its bottom at bottomEdge (DIP; null = screen bottom).
+    public void Place(double height, double? bottomEdge = null)
     {
         Width = SystemParameters.PrimaryScreenWidth;
         Height = height;
         Left = 0;
-        Top = SystemParameters.PrimaryScreenHeight - height;
+        Top = (bottomEdge ?? SystemParameters.PrimaryScreenHeight) - height;
     }
 
     /// Top-left corner on screen in physical pixels.
