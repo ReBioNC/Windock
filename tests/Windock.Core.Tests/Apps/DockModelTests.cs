@@ -60,6 +60,14 @@ public class DockModelTests
     }
 
     [Fact]
+    public void No_leading_separator_when_nothing_is_pinned()
+    {
+        _windows.Seed(Win(2, PathC));
+
+        Assert.Equal(new[] { C, "sep:trash", "recyclebin" }, Keys(Model()));
+    }
+
+    [Fact]
     public void Unpinned_running_app_uses_window_details()
     {
         _windows.Seed(Win(2, PathC));
@@ -106,8 +114,19 @@ public class DockModelTests
 
         var args = Capture(m, () => _windows.Remove(2));
 
-        Assert.Equal(new[] { "sep:pinned", C }, args!.Removed); // separator goes with the last unpinned app
+        Assert.Equal(new[] { C }, args!.Removed);
         Assert.Null(m.Find(C));
+    }
+
+    [Fact]
+    public void Pinned_separator_leaves_with_the_last_unpinned_app()
+    {
+        _windows.Seed(Win(2, PathC));
+        var m = Model(PathA);
+
+        var args = Capture(m, () => _windows.Remove(2));
+
+        Assert.Equal(new[] { "sep:pinned", C }, args!.Removed);
     }
 
     [Fact]

@@ -115,7 +115,7 @@ public sealed class DockModel
         var unpinned = _firstSeen.Where(id => !pinned.Contains(id)).ToList();
         if (unpinned.Count > 0)
         {
-            items.Add(Fixed(DockItem.PinnedSeparatorKey, DockItemKind.Separator, ""));
+            if (_pins.Count > 0) items.Add(Fixed(DockItem.PinnedSeparatorKey, DockItemKind.Separator, ""));
             foreach (var id in unpinned)
             {
                 var ws = WindowsOf(id);

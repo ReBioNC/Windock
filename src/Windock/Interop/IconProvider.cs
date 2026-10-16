@@ -71,10 +71,11 @@ internal sealed class IconProvider : IDisposable
         if (exePath is null) return null;
         try
         {
-            var dir = System.IO.Path.GetDirectoryName(exePath);
-            for (var i = 0; dir is not null && i < 4 && !System.IO.File.Exists(System.IO.Path.Combine(dir, "AppxManifest.xml")); i++)
-                dir = System.IO.Path.GetDirectoryName(dir);
-            if (dir is null) return null;
+            if (exePath.StartsWith("::", StringComparison.Ordinal) || exePath.StartsWith("shell:", StringComparison.OrdinalIgnoreCase)) return null;
+            string? dir = System.IO.Path.GetDirectoryName(exePath);
+            for (var i = 0; dir is not null && !System.IO.File.Exists(System.IO.Path.Combine(dir, "AppxManifest.xml")); i++)
+                dir = i < 3 ? System.IO.Path.GetDirectoryName(dir) : null;
+            if (string.IsNullOrEmpty(dir)) return null;
 
             var manifest = System.Xml.Linq.XDocument.Load(System.IO.Path.Combine(dir, "AppxManifest.xml"));
             var logo = manifest.Descendants().Where(e => e.Name.LocalName == "VisualElements")
@@ -100,7 +101,7 @@ internal sealed class IconProvider : IDisposable
             image.Freeze();
             return image;
         }
-        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or System.Xml.XmlException or NotSupportedException)
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or System.Xml.XmlException or NotSupportedException or ArgumentException)
         {
             _log.Error($"package logo failed for {exePath}", ex);
             return null;

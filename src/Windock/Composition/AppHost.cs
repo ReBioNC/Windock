@@ -1,7 +1,9 @@
 using System.IO;
 using System.Windows;
+using Windock.Core.Apps;
 using Windock.Core.Logging;
 using Windock.Core.Settings;
+using Windock.Dock;
 using Windock.Interop;
 using Windock.Tray;
 
@@ -23,6 +25,10 @@ internal sealed class AppHost
     public TrayIcon? Tray { get; private set; }
     public WindowTracker Windows { get; private set; } = null!;
     public PinResolver PinResolver { get; private set; } = null!;
+    public IconProvider? Icons { get; private set; }
+    public DockModel? Model { get; private set; }
+    public BackdropWindow? Backdrop { get; private set; }
+    public DockController? Dock { get; private set; }
 
     /// --dump-windows: log what the tracker and resolver see, for manual verification.
     private void DumpDiagnostics(IEnumerable<string> extraPins)
@@ -52,6 +58,15 @@ internal sealed class AppHost
             return;
         }
         Tray = new TrayIcon(OpenSettings, TogglePause, Exit);
+
+        Icons = new IconProvider(Log, Application.Current.Dispatcher);
+        Model = new DockModel(Windows, PinResolver);
+        Model.SetPins(Settings.Current.Pins);
+        Backdrop = new BackdropWindow();
+        Dock = new DockController(Model, new StopwatchClock(), Settings, Icons, new DockWindow(), Backdrop, Log);
+        Settings.Changed += (_, e) => Dock.ApplySettings(e);
+        Dock.Start();
+        Log.Info("dock started");
     }
 
     public void OpenSettings()
@@ -63,6 +78,7 @@ internal sealed class AppHost
     {
         _paused = !_paused;
         Tray?.SetPaused(_paused);
+        Dock?.SetHidden(_paused);
         Log.Info(_paused ? "dock paused" : "dock resumed");
     }
 
