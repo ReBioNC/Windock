@@ -90,7 +90,8 @@ internal sealed class AppHost
         Dock = new DockController(Model, new StopwatchClock(), Settings, Icons, new DockWindow(), Backdrop, Log);
         Launcher = new AppLauncher(Log, (title, text) => Tray?.ShowBalloon(title, text));
         var menus = new DockContextMenu(Launcher, Settings, PinResolver, OpenSettings, Exit);
-        Dock.ItemClicked += (item, shift) => Launcher.Execute(DockClickPolicy.Decide(item, Windows.Foreground, shift), item);
+        // Live foreground: the tracker skips our own windows, so its value is stale while Pengaturan is active.
+        Dock.ItemClicked += (item, shift) => Launcher.Execute(DockClickPolicy.Decide(item, Native.GetForegroundWindow(), shift), item);
         Dock.ContextRequested += item =>
         {
             var menu = menus.Build(item);
