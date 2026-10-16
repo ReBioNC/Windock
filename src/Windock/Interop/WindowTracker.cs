@@ -147,7 +147,7 @@ internal sealed class WindowTracker : IWindowSource, IDisposable
 
         // Store/UWP apps are identified by AppUserModelID; classic apps by exe path so shortcuts match them.
         var isPackaged = exe is not null && exe.Contains(@"\WindowsApps\", StringComparison.OrdinalIgnoreCase);
-        var aumid = isPackaged ? ShellInterop.WindowAppUserModelId(h) : null;
+        var aumid = isPackaged ? ShellInterop.WindowAppUserModelId(h) ?? Native.PackagedAppUserModelId(pid) : null;
         var id = AppId.Choose(aumid, exe, processName, h);
 
         var name = isPackaged && title.Length > 0 ? title : DisplayNameOf(exe) ?? processName ?? title;

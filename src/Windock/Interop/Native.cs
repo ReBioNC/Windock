@@ -177,6 +177,25 @@ internal static class Native
         }
     }
 
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern int GetApplicationUserModelId(IntPtr process, ref int length, StringBuilder? aumid);
+
+    /// AppUserModelID of a packaged (Store/MSIX) process, or null for classic apps.
+    public static string? PackagedAppUserModelId(uint pid)
+    {
+        var process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+        if (process == IntPtr.Zero) return null;
+        try
+        {
+            var length = 512;
+            var sb = new StringBuilder(length);
+            return GetApplicationUserModelId(process, ref length, sb) == 0 ? sb.ToString() : null;
+        }
+        finally
+        {
+            CloseHandle(process);
+        }
+    }
+
     public static bool SetAccent(IntPtr hWnd, int accentState)
     {
         var accent = new AccentPolicy { AccentState = accentState, AccentFlags = 2, GradientColor = 0x01000000 };
