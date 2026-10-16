@@ -51,6 +51,12 @@ internal sealed class AppHost
         Log.Info($"Windock starting (args: {string.Join(' ', args)})");
         Settings = new SettingsStore(DataDirectory, new DispatcherDelayScheduler(Application.Current.Dispatcher), Log);
         Settings.Load();
+        if (!Settings.Current.FirstRunCompleted)
+        {
+            var pins = DetectDefaultPins();
+            Log.Info($"first run: pinning {pins.Count} default apps");
+            Settings.Update(s => s with { Pins = pins, FirstRunCompleted = true });
+        }
         Windows = new WindowTracker(Log);
         PinResolver = new PinResolver(Log);
         if (args.Contains("--dump-windows"))
