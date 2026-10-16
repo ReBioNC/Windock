@@ -1,0 +1,10 @@
+﻿<Window x:Class="S1.BlurOverlay.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="S1 overlay" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize">
+    <Canvas x:Name="Root">
+        <Border x:Name="Plate" CornerRadius="16" Background="#8C1E1E1E"
+                BorderBrush="#1FFFFFFF" BorderThickness="1" Height="66" />
+    </Canvas>
+</Window>
