@@ -1,0 +1,23 @@
+## .NET build output
+[Bb]in/
+[Oo]bj/
+[Pp]ublish/
+artifacts/
+*.user
+*.suo
+*.userprefs
+
+## IDE
+.vs/
+.vscode/
+.idea/
+*.DotSettings.user
+
+## Test results
+TestResults/
+coverage*/
+
+## OS
+Thumbs.db
+Desktop.ini
+.DS_Store
