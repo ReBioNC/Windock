@@ -54,7 +54,11 @@ internal sealed class IconProvider : IDisposable
 
         _queue.Add(() =>
         {
-            var image = windowIcon ?? PackageLogo(iconPath) ?? (parsingName is null ? null : ShellImage(parsingName, pixelSize));
+            var packageDir = parsingName?.StartsWith(@"shell:AppsFolder\", StringComparison.OrdinalIgnoreCase) == true
+                ? ShellInterop.PackageInstallPath(parsingName) : null;
+            var image = windowIcon
+                ?? PackageLogo(packageDir is not null ? System.IO.Path.Combine(packageDir, "AppxManifest.xml") : iconPath)
+                ?? (parsingName is null ? null : ShellImage(parsingName, pixelSize));
             _ui.BeginInvoke(() =>
             {
                 var result = image ?? Generic;

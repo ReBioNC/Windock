@@ -79,6 +79,64 @@ internal static class ShellInterop
         int GetImage(SIZE size, int flags, out IntPtr hBitmap);
     }
 
+    public static readonly Guid IID_IShellItem = new("43826D1E-E718-42EE-BC55-A1E261C37BFE");
+
+    [ComImport, Guid("43826D1E-E718-42EE-BC55-A1E261C37BFE"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    public interface IShellItem
+    {
+        void BindToHandler(IntPtr bindCtx, in Guid handler, in Guid riid, out IntPtr ppv);
+        void GetParent(out IShellItem parent);
+        void GetDisplayName(uint sigdn, out IntPtr name);
+        void GetAttributes(uint mask, out uint attributes);
+        void Compare(IShellItem other, uint hint, out int order);
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, EntryPoint = "SHCreateItemFromParsingName")]
+    private static extern int SHCreateShellItem(string path, IntPtr bindCtx, in Guid riid, [MarshalAs(UnmanagedType.Interface)] out IShellItem item);
+
+    /// Friendly name of a shell item such as "shell:AppsFolder\<AUMID>" (e.g. "Calculator").
+    public static string? DisplayName(string parsingName)
+    {
+        try
+        {
+            if (SHCreateShellItem(parsingName, IntPtr.Zero, IID_IShellItem, out var item) != 0) return null;
+            try
+            {
+                item.GetDisplayName(0 /* SIGDN_NORMALDISPLAY */, out var ptr);
+                try { return Marshal.PtrToStringUni(ptr); }
+                finally { Marshal.FreeCoTaskMem(ptr); }
+            }
+            finally
+            {
+                Marshal.ReleaseComObject(item);
+            }
+        }
+        catch (COMException)
+        {
+            return null;
+        }
+    }
+
+    public static readonly PropertyKey PKEY_AppUserModel_PackageInstallPath = new(new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"), 15);
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern int SHGetPropertyStoreFromParsingName(string path, IntPtr bindCtx, int flags, in Guid riid, [MarshalAs(UnmanagedType.Interface)] out IPropertyStore store);
+
+    /// Install folder of a Store app from its "shell:AppsFolder\<AUMID>" item, or null.
+    public static string? PackageInstallPath(string appsFolderPath)
+    {
+        try
+        {
+            if (SHGetPropertyStoreFromParsingName(appsFolderPath, IntPtr.Zero, 0, IID_IPropertyStore, out var store) != 0) return null;
+            try { return ReadString(store, PKEY_AppUserModel_PackageInstallPath); }
+            finally { Marshal.ReleaseComObject(store); }
+        }
+        catch (COMException)
+        {
+            return null;
+        }
+    }
+
     [DllImport("shell32.dll")]
     public static extern int SHGetPropertyStoreForWindow(IntPtr hwnd, in Guid riid, [MarshalAs(UnmanagedType.Interface)] out IPropertyStore store);
 

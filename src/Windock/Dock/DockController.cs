@@ -62,6 +62,8 @@ internal sealed class DockController
 
     public IntPtr WindowHandle => _window.Handle;
 
+    public UIElement MenuAnchor => _window.Root;
+
     public void Start()
     {
         var appearance = _settings.Current.Appearance;

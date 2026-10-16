@@ -29,6 +29,7 @@ internal sealed class AppHost
     public DockModel? Model { get; private set; }
     public BackdropWindow? Backdrop { get; private set; }
     public DockController? Dock { get; private set; }
+    public AppLauncher? Launcher { get; private set; }
 
     /// --dump-windows: log what the tracker and resolver see, for manual verification.
     private void DumpDiagnostics(IEnumerable<string> extraPins)
@@ -65,6 +66,15 @@ internal sealed class AppHost
         Backdrop = new BackdropWindow();
         Dock = new DockController(Model, new StopwatchClock(), Settings, Icons, new DockWindow(), Backdrop, Log);
         Settings.Changed += (_, e) => Dock.ApplySettings(e);
+        Launcher = new AppLauncher(Log, (title, text) => Tray?.ShowBalloon(title, text));
+        var menus = new DockContextMenu(Launcher, Settings, PinResolver, OpenSettings, Exit);
+        Dock.ItemClicked += (item, shift) => Launcher.Execute(DockClickPolicy.Decide(item, Windows.Foreground, shift), item);
+        Dock.ContextRequested += item =>
+        {
+            var menu = menus.Build(item);
+            menu.PlacementTarget = Dock.MenuAnchor;
+            menu.IsOpen = true;
+        };
         Dock.Start();
         Log.Info("dock started");
     }

@@ -12,16 +12,23 @@ internal sealed class PinResolver(ILog log) : IPinResolver
 {
     public PinResolution Resolve(PinEntry pin)
     {
+        if (pin.Path.StartsWith(AppLauncher.AppsFolderPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            var aumid = pin.Path[AppLauncher.AppsFolderPrefix.Length..];
+            var display = ShellInterop.DisplayName(pin.Path);
+            return new PinResolution(AppId.FromAumid(aumid), display ?? aumid, pin.Path, pin.Path, display is not null);
+        }
+
         var name = Path.GetFileNameWithoutExtension(pin.Path);
         if (!pin.Path.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
             return new PinResolution(AppId.FromExePath(pin.Path), DisplayName(pin.Path) ?? name, pin.Path, pin.Path, File.Exists(pin.Path));
 
-        string? target = null, arguments = null, aumid = null;
+        string? target = null, arguments = null, linkAumid = null;
         if (File.Exists(pin.Path))
         {
             try
             {
-                (target, arguments, aumid) = ShellInterop.ReadShortcut(pin.Path);
+                (target, arguments, linkAumid) = ShellInterop.ReadShortcut(pin.Path);
                 target = SquirrelAppExe(target, arguments) ?? target;
             }
             catch (Exception ex) when (ex is COMException or InvalidCastException or IOException)
@@ -31,7 +38,7 @@ internal sealed class PinResolver(ILog log) : IPinResolver
         }
 
         // Classic apps match by target exe path (that is how WindowTracker identifies them); Store apps by AUMID.
-        var id = target is not null ? AppId.FromExePath(target) : AppId.Choose(aumid, null, name, 0);
+        var id = target is not null ? AppId.FromExePath(target) : AppId.Choose(linkAumid, null, name, 0);
         var exists = target is null ? File.Exists(pin.Path) : File.Exists(target);
         return new PinResolution(id, name, pin.Path, pin.Path, exists);
     }
