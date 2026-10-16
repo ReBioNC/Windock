@@ -66,7 +66,7 @@ Dock terdiri dari tiga jendela milik Windock:
 | Jendela | Ukuran | Isi | Gaya |
 |---|---|---|---|
 | `DockWindow` | Selebar monitor, tinggi = tinggi plate + jarak tepi + ruang magnification (`ukuranMagnification − ukuranIkon` + 16 untuk tooltip). Default 66 + 4 + 48 = 118 | Plate (warna, opacity, garis tepi), ikon, titik penanda, tooltip | `AllowsTransparency=True`, topmost, `WS_EX_TOOLWINDOW` (tidak muncul di Alt+Tab), `WS_EX_NOACTIVATE` (klik tidak mencuri fokus) |
-| `BackdropWindow` | Sebesar plate maksimum | Hanya efek blur | Blur via `SetWindowCompositionAttribute` (`ACCENT_ENABLE_BLURBEHIND` atau `ACCENT_ENABLE_ACRYLICBLURBEHIND`). Bentuk dipotong dengan `SetWindowRgn` rounded-rect yang diperbarui tiap frame. Posisinya tepat di bawah `DockWindow` dalam z-order. Toolwindow dan noactivate |
+| `BackdropWindow` | Tepat sebesar plate, dipindah dan di-resize tiap frame | Hanya efek blur | **Jendela Win32 mentah** (`CreateWindowEx`, `WS_POPUP`, bukan jendela WPF, karena me-resize jendela WPF tiap frame terlalu mahal). Blur via `SetWindowCompositionAttribute` (`ACCENT_ENABLE_BLURBEHIND`). Sudut dibulatkan dengan `SetWindowRgn` rounded-rect. Posisinya tepat di bawah `DockWindow` dalam z-order. Toolwindow dan noactivate. Lihat [spike S1](spikes/S1-blur-overlay.md) |
 | `EdgeTriggerWindow` | Strip 2 DIP di tepi layar | Kosong (alpha 1, tidak terlihat) | Hanya aktif saat dock auto-hide, untuk mendeteksi kursor menyentuh tepi |
 
 **Kenapa blur dipisah:** di Windows 10, efek blur sistem selalu mengenai seluruh persegi jendela. Kalau blur dipasang di `DockWindow` yang selebar layar, seluruh strip bawah layar ikut buram. Dengan dipisah, blur hanya ada di bentuk plate, sementara ikon yang membesar tetap bisa keluar ke atas plate di jendela transparan. Ini divalidasi di Spike S1 (§13).
@@ -91,7 +91,7 @@ LayoutResult Compute(
 
 Rumus magnification ada di [DESIGN.md §3](DESIGN.md#3-magnification).
 
-`DockRenderer` (WPF) menerima `LayoutResult` lalu memperbarui posisi dan ukuran elemen `Image` di sebuah `Canvas`. Region `BackdropWindow` juga diperbarui dari `PlateRect`.
+`DockRenderer` (WPF) menerima `LayoutResult` lalu memperbarui posisi dan ukuran elemen `Image` di sebuah `Canvas`. Posisi, ukuran, dan region `BackdropWindow` juga diperbarui dari `PlateRect` dengan satu `SetWindowPos` dan satu `SetWindowRgn`.
 
 **Loop render:** `DockRenderer` mendaftar ke `CompositionTarget.Rendering` (sekali per frame) hanya selama ada yang bergerak, yaitu salah satu kondisi berikut:
 - kursor di dalam zona aktif,
@@ -188,7 +188,7 @@ Ruang layar dicadangkan oleh jendela bantu kecil tak terlihat (`AppBarHost`), bu
 
 | Mode | Yang dilakukan |
 |---|---|
-| Sembunyikan total | 1. Simpan status asli taskbar (`ABM_GETSTATE`) ke `state.json`. 2. Set taskbar ke auto-hide (`ABM_SETSTATE`, `ABS_AUTOHIDE`) supaya taskbar melepas ruang layarnya. 3. `ShowWindow(SW_HIDE)` pada `Shell_TrayWnd` dan semua `Shell_SecondaryTrayWnd` |
+| Sembunyikan total | 1. Simpan status asli taskbar (`ABM_GETSTATE`) ke `state.json`. 2. Set taskbar ke auto-hide (`ABM_SETSTATE`, `ABS_AUTOHIDE`) supaya taskbar melepas ruang layarnya. 3. **Setelah ±700 ms** (transisi auto-hide memunculkan ulang taskbar), `ShowWindow(SW_HIDE)` pada `Shell_TrayWnd` dan semua `Shell_SecondaryTrayWnd`, lalu "jaga tetap tersembunyi" (lihat Tombol Windows di bawah) |
 | Auto-hide | Langkah 1 dan 2 saja |
 | Biarkan tampil | Tidak menyentuh taskbar. Ruang dock dicadangkan di atas taskbar |
 
@@ -198,7 +198,8 @@ Ruang layar dicadangkan oleh jendela bantu kecil tak terlihat (`AppBarHost`), bu
 - **Crash dengan exception:** handler global (§9) menjalankan pemulihan yang sama sebelum proses berakhir.
 - **Mati paksa** (Task Manager, listrik): `state.json` masih berisi penanda. Saat Windock dijalankan lagi, status asli dipulihkan dulu sebelum mode diterapkan ulang. Jika pengguna tidak menjalankan Windock lagi, cara manualnya ditulis di README: restart Explorer, lalu matikan "Automatically hide the taskbar" di Settings, Personalization, Taskbar.
 - **Explorer restart:** Windock mendengarkan pesan `TaskbarCreated` (`RegisterWindowMessage`), lalu menerapkan ulang mode taskbar dan mendaftarkan ulang AppBar.
-- **Tombol Windows:** perilaku Start Menu saat taskbar disembunyikan diverifikasi di Spike S2. Jika taskbar ikut muncul, `WindowTracker` mendeteksi `EVENT_OBJECT_SHOW` pada `Shell_TrayWnd` dan menyembunyikannya lagi setelah Start Menu tertutup.
+- **Tombol Windows:** Start Menu tetap terbuka normal ([spike S2](spikes/S2-taskbar.md)); hanya kotak search yang terlihat selama Start terbuka. "Jaga tetap tersembunyi": saat `EVENT_OBJECT_SHOW` pada taskbar atau `EVENT_SYSTEM_FOREGROUND`, jika taskbar terlihat dan foreground bukan `Windows.UI.Core.CoreWindow` (Start/Search) atau `Shell_TrayWnd`, taskbar disembunyikan lagi.
+- **AppBar:** `ABM_SETPOS` hanya dipanggil jika persegi hasil `ABM_QUERYPOS` berubah, untuk mencegah badai `ABN_POSCHANGED`.
 
 ## 8. Pengaturan dan state
 

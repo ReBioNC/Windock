@@ -89,7 +89,7 @@ Semua opsi ada di jendela Pengaturan dan langsung diterapkan tanpa restart. Nila
 | S-01 | Posisi dock: bawah, kiri, kanan | P0 untuk bawah, P1 untuk kiri dan kanan |
 | S-02 | Ukuran ikon (slider) | P0 |
 | S-03 | Magnification: hidup/mati, dan ukuran maksimal | P0 |
-| S-04 | Transparansi latar dock, dan mode blur: mati, blur standar, acrylic | P0 |
+| S-04 | Transparansi latar dock, dan mode blur: mati atau blur standar | P0 |
 | S-05 | Titik penanda aplikasi jalan: hidup/mati | P0 |
 | S-06 | Mode taskbar Windows: sembunyikan total, auto-hide, biarkan tampil | P0 |
 | S-07 | Dock auto-hide (muncul saat kursor ke tepi layar) | P1 |
@@ -135,7 +135,7 @@ Semua opsi ada di jendela Pengaturan dan langsung diterapkan tanpa restart. Nila
 | Risiko | Dampak | Mitigasi |
 |---|---|---|
 | Blur di Windows 10 tidak bisa dibatasi ke bentuk dock, karena blur selalu mengenai seluruh jendela | Tampilan | Jendela latar blur dipisah dari jendela ikon (ARCHITECTURE §4). Spike S1 membuktikan ini sebelum dock dibangun penuh |
-| Acrylic di beberapa build Windows 10 membuat geser jendela terasa lambat | Kenyamanan | Pakai blur biasa sebagai default, acrylic sebagai opsi tambahan, dan blur bisa dimatikan |
+| Acrylic mengabaikan region (sudut persegi) dan bisa membuat geser jendela lambat | Tampilan | Hanya blur standar yang ditawarkan, dan blur bisa dimatikan (spike S1) |
 | Menyembunyikan taskbar meninggalkan ruang kosong di layar, atau taskbar muncul lagi saat tombol Windows ditekan | Fungsi inti | Spike S2 menguji perilaku ini di Windows 10 22H2 sebelum implementasi |
 | Windock mati paksa saat taskbar disembunyikan | Pengguna "terkunci" | Pemulihan saat Windock dijalankan lagi, restart Explorer, dan langkah manual di README |
 | Antivirus atau SmartScreen memberi peringatan karena exe tidak ditandatangani | Kepercayaan | Kode terbuka di GitHub, dan tidak ada injeksi ke proses lain |

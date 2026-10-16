@@ -114,7 +114,7 @@ Menu konteks memakai gaya gelap yang serasi dengan dock (radius 8, latar `#2A2A2
 | Magnification | Hidup | Hidup / Mati |
 | Ukuran magnification | 80 | ukuran ikon – 128 |
 | Opacity latar | 55% | 0–100%, minimal 30% saat Blur = Mati |
-| Blur | Blur standar | Mati, Blur standar, Acrylic |
+| Blur | Blur standar | Mati, Blur standar (Acrylic tidak ditawarkan: mengabaikan sudut membulat, lihat spike S1) |
 | Titik penanda | Hidup | Hidup / Mati |
 | Mode taskbar Windows | Sembunyikan total | Sembunyikan total, Auto-hide, Biarkan tampil |
 | Dock auto-hide | Mati | Hidup / Mati |
