@@ -31,6 +31,10 @@ internal sealed partial class DockController
     private readonly HashSet<string> _iconRequested = new();
     private readonly Dictionary<string, DockItem> _lastKnown = new();  // keeps leaving (ghost) items drawable
     private readonly DispatcherTimer _tooltipTimer;
+    private readonly DispatcherTimer _previewTimer;
+
+    /// Hover time before window previews appear (the name tooltip shows sooner).
+    public static readonly TimeSpan PreviewDelay = TimeSpan.FromMilliseconds(700);
     private readonly DispatcherTimer _previewHideTimer;
     private WindowPreviewPopup? _preview;
 
@@ -55,7 +59,9 @@ internal sealed partial class DockController
         _log = log;
         _renderer = new DockRenderer(window.Root);
         _tooltipTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
-        _tooltipTimer.Tick += (_, _) => { _tooltipTimer.Stop(); ShowHoverInfo(); };
+        _tooltipTimer.Tick += (_, _) => { _tooltipTimer.Stop(); ShowTooltip(); };
+        _previewTimer = new DispatcherTimer { Interval = PreviewDelay };
+        _previewTimer.Tick += (_, _) => { _previewTimer.Stop(); ShowHoverInfo(); };
         _previewHideTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
         _previewHideTimer.Tick += (_, _) =>
         {
@@ -216,7 +222,11 @@ internal sealed partial class DockController
                 if (hover is not null && _model.Find(hover) is { IsRunning: true } next) ShowPreview(next);
                 else _previewHideTimer.Start();
             }
-            else if (hover is not null) _tooltipTimer.Start();
+            else if (hover is not null)
+            {
+                _tooltipTimer.Start();
+                if (_model.Find(hover) is { IsRunning: true }) _previewTimer.Start();
+            }
         }
         Invalidate();
     }
@@ -264,11 +274,10 @@ internal sealed partial class DockController
         _renderer.ShowTooltip(item.DisplayName, bounds);
     }
 
-    /// Window previews for a running app (title, live thumbnail, ✕), or the name tooltip otherwise.
+    /// Window previews for a running app (title, live thumbnail, ✕) after PreviewDelay of hovering.
     private void ShowHoverInfo()
     {
         if (_hoverKey is not null && _model.Find(_hoverKey) is { IsRunning: true } item) ShowPreview(item);
-        else ShowTooltip();
     }
 
     public event Action<IntPtr>? PreviewWindowChosen;
@@ -314,6 +323,7 @@ internal sealed partial class DockController
     private void HideTooltip()
     {
         _tooltipTimer.Stop();
+        _previewTimer.Stop();
         _renderer.HideTooltip();
     }
 

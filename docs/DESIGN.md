@@ -82,7 +82,7 @@ Semua animasi berjalan dari satu loop render (ARCHITECTURE §5) yang aktif hanya
 | Klik kiri, aplikasi jalan, tidak aktif | Aktifkan jendela terakhirnya, dan restore jika minimize |
 | Klik kiri, aplikasi jalan dengan satu jendela, sedang aktif | Minimize jendela itu |
 | Klik kiri, aplikasi jalan dengan banyak jendela | Pratinjau semua jendelanya muncul di atas ikon (seperti taskbar Windows); klik kartu untuk pindah ke jendela itu |
-| Arahkan kursor ke ikon aplikasi yang jalan (±300 ms) | Pratinjau jendela: judul, gambar live (DWM thumbnail), tombol ✕ per jendela. Pindah ke ikon lain yang jalan langsung mengganti pratinjau; keluar dari ikon dan pratinjau menutupnya setelah ±350 ms. Aplikasi yang tidak jalan menampilkan tooltip nama |
+| Arahkan kursor ke ikon aplikasi yang jalan (0,7 dtk; tooltip nama muncul di 0,3 dtk) | Pratinjau jendela: judul, gambar live (DWM thumbnail), tombol ✕ per jendela. Pindah ke ikon lain yang jalan langsung mengganti pratinjau; keluar dari ikon dan pratinjau menutupnya setelah ±350 ms. Aplikasi yang tidak jalan menampilkan tooltip nama |
 | `Shift` + klik kiri | Buka jendela atau instance baru |
 | Klik kanan | Menu konteks (lihat di bawah) |
 | Drag ikon pin ke posisi lain | Ikon lain bergeser membuka celah; urutan pin berubah dan langsung disimpan (F-11) |
