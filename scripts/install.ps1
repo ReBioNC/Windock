@@ -32,6 +32,8 @@ Write-Host "Membangun Windock ke $dest ..."
 dotnet publish (Join-Path $root "src\Windock") -c Release -r win-x64 --self-contained false `
     -p:PublishSingleFile=true -p:DebugType=none -o $dest | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "Build gagal." }
+# The SDK leaves its compiler/MSBuild servers running (".NET Host", ~250 MB) for faster rebuilds; stop them.
+dotnet build-server shutdown | Out-Null
 
 $shell = New-Object -ComObject WScript.Shell
 function New-Link([string]$path, [string]$arguments, [string]$description) {
