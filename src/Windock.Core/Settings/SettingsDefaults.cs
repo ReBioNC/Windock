@@ -16,7 +16,8 @@ public static class SettingsDefaults
             TaskbarMode: TaskbarMode.Hidden,
             AutoHide: false,
             BounceOnLaunch: true,
-            StartWithWindows: false),
+            StartWithWindows: false,
+            ExplorerContextMenu: true),
         Pins: Array.Empty<PinEntry>(),
         Safety: new SafetySettings(EmergencyHotkey: "Ctrl+Alt+Shift+W"),
         FirstRunCompleted: false);

@@ -16,7 +16,7 @@ public class SettingsJsonTests
         var original = TwoPins() with
         {
             Appearance = TwoPins().Appearance with { IconSize = 64, BackgroundOpacity = 0.7, Blur = BlurMode.Off },
-            Behavior = TwoPins().Behavior with { TaskbarMode = TaskbarMode.AutoHide },
+            Behavior = TwoPins().Behavior with { TaskbarMode = TaskbarMode.AutoHide, ExplorerContextMenu = false },
         };
 
         var parsed = SettingsJson.Parse(SettingsJson.Serialize(original));

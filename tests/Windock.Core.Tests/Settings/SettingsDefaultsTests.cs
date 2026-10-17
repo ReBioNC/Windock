@@ -16,7 +16,7 @@ public class SettingsDefaultsTests
         Assert.Equal(0.55, s.Appearance.BackgroundOpacity);
         Assert.Equal(BlurMode.Standard, s.Appearance.Blur);
         Assert.True(s.Appearance.ShowRunningIndicators);
-        Assert.Equal(new BehaviorSettings(TaskbarMode.Hidden, false, true, false), s.Behavior);
+        Assert.Equal(new BehaviorSettings(TaskbarMode.Hidden, false, true, false, ExplorerContextMenu: true), s.Behavior);
         Assert.Equal("Ctrl+Alt+Shift+W", s.Safety.EmergencyHotkey);
         Assert.Empty(s.Pins);
         Assert.False(s.FirstRunCompleted);

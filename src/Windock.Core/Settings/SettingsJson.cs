@@ -44,7 +44,8 @@ public static class SettingsJson
                 TaskbarMode: GetEnum(b, "taskbarMode", d.Behavior.TaskbarMode),
                 AutoHide: Get(b, "autoHide", d.Behavior.AutoHide),
                 BounceOnLaunch: Get(b, "bounceOnLaunch", d.Behavior.BounceOnLaunch),
-                StartWithWindows: Get(b, "startWithWindows", d.Behavior.StartWithWindows)),
+                StartWithWindows: Get(b, "startWithWindows", d.Behavior.StartWithWindows),
+                ExplorerContextMenu: Get(b, "explorerContextMenu", d.Behavior.ExplorerContextMenu)),
             Pins: ReadPins(obj["pins"] as JsonArray),
             Safety: new SafetySettings(GetString(safety, "emergencyHotkey") ?? d.Safety.EmergencyHotkey),
             FirstRunCompleted: Get(obj, "firstRunCompleted", d.FirstRunCompleted));
@@ -76,6 +77,7 @@ public static class SettingsJson
                 ["autoHide"] = s.Behavior.AutoHide,
                 ["bounceOnLaunch"] = s.Behavior.BounceOnLaunch,
                 ["startWithWindows"] = s.Behavior.StartWithWindows,
+                ["explorerContextMenu"] = s.Behavior.ExplorerContextMenu,
             },
             ["pins"] = new JsonArray(s.Pins.Select(p => (JsonNode)new JsonObject { ["path"] = p.Path }).ToArray()),
             ["safety"] = new JsonObject { ["emergencyHotkey"] = s.Safety.EmergencyHotkey },

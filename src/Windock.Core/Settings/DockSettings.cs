@@ -16,7 +16,7 @@ public sealed record AppearanceSettings(
     BlurMode Blur,
     bool ShowRunningIndicators);
 
-public sealed record BehaviorSettings(TaskbarMode TaskbarMode, bool AutoHide, bool BounceOnLaunch, bool StartWithWindows);
+public sealed record BehaviorSettings(TaskbarMode TaskbarMode, bool AutoHide, bool BounceOnLaunch, bool StartWithWindows, bool ExplorerContextMenu = true);
 
 public sealed record SafetySettings(string EmergencyHotkey);
 
