@@ -17,7 +17,8 @@ public static class SettingsDefaults
             AutoHide: false,
             BounceOnLaunch: true,
             StartWithWindows: false,
-            ExplorerContextMenu: true),
+            ExplorerContextMenu: true,
+            Mode: DockMode.Windock),
         Pins: Array.Empty<PinEntry>(),
         Safety: new SafetySettings(EmergencyHotkey: "Ctrl+Alt+Shift+W"),
         FirstRunCompleted: false);

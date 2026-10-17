@@ -169,7 +169,7 @@ Ikon Windock monokrom di system tray. Klik kiri membuka Pengaturan. Klik kanan m
 
 ```
   Pengaturan…
-  Jeda dock            (sembunyikan dock dan kembalikan taskbar sampai dilanjutkan)
+  Pakai Mode Windows   (atau "Pakai Mode Windock" — sama dengan tombol mode di Pengaturan)
   ─────────────
   Keluar
 ```

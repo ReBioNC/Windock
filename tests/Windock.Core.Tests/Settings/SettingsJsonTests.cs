@@ -16,7 +16,7 @@ public class SettingsJsonTests
         var original = TwoPins() with
         {
             Appearance = TwoPins().Appearance with { IconSize = 64, BackgroundOpacity = 0.7, Blur = BlurMode.Off },
-            Behavior = TwoPins().Behavior with { TaskbarMode = TaskbarMode.AutoHide, ExplorerContextMenu = false },
+            Behavior = TwoPins().Behavior with { TaskbarMode = TaskbarMode.AutoHide, ExplorerContextMenu = false, Mode = DockMode.Windows },
         };
 
         var parsed = SettingsJson.Parse(SettingsJson.Serialize(original));
@@ -44,6 +44,16 @@ public class SettingsJsonTests
 
         Assert.Equal(DockPosition.Bottom, s.Appearance.Position);
         Assert.Equal(64, s.Appearance.IconSize);
+    }
+
+    [Fact]
+    public void Mode_is_stored_as_text_and_unknown_mode_means_windock()
+    {
+        var d = SettingsDefaults.Create();
+        var json = SettingsJson.Serialize(d with { Behavior = d.Behavior with { Mode = DockMode.Windows } });
+
+        Assert.Contains("\"mode\": \"Windows\"", json);
+        Assert.Equal(DockMode.Windock, SettingsJson.Parse(json.Replace("\"Windows\"", "\"Mac\"")).Behavior.Mode);
     }
 
     [Fact]

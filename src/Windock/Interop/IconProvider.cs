@@ -57,7 +57,7 @@ internal sealed class IconProvider : IDisposable
             var packageDir = parsingName?.StartsWith(@"shell:AppsFolder\", StringComparison.OrdinalIgnoreCase) == true
                 ? ShellInterop.PackageInstallPath(parsingName) : null;
             var image = windowIcon
-                ?? PackageLogo(packageDir is not null ? System.IO.Path.Combine(packageDir, "AppxManifest.xml") : iconPath)
+                ?? PackageLogo(packageDir is not null ? System.IO.Path.Combine(packageDir, "AppxManifest.xml") : iconPath, pixelSize)
                 ?? (parsingName is null ? null : ShellImage(parsingName, pixelSize));
             _ui.BeginInvoke(() =>
             {
@@ -70,7 +70,7 @@ internal sealed class IconProvider : IDisposable
     }
 
     /// Store apps: the shell draws their icon on a coloured tile; the package's unplated logo looks like a real app icon.
-    private BitmapSource? PackageLogo(string? exePath)
+    private BitmapSource? PackageLogo(string? exePath, int px)
     {
         if (exePath is null) return null;
         try
@@ -101,6 +101,7 @@ internal sealed class IconProvider : IDisposable
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
             image.UriSource = new Uri(file);
+            image.DecodePixelWidth = px;  // store logos can be large; decode only what the dock shows
             image.EndInit();
             image.Freeze();
             return image;

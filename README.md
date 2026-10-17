@@ -2,7 +2,7 @@
 
 Dock ala macOS untuk Windows 10, dibuat dengan C# WPF di .NET 8.
 
-> Status: **v0.2.0**. Bisa dipakai harian; beberapa fitur masih menunggu Fase 2 (lihat di bawah).
+> Status: **v0.3.0**. Bisa dipakai harian; beberapa fitur masih menunggu Fase 2 (lihat di bawah).
 
 ## Fitur v0.1
 
@@ -11,10 +11,11 @@ Dock ala macOS untuk Windows 10, dibuat dengan C# WPF di .NET 8.
 - Klik untuk membuka, mengaktifkan, atau me-minimize; `Shift`+klik untuk jendela baru; klik kanan untuk menu
 - Atur isi dock dengan drag and drop: seret program atau shortcut dari Desktop/Explorer ke dock, seret ikon untuk mengurutkan, seret ke atas keluar dock untuk menghapus
 - Klik kanan program atau shortcut di Explorer › **Pin ke Windock**
+- Tombol **Mode Windock / Mode Windows** di Pengaturan: Mode Windows mengembalikan tampilan Windows asli (taskbar seperti semula, dock disembunyikan) tanpa menghapus pin atau pengaturan; mode terakhir diingat
 - Menggantikan taskbar Windows: taskbar disembunyikan selama Windock jalan, dan dikembalikan saat keluar, crash, atau saat Windock dijalankan lagi setelah dimatikan paksa
 - Jendela yang di-maximize berhenti di atas dock; dock hilang saat ada game atau video layar penuh
 - Semua opsi bisa diatur dari jendela Pengaturan (klik ikon Windock di system tray) dan langsung terlihat
-- Ringan: ±55 MB RAM di Task Manager, CPU 0% saat diam
+- Ringan: ±50 MB RAM di Task Manager, CPU 0% saat diam
 - Aman: jalan sebagai user biasa, tidak mengubah file sistem, dan tidak menghapus file
 
 **Menyusul di Fase 2:** ikon memantul saat aplikasi dibuka, dock auto-hide, posisi kiri/kanan, berpindah antarjendela dengan klik berulang, dan jalan otomatis saat Windows nyala.

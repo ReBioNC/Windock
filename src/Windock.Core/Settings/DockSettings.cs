@@ -6,6 +6,9 @@ public enum BlurMode { Off, Standard, Acrylic }
 
 public enum TaskbarMode { Hidden, AutoHide, Visible }
 
+/// Windock = dock replaces the taskbar; Windows = everything back to stock Windows, settings kept.
+public enum DockMode { Windock, Windows }
+
 public sealed record MagnificationSettings(bool Enabled, int Size);
 
 public sealed record AppearanceSettings(
@@ -16,7 +19,7 @@ public sealed record AppearanceSettings(
     BlurMode Blur,
     bool ShowRunningIndicators);
 
-public sealed record BehaviorSettings(TaskbarMode TaskbarMode, bool AutoHide, bool BounceOnLaunch, bool StartWithWindows, bool ExplorerContextMenu = true);
+public sealed record BehaviorSettings(TaskbarMode TaskbarMode, bool AutoHide, bool BounceOnLaunch, bool StartWithWindows, bool ExplorerContextMenu = true, DockMode Mode = DockMode.Windock);
 
 public sealed record SafetySettings(string EmergencyHotkey);
 

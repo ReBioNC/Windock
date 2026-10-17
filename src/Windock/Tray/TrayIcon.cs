@@ -11,10 +11,10 @@ internal sealed class TrayIcon : IDisposable
     private readonly Forms.ToolStripMenuItem _pauseItem;
     private readonly Icon _glyph;
 
-    public TrayIcon(Action openSettings, Action togglePause, Action exit)
+    public TrayIcon(Action openSettings, Action toggleMode, Action exit)
     {
         _glyph = (Environment.ProcessPath is { } exe ? Icon.ExtractAssociatedIcon(exe) : null) ?? CreateGlyph();
-        _pauseItem = new Forms.ToolStripMenuItem("Jeda dock", null, (_, _) => togglePause());
+        _pauseItem = new Forms.ToolStripMenuItem("Pakai Mode Windows", null, (_, _) => toggleMode());
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add(new Forms.ToolStripMenuItem("Pengaturan…", null, (_, _) => openSettings()));
         menu.Items.Add(_pauseItem);
@@ -28,7 +28,7 @@ internal sealed class TrayIcon : IDisposable
         };
     }
 
-    public void SetPaused(bool paused) => _pauseItem.Text = paused ? "Lanjutkan dock" : "Jeda dock";
+    public void SetMode(bool windowsMode) => _pauseItem.Text = windowsMode ? "Pakai Mode Windock" : "Pakai Mode Windows";
 
     public void ShowBalloon(string title, string text) =>
         _icon.ShowBalloonTip(4000, title, text, Forms.ToolTipIcon.Info);

@@ -17,11 +17,32 @@ internal partial class SettingsWindow : Window
         Nav.SelectedIndex = 0;
         context.Store.Changed += OnSettingsChanged;
         Closed += (_, _) => context.Store.Changed -= OnSettingsChanged;
+        ShowMode(context.Store.Current.Behavior.Mode);
+    }
+
+    private void OnWindockMode(object sender, RoutedEventArgs e) => SetMode(Core.Settings.DockMode.Windock);
+
+    private void OnWindowsMode(object sender, RoutedEventArgs e) => SetMode(Core.Settings.DockMode.Windows);
+
+    private void SetMode(Core.Settings.DockMode mode) =>
+        _context.Store.Update(s => s with { Behavior = s.Behavior with { Mode = mode } });
+
+    private void ShowMode(Core.Settings.DockMode mode)
+    {
+        var windock = mode == Core.Settings.DockMode.Windock;
+        var accent = (System.Windows.Media.Brush)FindResource("Settings.Accent");
+        var normal = (System.Windows.Media.Brush)FindResource("Settings.Control");
+        WindockModeButton.Background = windock ? accent : normal;
+        WindowsModeButton.Background = windock ? normal : accent;
+        ModeHint.Text = windock
+            ? "Dock aktif dan menggantikan taskbar sesuai pengaturan di bawah."
+            : "Tampilan Windows asli: taskbar kembali seperti semula, dock disembunyikan. Pin dan pengaturan tetap tersimpan.";
     }
 
     /// Confirms that an edit reached the dock; there is no Apply button.
     private void OnSettingsChanged(object? sender, Core.Settings.SettingsChangedEventArgs e)
     {
+        ShowMode(e.New.Behavior.Mode);
         Status.Foreground = (System.Windows.Media.Brush)FindResource("Settings.Text");
         Status.Text = $"✓ Diterapkan ke dock dan disimpan ({DateTime.Now:HH:mm:ss})";
     }

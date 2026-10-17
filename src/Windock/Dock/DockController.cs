@@ -88,7 +88,7 @@ internal sealed partial class DockController
     {
         var appearance = _settings.Current.Appearance;
         _window.Place(DockMetrics.WindowHeight(appearance.IconSize, appearance.Magnification.Size), _bottomEdge);
-        _window.Show();
+        if (!_hidden) _window.Show();
         _backdrop.SetBlur(appearance.Blur);
         _animator.AnimationsEnabled = SystemParameters.ClientAreaAnimation;
         SystemParameters.StaticPropertyChanged += (_, e) =>

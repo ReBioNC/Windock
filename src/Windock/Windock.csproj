@@ -9,7 +9,10 @@
     <ApplicationIcon>Assets\windock.ico</ApplicationIcon>
     <!-- WPF takes DPI awareness from the manifest; the WinForms analyzer (NotifyIcon only) objects. -->
     <NoWarn>$(NoWarn);WFAC010</NoWarn>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
+    <!-- Smaller idle footprint (measured: 55 MB -> 40 MB private working set). -->
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <TieredPGO>false</TieredPGO>
     <AssemblyTitle>Windock</AssemblyTitle>
     <Product>Windock</Product>
   </PropertyGroup>
@@ -17,6 +20,10 @@
   <ItemGroup>
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="5" />
   </ItemGroup>
 
   <ItemGroup>

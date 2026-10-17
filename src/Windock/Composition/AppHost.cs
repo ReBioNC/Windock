@@ -23,7 +23,8 @@ internal sealed class AppHost
     /// Present while Windock runs; left behind only by an unclean exit.
     private static readonly string SessionMarker = Path.Combine(DataDirectory, "session.lock");
 
-    private bool _paused;
+    /// Mode Windows: dock hidden, taskbar and screen space back to stock Windows; every setting is kept.
+    private bool InWindowsMode => Settings.Current.Behavior.Mode == DockMode.Windows;
     private bool _fullscreen;
     private bool _exiting;
     private uint _taskbarCreatedMessage;
@@ -79,7 +80,7 @@ internal sealed class AppHost
         Directory.CreateDirectory(DataDirectory);
         File.WriteAllText(SessionMarker, Environment.ProcessId.ToString());
 
-        Tray = new TrayIcon(OpenSettings, TogglePause, Exit);
+        Tray = new TrayIcon(OpenSettings, ToggleMode, Exit);
         Messages = new MessageWindow("WindockMessages");
         Messages.Message += OnSystemMessage;
         _taskbarCreatedMessage = Native.RegisterWindowMessage("TaskbarCreated");
@@ -100,6 +101,7 @@ internal sealed class AppHost
             menu.IsOpen = true;
         };
         Dock.DropCompleted += HandleDrop;
+        Dock.SetHidden(InWindowsMode);
         Dock.Start();
 
         AppBar = new AppBarService(Log);
@@ -107,8 +109,7 @@ internal sealed class AppHost
         // The shell also reports the desktop itself as "fullscreen"; treat its signal only as a cue to check.
         AppBar.FullscreenChanged += _ => CheckFullscreen();
         Windows.ForegroundChanged += (_, _) => CheckFullscreen();
-        ReserveSpace();
-        Taskbar.Apply(Settings.Current.Behavior.TaskbarMode);
+        ApplyMode();
 
         Hotkey = new HotkeyService(Messages);
         Hotkey.Pressed += () =>
@@ -127,6 +128,7 @@ internal sealed class AppHost
 
         Settings.Changed += OnSettingsChanged;
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
+        MemoryTrim.After(TimeSpan.FromSeconds(20));
         Log.Info("dock started");
     }
 
@@ -145,6 +147,7 @@ internal sealed class AppHost
         {
             _settingsWindow = null;
             Settings.Flush();
+            MemoryTrim.After(TimeSpan.FromSeconds(2));  // the settings UI is garbage now
         };
         _settingsWindow.Show();
         _settingsWindow.Activate();
@@ -155,11 +158,14 @@ internal sealed class AppHost
         Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms),
         Environment.GetFolderPath(Environment.SpecialFolder.Programs));
 
-    public void TogglePause()
+    public void SetMode(DockMode mode) => Settings.Update(s => s with { Behavior = s.Behavior with { Mode = mode } });
+
+    private void ToggleMode() => SetMode(InWindowsMode ? DockMode.Windock : DockMode.Windows);
+
+    /// Puts the screen in the current mode. Mode Windows restores the taskbar exactly as the user had it.
+    private void ApplyMode()
     {
-        _paused = !_paused;
-        Tray?.SetPaused(_paused);
-        if (_paused)
+        if (InWindowsMode)
         {
             Taskbar?.Restore();
             AppBar?.Release();
@@ -169,8 +175,9 @@ internal sealed class AppHost
             ReserveSpace();
             Taskbar?.Apply(Settings.Current.Behavior.TaskbarMode);
         }
+        Tray?.SetMode(InWindowsMode);
         UpdateDockVisibility();
-        Log.Info(_paused ? "dock paused" : "dock resumed");
+        Log.Info($"mode: {Settings.Current.Behavior.Mode}");
     }
 
     public void Exit()
@@ -198,7 +205,8 @@ internal sealed class AppHost
     {
         Dock?.ApplySettings(e);
         if (e.Sections.HasFlag(SettingsSection.Appearance) && e.New.Appearance.IconSize != e.Old.Appearance.IconSize) ReserveSpace();
-        if (e.Sections.HasFlag(SettingsSection.Behavior) && !_paused) Taskbar?.Apply(e.New.Behavior.TaskbarMode);
+        if (e.New.Behavior.Mode != e.Old.Behavior.Mode) ApplyMode();
+        else if (e.Sections.HasFlag(SettingsSection.Behavior) && !InWindowsMode) Taskbar?.Apply(e.New.Behavior.TaskbarMode);
         if (e.Sections.HasFlag(SettingsSection.Safety)) RegisterHotkey(e.New.Safety.EmergencyHotkey);
         if (e.New.Behavior.ExplorerContextMenu != e.Old.Behavior.ExplorerContextMenu) SyncExplorerMenu(e.New.Behavior.ExplorerContextMenu);
     }
@@ -274,7 +282,7 @@ internal sealed class AppHost
 
     private void ReserveSpace()
     {
-        if (_paused || Dock is null) return;
+        if (InWindowsMode || Dock is null) return;
         AppBar?.Reserve(DockMetrics.ReservedThickness(Settings.Current.Appearance.IconSize), Dock.DpiScale);
     }
 
@@ -287,7 +295,7 @@ internal sealed class AppHost
         UpdateDockVisibility();
     }
 
-    private void UpdateDockVisibility() => Dock?.SetHidden(_paused || _fullscreen);
+    private void UpdateDockVisibility() => Dock?.SetHidden(InWindowsMode || _fullscreen);
 
     private void OnSystemMessage(int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
@@ -303,7 +311,7 @@ internal sealed class AppHost
             Log.Info("TaskbarCreated: re-applying");
             AppBar?.Release();
             ReserveSpace();
-            if (!_paused) Taskbar?.Reapply();
+            if (!InWindowsMode) Taskbar?.Reapply();
         }
     }
 
@@ -314,7 +322,7 @@ internal sealed class AppHost
         {
             Log.Info("resumed from sleep: re-applying");
             ReserveSpace();
-            if (!_paused) Taskbar?.Reapply();
+            if (!InWindowsMode) Taskbar?.Reapply();
         });
     }
 
