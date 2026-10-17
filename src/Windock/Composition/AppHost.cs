@@ -45,6 +45,7 @@ internal sealed class AppHost
     public MessageWindow? Messages { get; private set; }
     public TaskbarModeCoordinator? Taskbar { get; private set; }
     public HotkeyService? Hotkey { get; private set; }
+    public CommandChannel? Commands { get; private set; }
 
     public void Start(string[] args)
     {
@@ -98,6 +99,7 @@ internal sealed class AppHost
             menu.PlacementTarget = Dock.MenuAnchor;
             menu.IsOpen = true;
         };
+        Dock.DropCompleted += HandleDrop;
         Dock.Start();
 
         AppBar = new AppBarService(Log);
@@ -115,6 +117,13 @@ internal sealed class AppHost
             Exit();
         };
         RegisterHotkey(Settings.Current.Safety.EmergencyHotkey);
+
+        Commands = new CommandChannel(Application.Current.Dispatcher, Log);
+        Commands.CommandReceived += (verb, argument) =>
+        {
+            if (verb == "pin") PinPath(argument);
+        };
+        SyncExplorerMenu(Settings.Current.Behavior.ExplorerContextMenu);
 
         Settings.Changed += OnSettingsChanged;
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
@@ -191,6 +200,7 @@ internal sealed class AppHost
         if (e.Sections.HasFlag(SettingsSection.Appearance) && e.New.Appearance.IconSize != e.Old.Appearance.IconSize) ReserveSpace();
         if (e.Sections.HasFlag(SettingsSection.Behavior) && !_paused) Taskbar?.Apply(e.New.Behavior.TaskbarMode);
         if (e.Sections.HasFlag(SettingsSection.Safety)) RegisterHotkey(e.New.Safety.EmergencyHotkey);
+        if (e.New.Behavior.ExplorerContextMenu != e.Old.Behavior.ExplorerContextMenu) SyncExplorerMenu(e.New.Behavior.ExplorerContextMenu);
     }
 
     /// Registers the emergency hotkey; returns false (and tells the user) when it is invalid or taken.
@@ -200,6 +210,60 @@ internal sealed class AppHost
         Log.Error($"emergency hotkey '{text}' could not be registered");
         if (notify) Tray?.ShowBalloon("Shortcut darurat tidak aktif", "Shortcut dipakai aplikasi lain atau tidak valid. Ganti di Pengaturan.");
         return false;
+    }
+
+    /// Pins a program or shortcut (Explorer "Pin ke Windock", drag and drop). index = gap among pins; null = last.
+    public void PinPath(string path, int? index = null)
+    {
+        if (!PinListEditor.CanPin(path))
+        {
+            Tray?.ShowBalloon("Tidak bisa di-pin", "Hanya program (.exe) dan shortcut (.lnk) yang bisa ditaruh di dock.");
+            return;
+        }
+        Log.Info($"pin {path} at {index?.ToString() ?? "end"}");
+        Settings.Update(s => s with { Pins = PinListEditor.Insert(s.Pins, new PinEntry(path), index ?? s.Pins.Count, IdOf) });
+    }
+
+    private AppId IdOf(PinEntry pin) => PinResolver.Resolve(pin).AppId;
+
+    /// Applies a finished drag in the dock to the pin list (gap indexes exclude the dragged icon).
+    private void HandleDrop(DockDrop drop)
+    {
+        Log.Info($"dock drop: {drop}");
+        switch (drop)
+        {
+            case DockDrop.Reorder { Item.AppId: { } id } reorder:
+                Settings.Update(s =>
+                {
+                    var from = s.Pins.ToList().FindIndex(p => IdOf(p) == id);
+                    if (from < 0) return s;
+                    var to = reorder.GapIndex >= from ? reorder.GapIndex + 1 : reorder.GapIndex;
+                    return s with { Pins = PinListEditor.Move(s.Pins, from, to) };
+                });
+                break;
+            case DockDrop.PinRunning running when DockContextMenu.PinPathFor(running.Item) is { } path:
+                PinPath(path, running.GapIndex);
+                break;
+            case DockDrop.PinFiles files:
+                for (var i = 0; i < files.Paths.Count; i++) PinPath(files.Paths[i], files.GapIndex + i);
+                break;
+            case DockDrop.Remove { Item.AppId: { } removeId }:
+                Settings.Update(s => s with { Pins = PinListEditor.Remove(s.Pins, removeId, IdOf) });
+                break;
+        }
+    }
+
+    private void SyncExplorerMenu(bool enabled)
+    {
+        try
+        {
+            if (!enabled) ExplorerContextMenu.Unregister();
+            else if (Environment.ProcessPath is { } exe && !ExplorerContextMenu.IsRegisteredFor(exe)) ExplorerContextMenu.Register(exe);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
+        {
+            Log.Error("explorer context menu registration failed", ex);
+        }
     }
 
     private void SuspendHotkey(bool suspend)

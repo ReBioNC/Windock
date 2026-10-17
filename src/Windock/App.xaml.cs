@@ -18,10 +18,13 @@ public partial class App : Application
         base.OnStartup(e);
 
         var exitRequest = e.Args.Contains("--exit");
+        var pinIndex = Array.IndexOf(e.Args, "--pin");
+        var pinPath = pinIndex >= 0 && pinIndex + 1 < e.Args.Length ? e.Args[pinIndex + 1] : null;
         _instance = SingleInstance.TryAcquire();
         if (_instance is null || exitRequest)
         {
-            if (_instance is null) SingleInstance.SignalExisting(exit: exitRequest);
+            if (_instance is null && pinPath is not null) CommandChannel.Send("pin", pinPath);
+            else if (_instance is null) SingleInstance.SignalExisting(exit: exitRequest);
             _instance?.Dispose();
             _instance = null;
             Shutdown();
@@ -50,6 +53,7 @@ public partial class App : Application
         };
         _host.Start(e.Args);
         if (e.Args.Contains("--settings")) _host.OpenSettings();
+        if (pinPath is not null) _host.PinPath(pinPath);
     }
 
     protected override void OnExit(ExitEventArgs e)

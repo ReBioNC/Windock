@@ -114,6 +114,19 @@ public class DockAnimatorTests
     }
 
     [Fact]
+    public void Ghost_that_reappears_elsewhere_is_revived_without_duplicate()
+    {
+        var a = Started("a", "b", "c");
+        a.ApplyChanges(new[] { "a", "c" }, Array.Empty<string>(), new[] { "b" }, Ms(0));
+
+        a.ApplyChanges(new[] { "b", "a", "c" }, Array.Empty<string>(), Array.Empty<string>(), Ms(50));
+
+        Assert.Equal(new[] { "b", "a", "c" }, a.Slots(Ms(60)).Select(s => s.Key));
+        Assert.Equal(1, Slot(a, "b", 300));
+        Assert.Equal(new[] { "b", "a", "c" }, a.Slots(Ms(400)).Select(s => s.Key));
+    }
+
+    [Fact]
     public void Disabled_animations_complete_instantly()
     {
         var a = Started("a");

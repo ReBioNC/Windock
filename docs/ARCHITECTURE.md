@@ -282,7 +282,7 @@ Aturan `SettingsStore`:
 1. **Manifest `requestedExecutionLevel="asInvoker"`.** Tidak pernah meminta Administrator.
 2. **Tidak ada injeksi DLL**, hook in-process, atau penulisan memori proses lain. Hook yang dipakai hanya `WINEVENT_OUTOFCONTEXT`.
 3. **Tidak ada penghapusan file** di luar `%AppData%\Windock\`. Menghapus pin hanya mengubah `settings.json`. Recycle Bin hanya dibuka, tidak pernah dikosongkan.
-4. **Registry hanya ditulis di `HKCU\...\Run`.** Setelan taskbar hanya diubah lewat API `ABM_SETSTATE`, selalu dicatat di `state.json` sebelum diubah, dan selalu dikembalikan.
+4. **Registry hanya ditulis di `HKCU\...\Run` dan `HKCU\Software\Classes\{exefile,lnkfile}\shell\WindockPin`** (menu "Pin ke Windock", bisa dimatikan di Pengaturan, dihapus oleh `uninstall.ps1`). Setelan taskbar hanya diubah lewat API `ABM_SETSTATE`, selalu dicatat di `state.json` sebelum diubah, dan selalu dikembalikan.
 5. **Menutup aplikasi hanya lewat `WM_CLOSE`**, sehingga aplikasi tetap bisa menanyakan "simpan perubahan?".
 6. **Tidak ada koneksi jaringan** di v1.0.
 

@@ -18,6 +18,10 @@ foreach ($folder in @([Environment]::GetFolderPath("Programs"), [Environment]::G
         if (Test-Path $path) { Remove-Item $path; Write-Host "Dihapus: $path" }
     }
 }
+foreach ($progId in "exefile", "lnkfile") {
+    $key = "HKCU:\Software\Classes\$progId\shell\WindockPin"
+    if (Test-Path $key) { Remove-Item $key -Recurse; Write-Host "Menu klik kanan dihapus: $progId" }
+}
 if (Test-Path $dest) { Remove-Item $dest -Recurse; Write-Host "Dihapus: $dest" }
 if ($RemoveSettings) {
     $data = Join-Path $env:APPDATA "Windock"

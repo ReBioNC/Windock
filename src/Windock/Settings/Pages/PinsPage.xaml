@@ -27,5 +27,10 @@
             <Button Content="Kembalikan pin default" Click="OnResetPins" />
         </StackPanel>
         <TextBlock x:Name="Message" Style="{StaticResource Hint}" Foreground="{StaticResource Settings.Error}" Margin="0,10,0,0" />
+
+        <CheckBox x:Name="ExplorerMenu" Margin="0,14,0,0"
+                  Content="Tampilkan &quot;Pin ke Windock&quot; di menu klik kanan Explorer dan Desktop" />
+        <TextBlock Style="{StaticResource Hint}" Margin="22,6,0,0"
+                   Text="Kamu juga bisa menyeret program atau shortcut ke dock, menyeret ikon untuk mengatur urutan, atau menyeretnya keluar dari dock untuk menghapus." />
     </StackPanel>
 </UserControl>

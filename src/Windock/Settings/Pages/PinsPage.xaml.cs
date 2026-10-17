@@ -26,6 +26,8 @@ internal partial class PinsPage : UserControl
         _sync = new PageSync(this, context.Store, Refresh);
 
         List.SelectionChanged += (_, _) => RemoveButton.IsEnabled = List.SelectedItem is not null;
+        ExplorerMenu.Checked += (_, _) => _sync.Edit(s => s with { Behavior = s.Behavior with { ExplorerContextMenu = true } });
+        ExplorerMenu.Unchecked += (_, _) => _sync.Edit(s => s with { Behavior = s.Behavior with { ExplorerContextMenu = false } });
         List.PreviewMouseLeftButtonDown += (_, e) =>
         {
             _dragStart = e.GetPosition(List);
@@ -48,6 +50,7 @@ internal partial class PinsPage : UserControl
         }
         List.SelectedItem = _rows.FirstOrDefault(r => r.Path == selected);
         RemoveButton.IsEnabled = List.SelectedItem is not null;
+        ExplorerMenu.IsChecked = s.Behavior.ExplorerContextMenu;
     }
 
     private void OnAdd(object sender, RoutedEventArgs e)

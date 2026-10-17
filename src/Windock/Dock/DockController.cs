@@ -14,7 +14,7 @@ namespace Windock.Dock;
 
 /// Connects model → animator → layout → renderer, and turns pointer input into dock events.
 /// The render loop only runs while something moves; an idle dock costs no CPU (N-02).
-internal sealed class DockController
+internal sealed partial class DockController
 {
     private const string RecycleBinParsingName = "::{645FF040-5081-101B-9F08-00AA002F954E}";
 
@@ -101,10 +101,21 @@ internal sealed class DockController
         _model.ItemsChanged += OnItemsChanged;
 
         var root = _window.Root;
-        root.MouseMove += (_, e) => OnPointer(e.GetPosition(root));
-        root.MouseLeave += (_, _) => OnPointerLeft();
-        root.MouseLeftButtonDown += (_, e) => { _pressedKey = HitTest(e.GetPosition(root))?.Key; Invalidate(); };
-        root.MouseLeftButtonUp += (_, e) => OnLeftUp(e.GetPosition(root));
+        root.MouseMove += (_, e) =>
+        {
+            var p = e.GetPosition(root);
+            if (!OnDragMove(p, e)) OnPointer(p);
+        };
+        root.MouseLeave += (_, _) =>
+        {
+            if (_drag is not { Active: true }) OnPointerLeft();
+        };
+        root.MouseLeftButtonDown += (_, e) => OnLeftDown(e.GetPosition(root));
+        root.MouseLeftButtonUp += (_, e) =>
+        {
+            if (!FinishDrag()) OnLeftUp(e.GetPosition(root));
+        };
+        WireDragAndDrop();
         root.MouseRightButtonUp += (_, e) => { HideTooltip(); ContextRequested?.Invoke(HitTest(e.GetPosition(root))); e.Handled = true; };
 
         Invalidate();
@@ -142,7 +153,12 @@ internal sealed class DockController
 
     private void OnItemsChanged(object? sender, DockItemsChangedEventArgs e)
     {
-        _animator.ApplyChanges(_model.Items.Select(i => i.Key).ToList(), e.Added, e.Removed, _clock.Now);
+        var added = e.Added.ToList();
+        if (_revive is not null && _model.Find(_revive) is not null && !added.Contains(_revive)) added.Add(_revive);
+        var removed = e.Removed.Concat(_pendingRemoved).ToList();
+        _revive = null;
+        _pendingRemoved.Clear();
+        _animator.ApplyChanges(ComposeOrder(), added, removed, _clock.Now);
         foreach (var key in e.Added.Concat(e.Updated)) RequestIcon(key);
         Invalidate();
     }

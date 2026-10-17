@@ -31,7 +31,9 @@ public sealed class DockAnimator
             _slots[key] = new Tween(SlotValue(key, now), 0, now, Duration(SlotDuration), Easing.InCubic);
             _ghosts.Add(key);
         }
-        foreach (var key in added)
+        // A leaving item that shows up in the new order again (e.g. dropped back into the dock) is revived.
+        var revived = keysInOrder.Where(k => _ghosts.Contains(k) && !removed.Contains(k) && !added.Contains(k)).ToList();
+        foreach (var key in added.Concat(revived))
         {
             var from = _order.Contains(key) ? SlotValue(key, now) : 0;
             _slots[key] = new Tween(from, 1, now, Duration(SlotDuration), Easing.OutCubic);

@@ -84,7 +84,11 @@ Semua animasi berjalan dari satu loop render (ARCHITECTURE §5) yang aktif hanya
 | Klik kiri, aplikasi jalan dengan banyak jendela, salah satunya aktif | Berpindah ke jendela berikutnya, bukan minimize (Fase 2, F-07). Sebelum Fase 2: minimize jendela aktif |
 | `Shift` + klik kiri | Buka jendela atau instance baru |
 | Klik kanan | Menu konteks (lihat di bawah) |
-| Drag ikon pin ke posisi lain | Urutan pin berubah dan langsung disimpan (Fase 2, F-11) |
+| Drag ikon pin ke posisi lain | Ikon lain bergeser membuka celah; urutan pin berubah dan langsung disimpan (F-11) |
+| Drag ikon pin ke atas, keluar dari dock (> 80 DIP) | Label "Hapus dari Dock" muncul; dilepas = pin dihapus dengan animasi memudar. Aplikasi yang masih jalan tetap tampil di bagian aplikasi jalan |
+| Drag aplikasi jalan (belum di-pin) ke bagian pin | Aplikasi di-pin di posisi celah |
+| Drag program (.exe) atau shortcut (.lnk) dari Explorer/Desktop ke dock | Celah terbuka di posisi kursor; dilepas = di-pin di situ. File asli tidak dipindah |
+| Klik kanan program atau shortcut di Explorer/Desktop › **Pin ke Windock** | Di-pin di akhir daftar (opsi di Pengaturan › Isi Dock) |
 | Klik Recycle Bin | Buka Recycle Bin di Explorer |
 | Klik kanan di area plate kosong | Menu: Pengaturan Dock…, Kunci posisi pin, Keluar |
 
