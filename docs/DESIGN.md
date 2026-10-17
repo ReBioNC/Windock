@@ -37,7 +37,7 @@ Semua ukuran di dokumen ini dalam DIP (device-independent pixel, 1 DIP = 1 px pa
 | Ikon | Persegi, ukuran default 48, digambar dari sumber 256 px dengan scaling kualitas tinggi |
 | Jarak antarikon | 8 |
 | Pemisah | Garis vertikal 1 DIP, tinggi 60% ikon, putih opacity 25%, jarak kiri-kanan 8 |
-| Titik penanda | Lingkaran diameter 4, putih opacity 85%, 3 DIP di bawah ikon, rata tengah |
+| Titik penanda | Satu titik per jendela yang terbuka (maks. 3), lingkaran diameter 4 berjarak 7, putih opacity 85%, 3 DIP di bawah ikon, rata tengah |
 | Ikon Recycle Bin | Ikon sistem Recycle Bin (versi kosong atau penuh), selalu paling kanan setelah pemisah kedua |
 | Tooltip nama aplikasi | Muncul 12 DIP di atas ikon setelah kursor diam 300 ms. Plate kecil gelap radius 6, teks 12 pt |
 
@@ -81,7 +81,8 @@ Semua animasi berjalan dari satu loop render (ARCHITECTURE §5) yang aktif hanya
 | Klik kiri, aplikasi belum jalan | Buka aplikasi, dan ikon memantul (jika S-08 aktif) |
 | Klik kiri, aplikasi jalan, tidak aktif | Aktifkan jendela terakhirnya, dan restore jika minimize |
 | Klik kiri, aplikasi jalan dengan satu jendela, sedang aktif | Minimize jendela itu |
-| Klik kiri, aplikasi jalan dengan banyak jendela, salah satunya aktif | Berpindah ke jendela berikutnya, bukan minimize (Fase 2, F-07). Sebelum Fase 2: minimize jendela aktif |
+| Klik kiri, aplikasi jalan dengan banyak jendela | Pratinjau semua jendelanya muncul di atas ikon (seperti taskbar Windows); klik kartu untuk pindah ke jendela itu |
+| Arahkan kursor ke ikon aplikasi yang jalan (±300 ms) | Pratinjau jendela: judul, gambar live (DWM thumbnail), tombol ✕ per jendela. Pindah ke ikon lain yang jalan langsung mengganti pratinjau; keluar dari ikon dan pratinjau menutupnya setelah ±350 ms. Aplikasi yang tidak jalan menampilkan tooltip nama |
 | `Shift` + klik kiri | Buka jendela atau instance baru |
 | Klik kanan | Menu konteks (lihat di bawah) |
 | Drag ikon pin ke posisi lain | Ikon lain bergeser membuka celah; urutan pin berubah dan langsung disimpan (F-11) |

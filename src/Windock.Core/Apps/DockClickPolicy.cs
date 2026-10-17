@@ -7,9 +7,11 @@ public abstract record ClickAction
     public sealed record Minimize(nint Hwnd) : ClickAction;
     public sealed record OpenRecycleBin : ClickAction { public static readonly OpenRecycleBin Instance = new(); }
     public sealed record None : ClickAction { public static readonly None Instance = new(); }
+    /// Several windows: show their live previews to pick from, like the Windows taskbar.
+    public sealed record ShowWindows : ClickAction { public static readonly ShowWindows Instance = new(); }
 }
 
-/// What a left click on a dock item does (DESIGN.md §5, Phase 1 behaviour).
+/// What a left click on a dock item does (DESIGN.md §5).
 public static class DockClickPolicy
 {
     public static ClickAction Decide(DockItem item, nint foreground, bool shift)
@@ -22,6 +24,8 @@ public static class DockClickPolicy
 
         if (shift || !item.IsRunning)
             return item.LaunchTarget is { } target ? new ClickAction.Launch(target) : ClickAction.None.Instance;
+
+        if (item.Windows.Count > 1) return ClickAction.ShowWindows.Instance;
 
         return item.Windows.Any(w => w.Handle == foreground)
             ? new ClickAction.Minimize(foreground)

@@ -2,12 +2,13 @@
 
 Dock ala macOS untuk Windows 10, dibuat dengan C# WPF di .NET 8.
 
-> Status: **v0.3.0**. Bisa dipakai harian; beberapa fitur masih menunggu Fase 2 (lihat di bawah).
+> Status: **v0.4.0**. Bisa dipakai harian; beberapa fitur masih menunggu Fase 2 (lihat di bawah).
 
 ## Fitur v0.1
 
 - Dock mengambang di tengah bawah layar dengan latar blur, ikon yang membesar saat kursor lewat, dan tooltip nama aplikasi
-- Aplikasi favorit (pin) dan aplikasi yang sedang jalan, dengan titik penanda; Recycle Bin di ujung kanan
+- Aplikasi favorit (pin) dan aplikasi yang sedang jalan, dengan titik penanda per jendela (maks. 3); Recycle Bin di ujung kanan
+- Arahkan kursor ke ikon aplikasi yang jalan untuk melihat pratinjau live tiap jendelanya (seperti taskbar Windows); klik pratinjau untuk pindah, ✕ untuk menutup
 - Klik untuk membuka, mengaktifkan, atau me-minimize; `Shift`+klik untuk jendela baru; klik kanan untuk menu
 - Atur isi dock dengan drag and drop: seret program atau shortcut dari Desktop/Explorer ke dock, seret ikon untuk mengurutkan, seret ke atas keluar dock untuk menghapus
 - Klik kanan program atau shortcut di Explorer › **Pin ke Windock**

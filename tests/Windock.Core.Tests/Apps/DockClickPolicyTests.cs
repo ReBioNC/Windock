@@ -21,15 +21,22 @@ public class DockClickPolicyTests
     [Fact]
     public void Running_inactive_activates_most_recent_window()
     {
-        Assert.Equal(new ClickAction.Activate(7), DockClickPolicy.Decide(App(7, 8), foreground: 99, shift: false));
+        Assert.Equal(new ClickAction.Activate(7), DockClickPolicy.Decide(App(7), foreground: 99, shift: false));
+    }
+
+    [Fact]
+    public void Single_running_window_that_is_active_is_minimized()
+    {
+        Assert.Equal(new ClickAction.Minimize(7), DockClickPolicy.Decide(App(7), foreground: 7, shift: false));
     }
 
     [Theory]
     [InlineData(7)]
     [InlineData(8)]
-    public void Running_active_minimizes_foreground_window(int foreground)
+    [InlineData(99)]
+    public void Several_windows_show_the_window_previews_like_the_taskbar(int foreground)
     {
-        Assert.Equal(new ClickAction.Minimize(foreground), DockClickPolicy.Decide(App(7, 8), foreground, shift: false));
+        Assert.Equal(ClickAction.ShowWindows.Instance, DockClickPolicy.Decide(App(7, 8), foreground, shift: false));
     }
 
     [Fact]

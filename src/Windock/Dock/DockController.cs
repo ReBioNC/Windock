@@ -31,6 +31,8 @@ internal sealed partial class DockController
     private readonly HashSet<string> _iconRequested = new();
     private readonly Dictionary<string, DockItem> _lastKnown = new();  // keeps leaving (ghost) items drawable
     private readonly DispatcherTimer _tooltipTimer;
+    private readonly DispatcherTimer _previewHideTimer;
+    private WindowPreviewPopup? _preview;
 
     private LayoutResult? _layout;
     private double? _cursorX;
@@ -53,7 +55,13 @@ internal sealed partial class DockController
         _log = log;
         _renderer = new DockRenderer(window.Root);
         _tooltipTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
-        _tooltipTimer.Tick += (_, _) => { _tooltipTimer.Stop(); ShowTooltip(); };
+        _tooltipTimer.Tick += (_, _) => { _tooltipTimer.Stop(); ShowHoverInfo(); };
+        _previewHideTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
+        _previewHideTimer.Tick += (_, _) =>
+        {
+            _previewHideTimer.Stop();
+            if (_preview?.ContainsPointer != true) HidePreview();
+        };
     }
 
     /// Left click released on an item (item, shift held).
@@ -141,6 +149,7 @@ internal sealed partial class DockController
         if (hidden)
         {
             HideTooltip();
+            HidePreview();
             _window.Hide();
             _backdrop.Hide();
         }
@@ -160,6 +169,7 @@ internal sealed partial class DockController
         _pendingRemoved.Clear();
         _animator.ApplyChanges(ComposeOrder(), added, removed, _clock.Now);
         foreach (var key in e.Added.Concat(e.Updated)) RequestIcon(key);
+        if (_preview is not null && (e.Updated.Contains(_preview.AppKey) || e.Removed.Contains(_preview.AppKey))) RefreshPreview();
         Invalidate();
     }
 
@@ -200,7 +210,13 @@ internal sealed partial class DockController
         {
             _hoverKey = hover;
             HideTooltip();
-            if (hover is not null) _tooltipTimer.Start();
+            if (_preview is not null)
+            {
+                // Like the taskbar: once previews are open, moving to another running app swaps them at once.
+                if (hover is not null && _model.Find(hover) is { IsRunning: true } next) ShowPreview(next);
+                else _previewHideTimer.Start();
+            }
+            else if (hover is not null) _tooltipTimer.Start();
         }
         Invalidate();
     }
@@ -211,6 +227,7 @@ internal sealed partial class DockController
         _hoverKey = null;
         _pressedKey = null;
         HideTooltip();
+        if (_preview is not null) _previewHideTimer.Start();
         _animator.SetPointerInside(false, _clock.Now);
         Invalidate();
     }
@@ -245,6 +262,53 @@ internal sealed partial class DockController
         if (_hoverKey is null || _layout is null || _model.Find(_hoverKey) is not { } item) return;
         var bounds = _layout.Items.FirstOrDefault(l => l.Key == _hoverKey).Bounds;
         _renderer.ShowTooltip(item.DisplayName, bounds);
+    }
+
+    /// Window previews for a running app (title, live thumbnail, ✕), or the name tooltip otherwise.
+    private void ShowHoverInfo()
+    {
+        if (_hoverKey is not null && _model.Find(_hoverKey) is { IsRunning: true } item) ShowPreview(item);
+        else ShowTooltip();
+    }
+
+    public event Action<IntPtr>? PreviewWindowChosen;
+    public event Action<IntPtr>? PreviewCloseRequested;
+
+    public void ShowPreview(DockItem item)
+    {
+        if (_layout is null || !item.IsRunning) return;
+        HideTooltip();
+        _previewHideTimer.Stop();
+        var bounds = _layout.Items.FirstOrDefault(l => l.Key == item.Key).Bounds;
+        var anchor = new Point(_window.Left + bounds.CenterX, _window.Top + Math.Min(bounds.Y, _layout.Plate.Y));
+        if (_preview is not null && _preview.AppKey != item.Key) HidePreview();
+        if (_preview is null)
+        {
+            _preview = new WindowPreviewPopup(item.Key, _iconImages.GetValueOrDefault(item.Key));
+            _preview.MouseEnter += (_, _) => _previewHideTimer.Stop();
+            _preview.MouseLeave += (_, _) => _previewHideTimer.Start();
+            _preview.WindowChosen += hwnd =>
+            {
+                HidePreview();
+                PreviewWindowChosen?.Invoke(hwnd);
+            };
+            _preview.CloseRequested += hwnd => PreviewCloseRequested?.Invoke(hwnd);
+        }
+        _preview.ShowFor(item.Windows, anchor, _window.Width);
+    }
+
+    public void HidePreview()
+    {
+        _previewHideTimer.Stop();
+        _preview?.Close();
+        _preview = null;
+    }
+
+    private void RefreshPreview()
+    {
+        if (_preview is null) return;
+        if (_model.Find(_preview.AppKey) is { IsRunning: true } item) ShowPreview(item);
+        else HidePreview();
     }
 
     private void HideTooltip()
@@ -296,7 +360,7 @@ internal sealed partial class DockController
             settings.Magnification.Enabled, _cursorX, _animator.MagnifyProgress(now), _window.Width, _window.Height));
 
         _renderer.Render(_layout, settings, key => _iconImages.GetValueOrDefault(key),
-            key => _model.Find(key)?.IsRunning ?? false, _pressedKey);
+            key => _model.Find(key)?.Windows.Count ?? 0, _pressedKey);
 
         var origin = _window.PhysicalOrigin;
         _backdrop.Update(_layout.Plate, _window.DpiScale, origin.X, origin.Y, _window.Handle);

@@ -98,7 +98,8 @@ internal sealed class AppHost
             var foreground = Native.GetForegroundWindow();
             var action = DockClickPolicy.Decide(item, foreground, shift);
             Log.Info($"click {item.Key} windows=[{string.Join(",", item.Windows.Select(w => $"0x{w.Handle:X}"))}] fg=0x{foreground:X} -> {action}");
-            Launcher.Execute(action, item);
+            if (action is ClickAction.ShowWindows) Dock.ShowPreview(item);
+            else Launcher.Execute(action, item);
         };
         Dock.ContextRequested += item =>
         {
@@ -107,6 +108,8 @@ internal sealed class AppHost
             menu.IsOpen = true;
         };
         Dock.DropCompleted += HandleDrop;
+        Dock.PreviewWindowChosen += hwnd => Launcher.Activate(hwnd);
+        Dock.PreviewCloseRequested += hwnd => Launcher.CloseWindows(new[] { hwnd });
         Dock.SetHidden(InWindowsMode);
         Dock.Start();
 

@@ -99,6 +99,7 @@ internal sealed partial class DockController
         var hit = HitTest(p);
         _pressedKey = hit?.Key;
         _shiftAtPress = Native.IsShiftDown();
+        HidePreview();
         _drag = hit is { Kind: DockItemKind.App } ? new DragState(hit, p) : null;
         Invalidate();
     }

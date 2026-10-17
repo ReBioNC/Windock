@@ -34,7 +34,7 @@ internal sealed class DockRenderer
     }
 
     public void Render(LayoutResult layout, AppearanceSettings appearance, Func<string, ImageSource?> iconFor,
-        Func<string, bool> isRunning, string? pressedKey)
+        Func<string, int> windowCount, string? pressedKey)
     {
         Place(_activeZone, layout.ActiveZone);
         Place(_plate, layout.Plate);
@@ -54,12 +54,14 @@ internal sealed class DockRenderer
             v.Element.RenderTransform = p >= 1 ? Transform.Identity : new ScaleTransform(scale, scale, item.Bounds.Width / 2, item.Bounds.Height / 2);
 
             if (v.Element is Image image) image.Source = iconFor(item.Key);
-            if (v.Indicator is { } dot)
+            var offsets = appearance.ShowRunningIndicators ? IndicatorDots.Offsets(windowCount(item.Key)) : Array.Empty<double>();
+            for (var d = 0; d < v.Dots.Count; d++)
             {
-                var show = appearance.ShowRunningIndicators && isRunning(item.Key);
-                dot.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+                var dot = v.Dots[d];
+                dot.Visibility = d < offsets.Count ? Visibility.Visible : Visibility.Collapsed;
+                if (d >= offsets.Count) continue;
                 dot.Opacity = p;
-                Canvas.SetLeft(dot, item.IndicatorCenterX - DockMetrics.IndicatorDiameter / 2);
+                Canvas.SetLeft(dot, item.IndicatorCenterX + offsets[d] - DockMetrics.IndicatorDiameter / 2);
                 Canvas.SetTop(dot, item.IndicatorCenterY - DockMetrics.IndicatorDiameter / 2);
             }
         }
@@ -67,7 +69,7 @@ internal sealed class DockRenderer
         foreach (var gone in _visuals.Keys.Where(k => !seen.Contains(k)).ToList())
         {
             _canvas.Children.Remove(_visuals[gone].Element);
-            if (_visuals[gone].Indicator is { } dot) _canvas.Children.Remove(dot);
+            foreach (var dot in _visuals[gone].Dots) _canvas.Children.Remove(dot);
             _visuals.Remove(gone);
         }
     }
@@ -90,17 +92,18 @@ internal sealed class DockRenderer
             ? new Image { Stretch = Stretch.Uniform }
             : new Rectangle { Fill = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF)) };
         _canvas.Children.Add(element);
-        Ellipse? indicator = null;
-        if (kind == LayoutItemKind.Icon)
+        var dots = new List<Ellipse>();
+        for (var i = 0; kind == LayoutItemKind.Icon && i < IndicatorDots.MaxDots; i++)
         {
-            indicator = new Ellipse
+            var dot = new Ellipse
             {
                 Width = DockMetrics.IndicatorDiameter, Height = DockMetrics.IndicatorDiameter,
-                Fill = new SolidColorBrush(Color.FromArgb(0xD9, 0xFF, 0xFF, 0xFF)), IsHitTestVisible = false,
+                Fill = new SolidColorBrush(Color.FromArgb(0xD9, 0xFF, 0xFF, 0xFF)), IsHitTestVisible = false, Visibility = Visibility.Collapsed,
             };
-            _canvas.Children.Add(indicator);
+            _canvas.Children.Add(dot);
+            dots.Add(dot);
         }
-        return new Visuals(element, indicator);
+        return new Visuals(element, dots);
     }
 
     private static void Place(FrameworkElement e, RectD r)
@@ -111,5 +114,5 @@ internal sealed class DockRenderer
         e.Height = Math.Max(0, r.Height);
     }
 
-    private sealed record Visuals(FrameworkElement Element, Ellipse? Indicator);
+    private sealed record Visuals(FrameworkElement Element, IReadOnlyList<Ellipse> Dots);
 }
