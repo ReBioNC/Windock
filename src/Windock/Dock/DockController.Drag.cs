@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Input;
 using Windock.Core.Apps;
 using Windock.Core.Layout;
+using Windock.Interop;
 
 namespace Windock.Dock;
 
@@ -23,6 +24,7 @@ internal sealed partial class DockController
     private const string GapPrefix = "__gap#";
 
     private DragState? _drag;
+    private bool _shiftAtPress;
     private DragGhostWindow? _ghost;
     private string? _gapKey;
     private int _gapIndex = -1;
@@ -96,6 +98,7 @@ internal sealed partial class DockController
     {
         var hit = HitTest(p);
         _pressedKey = hit?.Key;
+        _shiftAtPress = Native.IsShiftDown();
         _drag = hit is { Kind: DockItemKind.App } ? new DragState(hit, p) : null;
         Invalidate();
     }

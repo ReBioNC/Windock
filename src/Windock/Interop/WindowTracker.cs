@@ -9,11 +9,6 @@ namespace Windock.Interop;
 /// Keeps the list of taskbar-worthy top-level windows current from WinEvent hooks — no polling (ARCHITECTURE §6.1).
 internal sealed class WindowTracker : IWindowSource, IDisposable
 {
-    private static readonly HashSet<string> IgnoredClasses = new(StringComparer.Ordinal)
-    {
-        "Progman", "WorkerW", "Shell_TrayWnd", "Shell_SecondaryTrayWnd", "Windows.UI.Core.CoreWindow",
-    };
-
     private readonly ILog _log;
     private readonly Native.WinEventProc _proc;  // field keeps the delegate alive for the hooks
     private readonly List<IntPtr> _hooks = new();
@@ -122,18 +117,33 @@ internal sealed class WindowTracker : IWindowSource, IDisposable
     }
 
     /// Close to the taskbar's own rules: visible, unowned (or WS_EX_APPWINDOW), not a tool window, not cloaked.
+    /// Reads the window's facts and applies the shared rules in Core (AppWindowFilter).
     private static bool IsAppWindow(IntPtr h)
     {
-        if (!Native.IsWindowVisible(h) || Native.IsCloaked(h)) return false;
+        if (!Native.IsWindowVisible(h)) return false;  // cheap early exit for the many hidden windows
         var ex = Native.ExStyle(h);
-        var appWindow = (ex & Native.WS_EX_APPWINDOW) != 0;
-        if (!appWindow && (ex & Native.WS_EX_TOOLWINDOW) != 0) return false;
-        if (!appWindow && Native.GetWindow(h, Native.GW_OWNER) != IntPtr.Zero) return false;
-        if (IgnoredClasses.Contains(Native.ClassName(h))) return false;
-        // Windock's own Pengaturan window counts as an app (so it shows in the dock); the dock, backdrop,
-        // menus and helper windows are tool windows or untitled and are filtered out above.
-        return appWindow || Native.WindowText(h).Length > 0;
+        Native.GetWindowThreadProcessId(h, out var pid);
+        Native.GetWindowRect(h, out var rect);
+        var facts = new WindowFacts(
+            IsVisible: true,
+            IsCloaked: Native.IsCloaked(h),
+            IsToolWindow: (ex & Native.WS_EX_TOOLWINDOW) != 0,
+            IsAppWindow: (ex & Native.WS_EX_APPWINDOW) != 0,
+            IsNoActivate: (ex & Native.WS_EX_NOACTIVATE) != 0,
+            HasOwner: Native.GetWindow(h, Native.GW_OWNER) != IntPtr.Zero,
+            HiddenFromTaskbar: Native.GetProp(h, "ITaskList_Deleted") != IntPtr.Zero,
+            IsMinimized: Native.IsIconic(h),
+            Width: rect.Right - rect.Left,
+            Height: rect.Bottom - rect.Top,
+            Title: Native.WindowText(h),
+            ClassName: Native.ClassName(h),
+            ProcessName: ProcessNameOf(pid),
+            IsOwnProcess: pid == Environment.ProcessId);
+        return AppWindowFilter.IsAppWindow(facts);
     }
+
+    private static string ProcessNameOf(uint pid) =>
+        Native.ProcessImagePath(pid) is { } path ? Path.GetFileNameWithoutExtension(path) : "";
 
     private static WindowInfo Describe(IntPtr h)
     {

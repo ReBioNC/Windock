@@ -223,7 +223,7 @@ internal sealed partial class DockController
         HideTooltip();
         Invalidate();
         if (hit is not null && hit.Key == pressed)
-            ItemClicked?.Invoke(hit, Keyboard.Modifiers.HasFlag(ModifierKeys.Shift));
+            ItemClicked?.Invoke(hit, _shiftAtPress || Native.IsShiftDown());
     }
 
     private DockItem? HitTest(Point p)

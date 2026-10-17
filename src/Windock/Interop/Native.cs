@@ -139,6 +139,11 @@ internal static class Native
     [DllImport("gdi32.dll")] public static extern IntPtr CreateRoundRectRgn(int x1, int y1, int x2, int y2, int w, int h);
     [DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute(IntPtr hWnd, int attr, out int value, int size);
     [DllImport("user32.dll")] public static extern int GetSystemMetrics(int index);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr GetProp(IntPtr hWnd, string name);
+    [DllImport("user32.dll")] private static extern short GetAsyncKeyState(int virtualKey);
+
+    /// Shift held right now. WPF's Keyboard.Modifiers stays empty for the dock, which never has keyboard focus.
+    public static bool IsShiftDown() => (GetAsyncKeyState(0x10 /* VK_SHIFT */) & 0x8000) != 0;
     [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
     [DllImport("user32.dll")] public static extern IntPtr MonitorFromWindow(IntPtr hWnd, uint flags);
     [DllImport("user32.dll")] public static extern bool GetMonitorInfo(IntPtr monitor, ref MONITORINFO info);
