@@ -17,10 +17,13 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        var exitRequest = e.Args.Contains("--exit");
         _instance = SingleInstance.TryAcquire();
-        if (_instance is null)
+        if (_instance is null || exitRequest)
         {
-            SingleInstance.SignalExisting();
+            if (_instance is null) SingleInstance.SignalExisting(exit: exitRequest);
+            _instance?.Dispose();
+            _instance = null;
             Shutdown();
             return;
         }
@@ -40,7 +43,13 @@ public partial class App : Application
             _log.Info("activation requested by second instance");
             _host.OpenSettings();
         };
+        _instance.ExitRequested += () =>
+        {
+            _log.Info("exit requested by another launch");
+            _host.Exit();
+        };
         _host.Start(e.Args);
+        if (e.Args.Contains("--settings")) _host.OpenSettings();
     }
 
     protected override void OnExit(ExitEventArgs e)

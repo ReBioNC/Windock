@@ -6,9 +6,10 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\windock.ico</ApplicationIcon>
     <!-- WPF takes DPI awareness from the manifest; the WinForms analyzer (NotifyIcon only) objects. -->
     <NoWarn>$(NoWarn);WFAC010</NoWarn>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <AssemblyTitle>Windock</AssemblyTitle>
     <Product>Windock</Product>
   </PropertyGroup>
@@ -16,6 +17,10 @@
   <ItemGroup>
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\windock.ico" />
   </ItemGroup>
 
   <ItemGroup>

@@ -2,7 +2,7 @@
 
 Dock ala macOS untuk Windows 10, dibuat dengan C# WPF di .NET 8.
 
-> Status: **v0.1 (dock inti)**. Bisa dipakai harian; beberapa fitur masih menunggu Fase 2 (lihat di bawah).
+> Status: **v0.1.1 (dock inti)**. Bisa dipakai harian; beberapa fitur masih menunggu Fase 2 (lihat di bawah).
 
 ## Fitur v0.1
 
@@ -17,9 +17,27 @@ Dock ala macOS untuk Windows 10, dibuat dengan C# WPF di .NET 8.
 
 **Menyusul di Fase 2:** ikon memantul saat aplikasi dibuka, dock auto-hide, posisi kiri/kanan, menggeser urutan ikon langsung di dock, berpindah antarjendela dengan klik berulang, dan jalan otomatis saat Windows nyala.
 
-## Menjalankan
+## Instal
 
-Butuh **Windows 10 22H2 (x64)** dan **.NET 8 Desktop Runtime**.
+Butuh **Windows 10 22H2 (x64)** dan **.NET 8 SDK** (untuk build). Dari folder repo:
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/install.ps1 -Launch
+```
+
+Windock terpasang di `%LocalAppData%\Programs\Windock` (tanpa hak Administrator), dengan shortcut **Windock** dan **Pengaturan Windock** di Desktop dan Start Menu. Menjalankan script yang sama lagi akan memperbarui Windock. Untuk menghapus: `scripts/uninstall.ps1` (tambah `-RemoveSettings` untuk ikut menghapus pengaturan).
+
+## Membuka Pengaturan
+
+Saat taskbar disembunyikan, ikon tray ikut tersembunyi. Pengaturan bisa dibuka lewat:
+
+- shortcut **Pengaturan Windock** di Desktop atau Start Menu (atau menjalankan `Windock.exe` lagi),
+- klik kanan area kosong di dock › **Pengaturan Dock…**,
+- ikon Windock di dock saat jendela Pengaturan sedang terbuka.
+
+Semua perubahan langsung diterapkan dan disimpan; tidak ada tombol Simpan.
+
+## Menjalankan dari source
 
 Dari source:
 

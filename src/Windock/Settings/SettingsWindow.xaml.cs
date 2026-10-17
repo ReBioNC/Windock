@@ -15,6 +15,15 @@ internal partial class SettingsWindow : Window
         _context = context;
         InitializeComponent();
         Nav.SelectedIndex = 0;
+        context.Store.Changed += OnSettingsChanged;
+        Closed += (_, _) => context.Store.Changed -= OnSettingsChanged;
+    }
+
+    /// Confirms that an edit reached the dock; there is no Apply button.
+    private void OnSettingsChanged(object? sender, Core.Settings.SettingsChangedEventArgs e)
+    {
+        Status.Foreground = (System.Windows.Media.Brush)FindResource("Settings.Text");
+        Status.Text = $"✓ Diterapkan ke dock dan disimpan ({DateTime.Now:HH:mm:ss})";
     }
 
     protected override void OnSourceInitialized(EventArgs e)

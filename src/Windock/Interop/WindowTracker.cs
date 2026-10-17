@@ -40,7 +40,7 @@ internal sealed class WindowTracker : IWindowSource, IDisposable
                      (Native.EVENT_OBJECT_CLOAKED, Native.EVENT_OBJECT_UNCLOAKED),
                  })
         {
-            _hooks.Add(Native.SetWinEventHook(min, max, IntPtr.Zero, _proc, 0, 0, Native.WINEVENT_OUTOFCONTEXT | Native.WINEVENT_SKIPOWNPROCESS));
+            _hooks.Add(Native.SetWinEventHook(min, max, IntPtr.Zero, _proc, 0, 0, Native.WINEVENT_OUTOFCONTEXT));
         }
     }
 
@@ -130,8 +130,8 @@ internal sealed class WindowTracker : IWindowSource, IDisposable
         if (!appWindow && (ex & Native.WS_EX_TOOLWINDOW) != 0) return false;
         if (!appWindow && Native.GetWindow(h, Native.GW_OWNER) != IntPtr.Zero) return false;
         if (IgnoredClasses.Contains(Native.ClassName(h))) return false;
-        Native.GetWindowThreadProcessId(h, out var pid);
-        if (pid == Environment.ProcessId) return false;
+        // Windock's own Pengaturan window counts as an app (so it shows in the dock); the dock, backdrop,
+        // menus and helper windows are tool windows or untitled and are filtered out above.
         return appWindow || Native.WindowText(h).Length > 0;
     }
 

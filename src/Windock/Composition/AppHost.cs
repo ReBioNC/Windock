@@ -102,12 +102,9 @@ internal sealed class AppHost
 
         AppBar = new AppBarService(Log);
         AppBar.Reserved += bottomPx => Dock.SetBottomEdge(bottomPx / Dock.DpiScale);
-        AppBar.FullscreenChanged += fullscreen =>
-        {
-            _fullscreen = fullscreen;
-            Log.Info($"fullscreen app: {fullscreen}");
-            UpdateDockVisibility();
-        };
+        // The shell also reports the desktop itself as "fullscreen"; treat its signal only as a cue to check.
+        AppBar.FullscreenChanged += _ => CheckFullscreen();
+        Windows.ForegroundChanged += (_, _) => CheckFullscreen();
         ReserveSpace();
         Taskbar.Apply(Settings.Current.Behavior.TaskbarMode);
 
@@ -215,6 +212,15 @@ internal sealed class AppHost
     {
         if (_paused || Dock is null) return;
         AppBar?.Reserve(DockMetrics.ReservedThickness(Settings.Current.Appearance.IconSize), Dock.DpiScale);
+    }
+
+    private void CheckFullscreen()
+    {
+        var fullscreen = FullscreenDetector.IsFullscreenApp(Native.GetForegroundWindow());
+        if (fullscreen == _fullscreen) return;
+        _fullscreen = fullscreen;
+        Log.Info($"fullscreen app: {fullscreen}");
+        UpdateDockVisibility();
     }
 
     private void UpdateDockVisibility() => Dock?.SetHidden(_paused || _fullscreen);

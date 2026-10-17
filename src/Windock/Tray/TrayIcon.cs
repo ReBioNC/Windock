@@ -13,7 +13,7 @@ internal sealed class TrayIcon : IDisposable
 
     public TrayIcon(Action openSettings, Action togglePause, Action exit)
     {
-        _glyph = CreateGlyph();
+        _glyph = (Environment.ProcessPath is { } exe ? Icon.ExtractAssociatedIcon(exe) : null) ?? CreateGlyph();
         _pauseItem = new Forms.ToolStripMenuItem("Jeda dock", null, (_, _) => togglePause());
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add(new Forms.ToolStripMenuItem("Pengaturan…", null, (_, _) => openSettings()));
