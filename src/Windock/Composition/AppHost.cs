@@ -393,7 +393,7 @@ internal sealed class AppHost
         {
             Log.Info($"launcher open {entry.Target}");
             Launcher.Launch(entry.Target, entry.Name);
-        });
+        }, Log);
         _launcherWindow.Closed += (_, _) =>
         {
             _launcherWindow = null;

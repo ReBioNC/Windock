@@ -16,7 +16,7 @@ internal static class LauncherIndex
     private const uint SIGDN_NORMALDISPLAY = 0, SIGDN_PARENTRELATIVEPARSING = 0x80018001;
 
     /// Runs on its own STA thread (the shell folder enumeration expects one).
-    public static Task<IReadOnlyList<LauncherEntry>> BuildAsync(bool includeFiles)
+    public static Task<IReadOnlyList<LauncherEntry>> BuildAsync(bool includeFiles, Action<string> log)
     {
         var done = new TaskCompletionSource<IReadOnlyList<LauncherEntry>>();
         var thread = new Thread(() =>
@@ -25,7 +25,8 @@ internal static class LauncherIndex
             {
                 var list = new List<LauncherEntry>();
                 AddApps(list);
-                AddStartMenuShortcuts(list);
+                log($"launcher index: {list.Count} apps in shell:AppsFolder");
+                AddStartMenuShortcuts(list, log);
                 if (includeFiles) AddFiles(list);
                 done.SetResult(list);
             }
@@ -79,16 +80,27 @@ internal static class LauncherIndex
         }
     }
 
-    private static void AddStartMenuShortcuts(List<LauncherEntry> list)
+    private static readonly EnumerationOptions Recursive = new()
+    {
+        RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0, MatchCasing = MatchCasing.CaseInsensitive,
+    };
+
+    private static void AddStartMenuShortcuts(List<LauncherEntry> list, Action<string> log)
     {
         foreach (var root in new[] { Environment.SpecialFolder.Programs, Environment.SpecialFolder.CommonPrograms })
         {
+            var folder = Environment.GetFolderPath(root);
+            var before = list.Count;
             try
             {
-                foreach (var path in Directory.EnumerateFiles(Environment.GetFolderPath(root), "*.lnk", SearchOption.AllDirectories))
+                foreach (var path in Directory.EnumerateFiles(folder, "*.lnk", Recursive))
                     list.Add(new LauncherEntry(Path.GetFileNameWithoutExtension(path), path, LauncherEntryKind.App));
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                log($"launcher index: reading {folder} failed: {ex.Message}");
+            }
+            log($"launcher index: {list.Count - before} shortcuts in {folder}");
         }
     }
 

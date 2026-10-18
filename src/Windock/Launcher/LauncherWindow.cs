@@ -26,8 +26,11 @@ internal sealed class LauncherWindow : Window
     private bool _indexReady;
     private bool _closing;
 
-    public LauncherWindow(IconProvider icons, int maxResults, bool includeFiles, Action<LauncherEntry> open)
+    private readonly Windock.Core.Logging.ILog _log;
+
+    public LauncherWindow(IconProvider icons, int maxResults, bool includeFiles, Action<LauncherEntry> open, Windock.Core.Logging.ILog log)
     {
+        _log = log;
         _icons = icons;
         _maxResults = maxResults;
         _open = open;
@@ -116,10 +119,11 @@ internal sealed class LauncherWindow : Window
     {
         try
         {
-            _index = await LauncherIndex.BuildAsync(includeFiles);
+            _index = await LauncherIndex.BuildAsync(includeFiles, message => _log.Info(message));
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _log.Error("launcher index failed", ex);
             _index = Array.Empty<LauncherEntry>();
         }
         _indexReady = true;
