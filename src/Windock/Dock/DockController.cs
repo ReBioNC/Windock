@@ -49,6 +49,7 @@ internal sealed partial class DockController
     private int _iconPixels;
     private double? _bottomEdge;
     private bool _binFull;
+    private string? _wallpaperPlate;  // plate color derived from the wallpaper, when known
 
     public DockController(DockModel model, IClock clock, SettingsStore settings, IconProvider icons, DockWindow window, BackdropWindow backdrop, ILog log)
     {
@@ -106,6 +107,7 @@ internal sealed partial class DockController
         _window.Place(DockMetrics.WindowHeight(appearance.IconSize, appearance.Magnification.Size), _bottomEdge);
         if (!_hidden) _window.Show();
         _backdrop.SetBlur(appearance.Blur);
+        _backdrop.SetRadius(_settings.Current.Theme.CornerRadius);
         _animator.AnimationsEnabled = _bounce.AnimationsEnabled = SystemParameters.ClientAreaAnimation;
         SystemParameters.StaticPropertyChanged += (_, e) =>
         {
@@ -144,6 +146,11 @@ internal sealed partial class DockController
         if (e.Sections.HasFlag(SettingsSection.HiddenApps)) _model.SetHiddenApps(e.New.HiddenApps.Select(h => h.AppId));
         if (e.Sections.HasFlag(SettingsSection.Trash)) _model.SetShowRecycleBin(e.New.Trash.ShowRecycleBin);
         if (e.Sections.HasFlag(SettingsSection.Behavior)) ApplyAttentionSettings(e.Old.Behavior, e.New.Behavior);
+        if (e.Sections.HasFlag(SettingsSection.Theme))
+        {
+            _backdrop.SetRadius(e.New.Theme.CornerRadius);
+            Invalidate();
+        }
         if (!e.Sections.HasFlag(SettingsSection.Appearance)) return;
 
         var a = e.New.Appearance;
@@ -248,6 +255,19 @@ internal sealed partial class DockController
             _iconImages[k] = image;
             Invalidate();
         });
+    }
+
+    /// The plate color to use while "ikuti warna wallpaper" is on.
+    public void SetWallpaperColor(string? hex)
+    {
+        _wallpaperPlate = hex;
+        Invalidate();
+    }
+
+    private ThemeSettings EffectiveTheme()
+    {
+        var theme = _settings.Current.Theme;
+        return theme.FollowWallpaper && _wallpaperPlate is not null ? theme with { PlateColor = _wallpaperPlate } : theme;
     }
 
     /// Shows the full or empty Recycle Bin icon.
@@ -442,7 +462,7 @@ internal sealed partial class DockController
         _layout = DockLayoutEngine.Compute(new LayoutInput(items, settings.IconSize, settings.Magnification.Size,
             settings.Magnification.Enabled, _cursorX, _animator.MagnifyProgress(now), _window.Width, _window.Height));
 
-        _renderer.Render(_layout, settings, key => _iconImages.GetValueOrDefault(key),
+        _renderer.Render(_layout, settings, EffectiveTheme(), key => _iconImages.GetValueOrDefault(key),
             key => _model.Find(key)?.Windows.Count ?? 0, _pressedKey,
             key => _bounce.Lift(key, now) * BounceAnimator.HeightFactor * settings.IconSize, ShowsAttentionBadge);
 

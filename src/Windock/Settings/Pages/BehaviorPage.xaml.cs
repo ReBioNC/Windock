@@ -21,8 +21,8 @@ internal partial class BehaviorPage : UserControl
         HideNever.Checked += (_, _) => SetAutoHide(DockAutoHide.Never);
         HideWhenCovered.Checked += (_, _) => SetAutoHide(DockAutoHide.WhenCovered);
         HideAlways.Checked += (_, _) => SetAutoHide(DockAutoHide.Always);
-        Bounce.Click += (_, _) => _sync.Edit(s => s with { Behavior = s.Behavior with { BounceOnLaunch = Bounce.IsChecked == true } });
-        Startup.Click += (_, _) => _sync.Edit(s => s with { Behavior = s.Behavior with { StartWithWindows = Startup.IsChecked == true } });
+        PageSync.OnToggle(Bounce, on => _sync.Edit(s => s with { Behavior = s.Behavior with { BounceOnLaunch = on } }));
+        PageSync.OnToggle(Startup, on => _sync.Edit(s => s with { Behavior = s.Behavior with { StartWithWindows = on } }));
         AttentionBounce.Checked += (_, _) => SetAttention(AttentionStyle.Bounce);
         AttentionDot.Checked += (_, _) => SetAttention(AttentionStyle.Dot);
         AttentionOff.Checked += (_, _) => SetAttention(AttentionStyle.Off);

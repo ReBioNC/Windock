@@ -61,9 +61,10 @@ internal partial class SettingsWindow : Window
             page = index switch
             {
                 0 => new AppearancePage(_context),
-                1 => new BehaviorPage(_context),
-                2 => new PinsPage(_context),
-                3 => new SafetyPage(_context),
+                1 => new ThemePage(_context),
+                2 => new BehaviorPage(_context),
+                3 => new PinsPage(_context),
+                4 => new SafetyPage(_context),
                 _ => new AboutPage(_context),
             };
             _pages[index] = page;

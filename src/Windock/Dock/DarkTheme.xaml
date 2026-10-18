@@ -34,7 +34,7 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsHighlighted" Value="True">
-                            <Setter TargetName="Bg" Property="Background" Value="{StaticResource Windock.Accent}" />
+                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource Windock.Accent}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Foreground" Value="{StaticResource Windock.TextMuted}" />

@@ -46,4 +46,11 @@ internal sealed class PageSync
         if (answer != MessageBoxResult.OK) return;
         store.Update(s => SettingsDefaults.Create() with { Pins = s.Pins, FirstRunCompleted = s.FirstRunCompleted });
     }
+
+    /// Checked and Unchecked (not Click), so keyboard and UI Automation toggles are saved too.
+    public static void OnToggle(System.Windows.Controls.Primitives.ToggleButton box, Action<bool> set)
+    {
+        box.Checked += (_, _) => set(true);
+        box.Unchecked += (_, _) => set(false);
+    }
 }

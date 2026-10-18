@@ -26,8 +26,8 @@ internal partial class PinsPage : UserControl
         _sync = new PageSync(this, context.Store, Refresh);
 
         List.SelectionChanged += (_, _) => RemoveButton.IsEnabled = List.SelectedItem is not null;
-        ShowBin.Click += (_, _) => _sync.Edit(s => s with { Trash = s.Trash with { ShowRecycleBin = ShowBin.IsChecked == true } });
-        ConfirmTrash.Click += (_, _) => _sync.Edit(s => s with { Trash = s.Trash with { ConfirmBeforeTrash = ConfirmTrash.IsChecked == true } });
+        PageSync.OnToggle(ShowBin, on => _sync.Edit(s => s with { Trash = s.Trash with { ShowRecycleBin = on } }));
+        PageSync.OnToggle(ConfirmTrash, on => _sync.Edit(s => s with { Trash = s.Trash with { ConfirmBeforeTrash = on } }));
         HiddenList.SelectionChanged += (_, _) => ShowAgainButton.IsEnabled = HiddenList.SelectedItem is not null;
         ExplorerMenu.Checked += (_, _) => _sync.Edit(s => s with { Behavior = s.Behavior with { ExplorerContextMenu = true } });
         ExplorerMenu.Unchecked += (_, _) => _sync.Edit(s => s with { Behavior = s.Behavior with { ExplorerContextMenu = false } });

@@ -13,6 +13,8 @@ internal sealed class DockRenderer
     private readonly Canvas _canvas;
     private readonly Rectangle _activeZone = new() { Fill = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0)) };
     private readonly Border _plate = new() { CornerRadius = new CornerRadius(DockMetrics.PlateRadius), BorderThickness = new Thickness(1) };
+    private SolidColorBrush _dotBrush = new(Color.FromArgb(0xD9, 0xFF, 0xFF, 0xFF));
+    private string? _dotColor;
     private readonly Dictionary<string, Visuals> _visuals = new();
     private readonly Border _tooltip;
     private readonly TextBlock _tooltipText;
@@ -33,12 +35,23 @@ internal sealed class DockRenderer
         Panel.SetZIndex(_tooltip, 10);
     }
 
-    public void Render(LayoutResult layout, AppearanceSettings appearance, Func<string, ImageSource?> iconFor,
+    /// theme.PlateColor is the color actually shown (already resolved for "ikuti warna wallpaper").
+    public void Render(LayoutResult layout, AppearanceSettings appearance, ThemeSettings theme, Func<string, ImageSource?> iconFor,
         Func<string, int> windowCount, string? pressedKey, Func<string, double> liftFor, Func<string, bool> badgeFor)
     {
         Place(_activeZone, layout.ActiveZone);
         Place(_plate, layout.Plate);
-        _plate.Background = new SolidColorBrush(Color.FromArgb((byte)Math.Round(appearance.BackgroundOpacity * 255), 0x1E, 0x1E, 0x1E));
+        var plate = ThemeColor.TryParse(theme.PlateColor, out var pc) ? pc : new ThemeColor(0x1E, 0x1E, 0x1E);
+        _plate.Background = new SolidColorBrush(Color.FromArgb((byte)Math.Round(appearance.BackgroundOpacity * 255), plate.R, plate.G, plate.B));
+        _plate.CornerRadius = new CornerRadius(theme.CornerRadius);
+        _plate.BorderThickness = new Thickness(theme.ShowBorder ? 1 : 0);
+        if (_dotColor != theme.IndicatorColor)
+        {
+            _dotColor = theme.IndicatorColor;
+            var dc = ThemeColor.TryParse(theme.IndicatorColor, out var parsed) ? parsed : new ThemeColor(0xFF, 0xFF, 0xFF);
+            _dotBrush = new SolidColorBrush(Color.FromArgb(0xD9, dc.R, dc.G, dc.B));
+            _dotBrush.Freeze();
+        }
 
         var seen = new HashSet<string>();
         foreach (var item in layout.Items)
@@ -74,6 +87,7 @@ internal sealed class DockRenderer
                 dot.Visibility = d < offsets.Count ? Visibility.Visible : Visibility.Collapsed;
                 if (d >= offsets.Count) continue;
                 dot.Opacity = p;
+                dot.Fill = _dotBrush;
                 Canvas.SetLeft(dot, item.IndicatorCenterX + offsets[d] - DockMetrics.IndicatorDiameter / 2);
                 Canvas.SetTop(dot, item.IndicatorCenterY - DockMetrics.IndicatorDiameter / 2);
             }

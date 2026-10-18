@@ -38,6 +38,16 @@ internal sealed class BackdropWindow : IDisposable
 
     public IntPtr Handle { get; }
 
+    private double _radius = DockMetrics.PlateRadius;
+
+    /// Corner radius of the plate (DIP); the blur region follows it.
+    public void SetRadius(double radius)
+    {
+        if (_radius == radius) return;
+        _radius = radius;
+        _last = default;  // force a new region on the next update
+    }
+
     public void SetBlur(BlurMode mode)
     {
         _enabled = mode != BlurMode.Off;
@@ -54,7 +64,7 @@ internal sealed class BackdropWindow : IDisposable
         if (rect == _last && _visible) return;
         _last = rect;
         Native.SetWindowPos(Handle, dockHwnd, rect.X, rect.Y, rect.W, rect.H, Native.SWP_NOACTIVATE | Native.SWP_SHOWWINDOW);
-        WindowEffects.SetRoundRectRegion(Handle, new RectD(0, 0, rect.W, rect.H), DockMetrics.PlateRadius * dpiScale);
+        WindowEffects.SetRoundRectRegion(Handle, new RectD(0, 0, rect.W, rect.H), _radius * dpiScale);
         _visible = true;
     }
 

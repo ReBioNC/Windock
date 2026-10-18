@@ -151,6 +151,13 @@ internal sealed class AppHost
         SyncExplorerMenu(Settings.Current.Behavior.ExplorerContextMenu);
         SyncStartup(Settings.Current.Behavior.StartWithWindows);
 
+        ApplyAccent(Settings.Current.Theme.AccentColor);
+        UpdateWallpaperColor();
+        SystemEvents.UserPreferenceChanged += (_, e) =>
+        {
+            if (e.Category == UserPreferenceCategory.Desktop) UpdateWallpaperColor();
+        };
+
         Settings.Changed += OnSettingsChanged;
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
         MemoryTrim.After(TimeSpan.FromSeconds(20));
@@ -240,6 +247,34 @@ internal sealed class AppHost
         if (e.Sections.HasFlag(SettingsSection.Safety)) RegisterHotkey(e.New.Safety.EmergencyHotkey);
         if (e.New.Behavior.ExplorerContextMenu != e.Old.Behavior.ExplorerContextMenu) SyncExplorerMenu(e.New.Behavior.ExplorerContextMenu);
         if (e.New.Behavior.StartWithWindows != e.Old.Behavior.StartWithWindows) SyncStartup(e.New.Behavior.StartWithWindows);
+        if (e.New.Theme.AccentColor != e.Old.Theme.AccentColor) ApplyAccent(e.New.Theme.AccentColor);
+        if (e.New.Theme.FollowWallpaper && !e.Old.Theme.FollowWallpaper) UpdateWallpaperColor();
+    }
+
+    /// Accent color of menus, highlights and Pengaturan (dynamic resources, so open windows update too).
+    private static void ApplyAccent(string hex)
+    {
+        if (!ThemeColor.TryParse(hex, out var c)) return;
+        var brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(c.R, c.G, c.B));
+        brush.Freeze();
+        Application.Current.Resources["Windock.Accent"] = brush;
+        Application.Current.Resources["Settings.Accent"] = brush;
+    }
+
+    /// Recomputes the wallpaper-based plate color (only while that option is on).
+    private async void UpdateWallpaperColor()
+    {
+        if (!Settings.Current.Theme.FollowWallpaper) return;
+        try
+        {
+            var hex = await WallpaperColor.ComputeAsync();
+            Log.Info($"wallpaper color {hex}");
+            Dock?.SetWallpaperColor(hex);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("wallpaper color failed", ex);
+        }
     }
 
     /// Registers the emergency hotkey; returns false (and tells the user) when it is invalid or taken.

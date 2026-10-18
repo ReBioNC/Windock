@@ -1,0 +1,59 @@
+<UserControl x:Class="Windock.Settings.Pages.ThemePage" x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel>
+        <TextBlock Text="Tema" Style="{StaticResource PageTitle}" />
+
+        <Grid Style="{StaticResource Row}">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+            <TextBlock Text="Warna latar dock" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,6,0,0" />
+            <StackPanel Grid.Column="1">
+                <StackPanel Orientation="Horizontal">
+                    <WrapPanel x:Name="PlateSwatches" />
+                    <TextBox x:Name="PlateHex" Width="90" Margin="8,0,0,0" VerticalContentAlignment="Center" />
+                </StackPanel>
+                <CheckBox x:Name="FollowWallpaper" Content="Ikuti warna wallpaper" Margin="0,10,0,0" />
+                <TextBlock Style="{StaticResource Hint}" Margin="22,4,0,0"
+                           Text="Warna rata-rata wallpaper, digelapkan supaya ikon tetap jelas. Ikut berubah saat wallpaper diganti." />
+            </StackPanel>
+        </Grid>
+
+        <Grid Style="{StaticResource Row}">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /><ColumnDefinition Width="50" /></Grid.ColumnDefinitions>
+            <TextBlock Text="Kebulatan sudut" Style="{StaticResource Label}" />
+            <Slider x:Name="Radius" Grid.Column="1" Minimum="0" Maximum="30" IsSnapToTickEnabled="True" TickFrequency="1" />
+            <TextBlock Grid.Column="2" Style="{StaticResource Label}" HorizontalAlignment="Right" Text="{Binding Value, ElementName=Radius}" />
+        </Grid>
+
+        <Grid Style="{StaticResource Row}">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+            <TextBlock Text="Garis tepi" Style="{StaticResource Label}" />
+            <CheckBox x:Name="Border" Grid.Column="1" Content="Garis tipis di sekeliling dock" />
+        </Grid>
+
+        <Grid Style="{StaticResource Row}">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+            <TextBlock Text="Warna titik penanda" Style="{StaticResource Label}" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <WrapPanel x:Name="DotSwatches" />
+                <TextBox x:Name="DotHex" Width="90" Margin="8,0,0,0" VerticalContentAlignment="Center" />
+            </StackPanel>
+        </Grid>
+
+        <Grid Style="{StaticResource Row}">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+            <TextBlock Text="Warna aksen" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,6,0,0" />
+            <StackPanel Grid.Column="1">
+                <StackPanel Orientation="Horizontal">
+                    <WrapPanel x:Name="AccentSwatches" />
+                    <TextBox x:Name="AccentHex" Width="90" Margin="8,0,0,0" VerticalContentAlignment="Center" />
+                </StackPanel>
+                <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0" Text="Dipakai di menu klik kanan, sorotan, dan jendela Pengaturan ini." />
+            </StackPanel>
+        </Grid>
+
+        <TextBlock x:Name="Message" Style="{StaticResource Hint}" Foreground="{StaticResource Settings.Error}" Margin="0,4,0,0" />
+
+        <Button Content="Kembalikan tema default" HorizontalAlignment="Right" Margin="0,12,0,0" Click="OnReset" />
+    </StackPanel>
+</UserControl>

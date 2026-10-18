@@ -36,7 +36,7 @@
                                             <Setter TargetName="Bd" Property="Background" Value="{StaticResource Settings.ControlHover}" />
                                         </Trigger>
                                         <Trigger Property="IsSelected" Value="True">
-                                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource Settings.Accent}" />
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Settings.Accent}" />
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -45,6 +45,7 @@
                     </Style>
                 </ListBox.ItemContainerStyle>
                 <ListBoxItem Content="Tampilan" />
+                <ListBoxItem Content="Tema" />
                 <ListBoxItem Content="Perilaku" />
                 <ListBoxItem Content="Isi Dock" />
                 <ListBoxItem Content="Pengaman" />
