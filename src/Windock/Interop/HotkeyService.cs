@@ -2,12 +2,14 @@ using Windock.Core.Input;
 
 namespace Windock.Interop;
 
-/// One global hotkey (the emergency "turn Windock off" gesture).
+/// Global hotkeys keyed by id (emergency exit, launcher).
 internal sealed class HotkeyService : IDisposable
 {
-    private const int Id = 1;
+    public const int EmergencyId = 1;
+    public const int LauncherId = 2;
+
     private readonly MessageWindow _window;
-    private bool _registered;
+    private readonly HashSet<int> _registered = new();
 
     public HotkeyService(MessageWindow window)
     {
@@ -15,32 +17,38 @@ internal sealed class HotkeyService : IDisposable
         _window.Message += OnMessage;
     }
 
-    public event Action? Pressed;
+    /// Raised with the id of the hotkey that was pressed.
+    public event Action<int>? Pressed;
 
-    public bool TryRegister(HotkeyGesture gesture)
+    public bool TryRegister(int id, HotkeyGesture gesture)
     {
-        Unregister();
-        _registered = Native.RegisterHotKey(_window.Handle, Id, (uint)gesture.Modifiers | Native.MOD_NOREPEAT, (uint)gesture.VirtualKey);
-        return _registered;
+        Unregister(id);
+        if (!Native.RegisterHotKey(_window.Handle, id, (uint)gesture.Modifiers | Native.MOD_NOREPEAT, (uint)gesture.VirtualKey)) return false;
+        _registered.Add(id);
+        return true;
     }
 
-    public void Unregister()
+    public void Unregister(int id)
     {
-        if (!_registered) return;
-        Native.UnregisterHotKey(_window.Handle, Id);
-        _registered = false;
+        if (!_registered.Remove(id)) return;
+        Native.UnregisterHotKey(_window.Handle, id);
     }
 
     private void OnMessage(int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (msg != Native.WM_HOTKEY || wParam.ToInt32() != Id) return;
+        if (msg != Native.WM_HOTKEY || !_registered.Contains(wParam.ToInt32())) return;
         handled = true;
-        Pressed?.Invoke();
+        Pressed?.Invoke(wParam.ToInt32());
+    }
+
+    public void UnregisterAll()
+    {
+        foreach (var id in _registered.ToList()) Unregister(id);
     }
 
     public void Dispose()
     {
-        Unregister();
+        UnregisterAll();
         _window.Message -= OnMessage;
     }
 }

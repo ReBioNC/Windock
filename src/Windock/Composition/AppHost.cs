@@ -125,8 +125,9 @@ internal sealed class AppHost
         ApplyMode();
 
         Hotkey = new HotkeyService(Messages);
-        Hotkey.Pressed += () =>
+        Hotkey.Pressed += id =>
         {
+            if (id != HotkeyService.EmergencyId) return;
             Log.Info("emergency hotkey pressed");
             Exit();
         };
@@ -210,7 +211,7 @@ internal sealed class AppHost
         Log.Info("restore all");
         Try(() => Taskbar?.Restore());
         Try(() => AppBar?.Release());
-        Try(() => Hotkey?.Unregister());
+        Try(() => Hotkey?.UnregisterAll());
         Try(() => File.Delete(SessionMarker));
     }
 
@@ -232,7 +233,7 @@ internal sealed class AppHost
     /// Registers the emergency hotkey; returns false (and tells the user) when it is invalid or taken.
     public bool RegisterHotkey(string text, bool notify = true)
     {
-        if (Hotkey is not null && HotkeyGesture.TryParse(text, out var gesture) && Hotkey.TryRegister(gesture)) return true;
+        if (Hotkey is not null && HotkeyGesture.TryParse(text, out var gesture) && Hotkey.TryRegister(HotkeyService.EmergencyId, gesture)) return true;
         Log.Error($"emergency hotkey '{text}' could not be registered");
         if (notify) Tray?.ShowBalloon("Shortcut darurat tidak aktif", "Shortcut dipakai aplikasi lain atau tidak valid. Ganti di Pengaturan.");
         return false;
@@ -294,7 +295,7 @@ internal sealed class AppHost
 
     private void SuspendHotkey(bool suspend)
     {
-        if (suspend) Hotkey?.Unregister();
+        if (suspend) Hotkey?.Unregister(HotkeyService.EmergencyId);
         else RegisterHotkey(Settings.Current.Safety.EmergencyHotkey, notify: false);
     }
 

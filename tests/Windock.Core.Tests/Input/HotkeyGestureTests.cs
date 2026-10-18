@@ -40,6 +40,28 @@ public class HotkeyGestureTests
     }
 
     [Fact]
+    public void Space_is_a_key()
+    {
+        Assert.True(HotkeyGesture.TryParse("ctrl+alt+space", out var g));
+        Assert.Equal(HotkeyGesture.VkSpace, g.VirtualKey);
+        Assert.Equal("Ctrl+Alt+Space", g.ToString());
+    }
+
+    [Fact]
+    public void MinModifiers_allows_single_modifier_gestures()
+    {
+        Assert.False(HotkeyGesture.TryParse("Alt+Space", out _));
+        Assert.True(HotkeyGesture.TryParse("Alt+Space", out var g, minModifiers: 1));
+        Assert.Equal(HotkeyModifiers.Alt, g.Modifiers);
+        Assert.Equal("Alt+Space", g.ToString());
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public void A_bare_key_is_never_a_gesture(int min) => Assert.False(HotkeyGesture.TryParse("Space", out _, min));
+
+    [Fact]
     public void Modifier_values_match_win32_MOD_constants()
     {
         Assert.Equal(1, (int)HotkeyModifiers.Alt);
