@@ -14,7 +14,7 @@ public static class SettingsDefaults
             ShowRunningIndicators: true),
         Behavior: new BehaviorSettings(
             TaskbarMode: TaskbarMode.Hidden,
-            AutoHide: false,
+            AutoHide: DockAutoHide.Never,
             BounceOnLaunch: true,
             StartWithWindows: false,
             ExplorerContextMenu: true,

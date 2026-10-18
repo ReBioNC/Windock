@@ -16,7 +16,7 @@ public class SettingsJsonTests
         var original = TwoPins() with
         {
             Appearance = TwoPins().Appearance with { IconSize = 64, BackgroundOpacity = 0.7, Blur = BlurMode.Off },
-            Behavior = TwoPins().Behavior with { TaskbarMode = TaskbarMode.AutoHide, ExplorerContextMenu = false, Mode = DockMode.Windows },
+            Behavior = TwoPins().Behavior with { TaskbarMode = TaskbarMode.AutoHide, ExplorerContextMenu = false, Mode = DockMode.Windows, AutoHide = DockAutoHide.WhenCovered },
         };
 
         var parsed = SettingsJson.Parse(SettingsJson.Serialize(original));
@@ -54,6 +54,18 @@ public class SettingsJsonTests
 
         Assert.Contains("\"mode\": \"Windows\"", json);
         Assert.Equal(DockMode.Windock, SettingsJson.Parse(json.Replace("\"Windows\"", "\"Mac\"")).Behavior.Mode);
+    }
+
+    [Theory]
+    [InlineData("true", DockAutoHide.Always)]     // v0.1–0.4 stored a bool that was never used
+    [InlineData("false", DockAutoHide.Never)]
+    [InlineData("\"WhenCovered\"", DockAutoHide.WhenCovered)]
+    [InlineData("\"Sometimes\"", DockAutoHide.Never)]
+    public void Auto_hide_reads_mode_and_old_boolean(string value, DockAutoHide expected)
+    {
+        var s = SettingsJson.Parse("{ \"behavior\": { \"autoHide\": " + value + " } }");
+
+        Assert.Equal(expected, s.Behavior.AutoHide);
     }
 
     [Fact]

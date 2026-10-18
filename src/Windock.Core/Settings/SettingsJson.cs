@@ -42,7 +42,7 @@ public static class SettingsJson
                 ShowRunningIndicators: Get(a, "showRunningIndicators", d.Appearance.ShowRunningIndicators)),
             Behavior: new BehaviorSettings(
                 TaskbarMode: GetEnum(b, "taskbarMode", d.Behavior.TaskbarMode),
-                AutoHide: Get(b, "autoHide", d.Behavior.AutoHide),
+                AutoHide: ReadAutoHide(b, d.Behavior.AutoHide),
                 BounceOnLaunch: Get(b, "bounceOnLaunch", d.Behavior.BounceOnLaunch),
                 StartWithWindows: Get(b, "startWithWindows", d.Behavior.StartWithWindows),
                 ExplorerContextMenu: Get(b, "explorerContextMenu", d.Behavior.ExplorerContextMenu),
@@ -75,7 +75,7 @@ public static class SettingsJson
             ["behavior"] = new JsonObject
             {
                 ["taskbarMode"] = s.Behavior.TaskbarMode.ToString(),
-                ["autoHide"] = s.Behavior.AutoHide,
+                ["autoHide"] = s.Behavior.AutoHide.ToString(),
                 ["bounceOnLaunch"] = s.Behavior.BounceOnLaunch,
                 ["startWithWindows"] = s.Behavior.StartWithWindows,
                 ["explorerContextMenu"] = s.Behavior.ExplorerContextMenu,
@@ -87,6 +87,12 @@ public static class SettingsJson
         };
         return root.ToJsonString(Indented);
     }
+
+    /// Earlier versions stored an unused boolean here; true meant "hide", so it maps to Always.
+    private static DockAutoHide ReadAutoHide(JsonObject? behavior, DockAutoHide fallback) =>
+        behavior?["autoHide"] is JsonValue v && v.TryGetValue(out bool flag)
+            ? flag ? DockAutoHide.Always : DockAutoHide.Never
+            : GetEnum(behavior, "autoHide", fallback);
 
     private static IReadOnlyList<PinEntry> ReadPins(JsonArray? array)
     {

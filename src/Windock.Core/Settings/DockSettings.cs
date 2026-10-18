@@ -9,6 +9,9 @@ public enum TaskbarMode { Hidden, AutoHide, Visible }
 /// Windock = dock replaces the taskbar; Windows = everything back to stock Windows, settings kept.
 public enum DockMode { Windock, Windows }
 
+/// When the dock slides out of sight: never, while a window covers it (e.g. maximized), or always (Mac-style).
+public enum DockAutoHide { Never, WhenCovered, Always }
+
 public sealed record MagnificationSettings(bool Enabled, int Size);
 
 public sealed record AppearanceSettings(
@@ -19,7 +22,7 @@ public sealed record AppearanceSettings(
     BlurMode Blur,
     bool ShowRunningIndicators);
 
-public sealed record BehaviorSettings(TaskbarMode TaskbarMode, bool AutoHide, bool BounceOnLaunch, bool StartWithWindows, bool ExplorerContextMenu = true, DockMode Mode = DockMode.Windock);
+public sealed record BehaviorSettings(TaskbarMode TaskbarMode, DockAutoHide AutoHide, bool BounceOnLaunch, bool StartWithWindows, bool ExplorerContextMenu = true, DockMode Mode = DockMode.Windock);
 
 public sealed record SafetySettings(string EmergencyHotkey);
 
