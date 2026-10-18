@@ -340,6 +340,13 @@ internal sealed partial class DockController
 
     private void OnRendering(object? sender, EventArgs e)
     {
+        if (_hidden)
+        {
+            // Hidden (fullscreen app / Mode Windows): a frame now would re-show the blur window.
+            CompositionTarget.Rendering -= OnRendering;
+            _renderHooked = false;
+            return;
+        }
         try
         {
             var now = _clock.Now;
