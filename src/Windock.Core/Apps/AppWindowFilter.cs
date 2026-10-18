@@ -15,7 +15,8 @@ public sealed record WindowFacts(
     string Title,
     string ClassName,
     string ProcessName,
-    bool IsOwnProcess);
+    bool IsOwnProcess,
+    bool IsChild = false);
 
 /// Which windows deserve a dock icon — close to the taskbar's own rules (ARCHITECTURE §6.1).
 public static class AppWindowFilter
@@ -38,6 +39,8 @@ public static class AppWindowFilter
     public static bool IsAppWindow(WindowFacts w)
     {
         if (!w.IsVisible || w.IsCloaked || w.HiddenFromTaskbar) return false;
+        // Child windows live inside another window (e.g. Electron's "Chrome Legacy Window"); never their own app.
+        if (w.IsChild) return false;
         if (!w.IsAppWindow && (w.IsToolWindow || w.HasOwner || w.IsNoActivate)) return false;
         if (!w.IsAppWindow && w.Title.Length == 0) return false;
         if (!w.IsMinimized && (w.Width <= 1 || w.Height <= 1)) return false;

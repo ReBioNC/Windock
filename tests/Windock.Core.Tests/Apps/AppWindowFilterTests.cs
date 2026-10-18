@@ -8,7 +8,7 @@ public class AppWindowFilterTests
     private static WindowFacts Normal() => new(
         IsVisible: true, IsCloaked: false, IsToolWindow: false, IsAppWindow: false, IsNoActivate: false, HasOwner: false,
         HiddenFromTaskbar: false, IsMinimized: false, Width: 800, Height: 600,
-        Title: "Untitled - Notepad", ClassName: "Notepad", ProcessName: "notepad", IsOwnProcess: false);
+        Title: "Untitled - Notepad", ClassName: "Notepad", ProcessName: "notepad", IsOwnProcess: false, IsChild: false);
 
     [Fact]
     public void Normal_window_is_an_app() => Assert.True(AppWindowFilter.IsAppWindow(Normal()));
@@ -34,6 +34,15 @@ public class AppWindowFilterTests
     {
         Assert.False(AppWindowFilter.IsAppWindow(Normal() with { Title = "" }));
         Assert.True(AppWindowFilter.IsAppWindow(Normal() with { Title = "", IsAppWindow = true }));
+    }
+
+    [Fact]
+    public void Child_windows_inside_an_app_are_not_apps() // e.g. Discord/Electron "Chrome Legacy Window"
+    {
+        var legacy = Normal() with { IsChild = true, Title = "Chrome Legacy Window", ClassName = "Chrome_RenderWidgetHostHWND", ProcessName = "Discord" };
+
+        Assert.False(AppWindowFilter.IsAppWindow(legacy));
+        Assert.False(AppWindowFilter.IsAppWindow(legacy with { IsAppWindow = true }));
     }
 
     [Fact]

@@ -138,7 +138,8 @@ internal sealed class WindowTracker : IWindowSource, IDisposable
             Title: Native.WindowText(h),
             ClassName: Native.ClassName(h),
             ProcessName: ProcessNameOf(pid),
-            IsOwnProcess: pid == Environment.ProcessId);
+            IsOwnProcess: pid == Environment.ProcessId,
+            IsChild: (Native.GetWindowLongPtr(h, Native.GWL_STYLE).ToInt64() & Native.WS_CHILD) != 0);
         return AppWindowFilter.IsAppWindow(facts);
     }
 
