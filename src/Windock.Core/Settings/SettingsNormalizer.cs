@@ -7,6 +7,8 @@ public static class SettingsNormalizer
     public const int MaxIconSize = 96;
     public const int MaxMagnificationSize = 128;
     public const double MinOpacityWithoutBlur = 0.30;
+    public const int MinCornerRadius = 0, MaxCornerRadius = 30;
+    public const int MinLauncherResults = 5, MaxLauncherResults = 12;
 
     public static DockSettings Normalize(DockSettings s)
     {
@@ -22,6 +24,17 @@ public static class SettingsNormalizer
             Magnification = a.Magnification.Size == mag ? a.Magnification : a.Magnification with { Size = mag },
             BackgroundOpacity = opacity,
         };
-        return appearance == a ? s : s with { Appearance = appearance };
+        var t = s.Theme;
+        var theme = t with
+        {
+            PlateColor = ThemeColor.Normalize(t.PlateColor) ?? ThemeSettings.Default.PlateColor,
+            IndicatorColor = ThemeColor.Normalize(t.IndicatorColor) ?? ThemeSettings.Default.IndicatorColor,
+            AccentColor = ThemeColor.Normalize(t.AccentColor) ?? ThemeSettings.Default.AccentColor,
+            CornerRadius = Math.Clamp(t.CornerRadius, MinCornerRadius, MaxCornerRadius),
+        };
+        var launcher = s.Launcher with { MaxResults = Math.Clamp(s.Launcher.MaxResults, MinLauncherResults, MaxLauncherResults) };
+
+        if (appearance == a && theme == t && launcher == s.Launcher) return s;
+        return s with { Appearance = appearance, Theme = theme, Launcher = launcher };
     }
 }

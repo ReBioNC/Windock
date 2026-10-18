@@ -12,7 +12,40 @@ public enum DockMode { Windock, Windows }
 /// When the dock slides out of sight: never, while a window covers it (e.g. maximized), or always (Mac-style).
 public enum DockAutoHide { Never, WhenCovered, Always }
 
+/// How a window asking for attention (flashing) is shown on its dock icon.
+public enum AttentionStyle { Bounce, Dot, Off }
+
+public enum AttentionRepeat { UntilOpened, Once }
+
 public sealed record MagnificationSettings(bool Enabled, int Size);
+
+/// Colors are "#RRGGBB".
+public sealed record ThemeSettings(string PlateColor, int CornerRadius, bool ShowBorder, string IndicatorColor, string AccentColor, bool FollowWallpaper)
+{
+    public static readonly ThemeSettings Default = new("#1E1E1E", 16, true, "#FFFFFF", "#2F6FE4", false);
+}
+
+public sealed record StatusSettings(
+    bool Enabled, bool ShowTray, bool ShowWifi, bool ShowVolume, bool ShowBattery, bool ShowBatteryPercent,
+    bool ShowLanguage, bool ShowClock, bool Clock24Hour, bool ShowDate, bool ShowSeconds, bool ShowNotifications)
+{
+    public static readonly StatusSettings Default = new(
+        Enabled: true, ShowTray: true, ShowWifi: true, ShowVolume: true, ShowBattery: true, ShowBatteryPercent: false,
+        ShowLanguage: true, ShowClock: true, Clock24Hour: true, ShowDate: true, ShowSeconds: false, ShowNotifications: true);
+}
+
+public sealed record LauncherSettings(bool Enabled, string Hotkey, int MaxResults, bool IncludeFiles)
+{
+    public static readonly LauncherSettings Default = new(true, "Alt+Space", 8, false);
+}
+
+public sealed record TrashSettings(bool ShowRecycleBin, bool ConfirmBeforeTrash)
+{
+    public static readonly TrashSettings Default = new(true, true);
+}
+
+/// A running app the user chose not to show in the dock.
+public sealed record HiddenApp(string AppId, string Name);
 
 public sealed record AppearanceSettings(
     DockPosition Position,
@@ -22,7 +55,9 @@ public sealed record AppearanceSettings(
     BlurMode Blur,
     bool ShowRunningIndicators);
 
-public sealed record BehaviorSettings(TaskbarMode TaskbarMode, DockAutoHide AutoHide, bool BounceOnLaunch, bool StartWithWindows, bool ExplorerContextMenu = true, DockMode Mode = DockMode.Windock);
+public sealed record BehaviorSettings(TaskbarMode TaskbarMode, DockAutoHide AutoHide, bool BounceOnLaunch, bool StartWithWindows,
+    bool ExplorerContextMenu = true, DockMode Mode = DockMode.Windock,
+    AttentionStyle Attention = AttentionStyle.Bounce, AttentionRepeat AttentionRepeat = AttentionRepeat.UntilOpened);
 
 public sealed record SafetySettings(string EmergencyHotkey);
 
@@ -36,7 +71,13 @@ public sealed record DockSettings(
     SafetySettings Safety,
     bool FirstRunCompleted)
 {
-    // Pins compare by content, not by list reference.
+    public ThemeSettings Theme { get; init; } = ThemeSettings.Default;
+    public StatusSettings Status { get; init; } = StatusSettings.Default;
+    public LauncherSettings Launcher { get; init; } = LauncherSettings.Default;
+    public TrashSettings Trash { get; init; } = TrashSettings.Default;
+    public IReadOnlyList<HiddenApp> HiddenApps { get; init; } = Array.Empty<HiddenApp>();
+
+    // Lists compare by content, not by reference.
     public bool Equals(DockSettings? other) =>
         other is not null
         && Version == other.Version
@@ -44,7 +85,12 @@ public sealed record DockSettings(
         && Behavior == other.Behavior
         && Pins.SequenceEqual(other.Pins)
         && Safety == other.Safety
-        && FirstRunCompleted == other.FirstRunCompleted;
+        && FirstRunCompleted == other.FirstRunCompleted
+        && Theme == other.Theme
+        && Status == other.Status
+        && Launcher == other.Launcher
+        && Trash == other.Trash
+        && HiddenApps.SequenceEqual(other.HiddenApps);
 
     public override int GetHashCode()
     {
@@ -55,6 +101,11 @@ public sealed record DockSettings(
         foreach (var pin in Pins) hash.Add(pin);
         hash.Add(Safety);
         hash.Add(FirstRunCompleted);
+        hash.Add(Theme);
+        hash.Add(Status);
+        hash.Add(Launcher);
+        hash.Add(Trash);
+        foreach (var app in HiddenApps) hash.Add(app);
         return hash.ToHashCode();
     }
 }

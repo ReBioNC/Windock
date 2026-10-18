@@ -61,6 +61,20 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void Update_reports_new_v06_sections()
+    {
+        var store = NewStore();
+        SettingsSection sections = SettingsSection.None;
+        store.Changed += (_, e) => sections = e.Sections;
+
+        store.Update(s => s with { Theme = s.Theme with { CornerRadius = 4 }, Status = s.Status with { ShowWifi = false },
+            Launcher = s.Launcher with { Enabled = false }, Trash = s.Trash with { ShowRecycleBin = false },
+            HiddenApps = new[] { new HiddenApp("x", "X") } });
+
+        Assert.Equal(SettingsSection.Theme | SettingsSection.Status | SettingsSection.Launcher | SettingsSection.Trash | SettingsSection.HiddenApps, sections);
+    }
+
+    [Fact]
     public void Update_with_no_effective_change_raises_nothing()
     {
         var store = NewStore();
