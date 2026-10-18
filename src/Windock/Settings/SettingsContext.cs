@@ -12,6 +12,7 @@ internal sealed record SettingsContext(
     IPinResolver Pins,
     Func<IReadOnlyList<PinEntry>> DefaultPins,
     Func<string, bool> TryRegisterHotkey,
+    Func<string, bool> TryRegisterLauncherHotkey,
     Action<bool> SuspendHotkey,
     string DataDirectory,
     ILog Log);

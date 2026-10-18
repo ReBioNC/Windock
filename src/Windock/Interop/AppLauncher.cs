@@ -45,7 +45,7 @@ internal sealed class AppLauncher(ILog log, Action<string, string> notifyError)
                 Start("explorer.exe", target);
                 return;
             }
-            if (!target.StartsWith("shell:", StringComparison.OrdinalIgnoreCase) && !File.Exists(target))
+            if (!target.StartsWith("shell:", StringComparison.OrdinalIgnoreCase) && !File.Exists(target) && !Directory.Exists(target))
                 throw new FileNotFoundException("Launch target not found", target);
             var info = new ProcessStartInfo(target) { UseShellExecute = true };
             if (target.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) info.WorkingDirectory = Path.GetDirectoryName(target) ?? "";

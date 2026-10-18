@@ -52,6 +52,7 @@ internal sealed class AppHost
     public ShellHook? Shell { get; private set; }
     public Status.StatusArea? StatusArea { get; private set; }
     private Win32TaskbarController? _taskbarWindows;
+    private Launcher.LauncherWindow? _launcherWindow;
 
     public void Start(string[] args)
     {
@@ -144,11 +145,16 @@ internal sealed class AppHost
         Hotkey = new HotkeyService(Messages);
         Hotkey.Pressed += id =>
         {
-            if (id != HotkeyService.EmergencyId) return;
+            if (id == HotkeyService.LauncherId)
+            {
+                ToggleLauncher();
+                return;
+            }
             Log.Info("emergency hotkey pressed");
             Exit();
         };
         RegisterHotkey(Settings.Current.Safety.EmergencyHotkey);
+        RegisterLauncherHotkey(Settings.Current.Launcher);
 
         Commands = new CommandChannel(Application.Current.Dispatcher, Log);
         Commands.CommandReceived += (verb, argument) =>
@@ -180,7 +186,8 @@ internal sealed class AppHost
             _settingsWindow.Activate();
             return;
         }
-        var context = new SettingsContext(Settings, Icons, PinResolver, DetectDefaultPins, text => RegisterHotkey(text, notify: false), SuspendHotkey, DataDirectory, Log);
+        var context = new SettingsContext(Settings, Icons, PinResolver, DetectDefaultPins, text => RegisterHotkey(text, notify: false),
+            text => RegisterLauncherHotkey(Settings.Current.Launcher with { Hotkey = text }, notify: false), SuspendHotkey, DataDirectory, Log);
         _settingsWindow = new SettingsWindow(context);
         _settingsWindow.Closed += (_, _) =>
         {
@@ -256,6 +263,7 @@ internal sealed class AppHost
         if (e.New.Behavior.StartWithWindows != e.Old.Behavior.StartWithWindows) SyncStartup(e.New.Behavior.StartWithWindows);
         if (e.New.Theme.AccentColor != e.Old.Theme.AccentColor) ApplyAccent(e.New.Theme.AccentColor);
         if (e.Sections.HasFlag(SettingsSection.Status)) StatusArea?.ApplySettings();
+        if (e.Sections.HasFlag(SettingsSection.Launcher)) RegisterLauncherHotkey(e.New.Launcher);
         if (e.New.Theme.FollowWallpaper && !e.Old.Theme.FollowWallpaper) UpdateWallpaperColor();
     }
 
@@ -344,6 +352,45 @@ internal sealed class AppHost
         Log.Error($"emergency hotkey '{text}' could not be registered");
         if (notify) Tray?.ShowBalloon("Shortcut darurat tidak aktif", "Shortcut dipakai aplikasi lain atau tidak valid. Ganti di Pengaturan.");
         return false;
+    }
+
+    /// Registers (or removes) the launcher hotkey; false when it is invalid or taken.
+    public bool RegisterLauncherHotkey(LauncherSettings launcher, bool notify = true)
+    {
+        if (Hotkey is null) return false;
+        if (!launcher.Enabled)
+        {
+            Hotkey.Unregister(HotkeyService.LauncherId);
+            return true;
+        }
+        if (HotkeyGesture.TryParse(launcher.Hotkey, out var gesture, minModifiers: 1) && Hotkey.TryRegister(HotkeyService.LauncherId, gesture)) return true;
+        Log.Error($"launcher hotkey '{launcher.Hotkey}' could not be registered");
+        if (notify) Tray?.ShowBalloon("Shortcut launcher tidak aktif", $"{launcher.Hotkey} dipakai aplikasi lain atau tidak valid. Ganti di Pengaturan > Launcher.");
+        return false;
+    }
+
+    private void ToggleLauncher()
+    {
+        if (_launcherWindow is not null)
+        {
+            _launcherWindow.CloseOnce();
+            return;
+        }
+        if (Icons is null || Launcher is null) return;
+        var l = Settings.Current.Launcher;
+        Log.Info("launcher opened");
+        _launcherWindow = new Launcher.LauncherWindow(Icons, l.MaxResults, l.IncludeFiles, entry =>
+        {
+            Log.Info($"launcher open {entry.Target}");
+            Launcher.Launch(entry.Target, entry.Name);
+        });
+        _launcherWindow.Closed += (_, _) =>
+        {
+            _launcherWindow = null;
+            MemoryTrim.After(TimeSpan.FromSeconds(2));  // the index and window are garbage now
+        };
+        _launcherWindow.Show();
+        _launcherWindow.Activate();
     }
 
     /// Pins a program or shortcut (Explorer "Pin ke Windock", drag and drop). index = gap among pins; null = last.
@@ -441,8 +488,13 @@ internal sealed class AppHost
 
     private void SuspendHotkey(bool suspend)
     {
-        if (suspend) Hotkey?.Unregister(HotkeyService.EmergencyId);
-        else RegisterHotkey(Settings.Current.Safety.EmergencyHotkey, notify: false);
+        if (suspend)
+        {
+            Hotkey?.UnregisterAll();
+            return;
+        }
+        RegisterHotkey(Settings.Current.Safety.EmergencyHotkey, notify: false);
+        RegisterLauncherHotkey(Settings.Current.Launcher, notify: false);
     }
 
     private void ReserveSpace()

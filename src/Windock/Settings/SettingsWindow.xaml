@@ -49,6 +49,7 @@
                 <ListBoxItem Content="Area status" />
                 <ListBoxItem Content="Perilaku" />
                 <ListBoxItem Content="Isi Dock" />
+                <ListBoxItem Content="Launcher" />
                 <ListBoxItem Content="Pengaman" />
                 <ListBoxItem Content="Tentang" />
             </ListBox>
