@@ -34,7 +34,7 @@ internal sealed class DockRenderer
     }
 
     public void Render(LayoutResult layout, AppearanceSettings appearance, Func<string, ImageSource?> iconFor,
-        Func<string, int> windowCount, string? pressedKey, Func<string, double> liftFor)
+        Func<string, int> windowCount, string? pressedKey, Func<string, double> liftFor, Func<string, bool> badgeFor)
     {
         Place(_activeZone, layout.ActiveZone);
         Place(_plate, layout.Plate);
@@ -47,6 +47,18 @@ internal sealed class DockRenderer
             if (!_visuals.TryGetValue(item.Key, out var v)) _visuals[item.Key] = v = Create(item.Kind);
             Place(v.Element, item.Bounds);
             if (liftFor(item.Key) is var lift and > 0) Canvas.SetTop(v.Element, item.Bounds.Y - lift);
+            if (v.Badge is { } badge)
+            {
+                var show = item.SlotProgress >= 1 && badgeFor(item.Key);
+                badge.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+                if (show)
+                {
+                    var size = Math.Round(item.Bounds.Width * 0.28);
+                    badge.Width = badge.Height = size;
+                    Canvas.SetLeft(badge, item.Bounds.X + item.Bounds.Width - size * 0.8);
+                    Canvas.SetTop(badge, item.Bounds.Y - size * 0.2);
+                }
+            }
 
             // Entering/leaving items fade and scale between 60% and 100% (DESIGN §4).
             var p = Math.Clamp(item.SlotProgress, 0, 1);
@@ -71,6 +83,7 @@ internal sealed class DockRenderer
         {
             _canvas.Children.Remove(_visuals[gone].Element);
             foreach (var dot in _visuals[gone].Dots) _canvas.Children.Remove(dot);
+            if (_visuals[gone].Badge is { } badge) _canvas.Children.Remove(badge);
             _visuals.Remove(gone);
         }
     }
@@ -104,7 +117,18 @@ internal sealed class DockRenderer
             _canvas.Children.Add(dot);
             dots.Add(dot);
         }
-        return new Visuals(element, dots);
+        Ellipse? badge = null;
+        if (kind == LayoutItemKind.Icon)
+        {
+            badge = new Ellipse
+            {
+                Fill = new SolidColorBrush(Color.FromRgb(0xFF, 0x3B, 0x30)), Stroke = new SolidColorBrush(Color.FromArgb(0xCC, 0xFF, 0xFF, 0xFF)),
+                StrokeThickness = 1.5, IsHitTestVisible = false, Visibility = Visibility.Collapsed,
+            };
+            _canvas.Children.Add(badge);
+            Panel.SetZIndex(badge, 5);
+        }
+        return new Visuals(element, dots, badge);
     }
 
     private static void Place(FrameworkElement e, RectD r)
@@ -115,5 +139,5 @@ internal sealed class DockRenderer
         e.Height = Math.Max(0, r.Height);
     }
 
-    private sealed record Visuals(FrameworkElement Element, IReadOnlyList<Ellipse> Dots);
+    private sealed record Visuals(FrameworkElement Element, IReadOnlyList<Ellipse> Dots, Ellipse? Badge);
 }

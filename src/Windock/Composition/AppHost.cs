@@ -49,6 +49,7 @@ internal sealed class AppHost
     public CommandChannel? Commands { get; private set; }
     public AutoHideController? AutoHide { get; private set; }
     public RecycleBinWatcher? BinWatcher { get; private set; }
+    public ShellHook? Shell { get; private set; }
 
     public void Start(string[] args)
     {
@@ -119,6 +120,8 @@ internal sealed class AppHost
         Dock.PreviewCloseRequested += hwnd => Launcher.CloseWindows(new[] { hwnd });
         Dock.SetHidden(InWindowsMode);
         Dock.Start();
+        Shell = new ShellHook(Messages);
+        Shell.Flashed += hwnd => Dock.RequestAttention(hwnd);
         BinWatcher = new RecycleBinWatcher();
         BinWatcher.Changed += RefreshRecycleBin;
         RefreshRecycleBin();

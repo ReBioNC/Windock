@@ -143,6 +143,7 @@ internal sealed partial class DockController
         if (e.Sections.HasFlag(SettingsSection.Pins)) _model.SetPins(e.New.Pins);
         if (e.Sections.HasFlag(SettingsSection.HiddenApps)) _model.SetHiddenApps(e.New.HiddenApps.Select(h => h.AppId));
         if (e.Sections.HasFlag(SettingsSection.Trash)) _model.SetShowRecycleBin(e.New.Trash.ShowRecycleBin);
+        if (e.Sections.HasFlag(SettingsSection.Behavior)) ApplyAttentionSettings(e.Old.Behavior, e.New.Behavior);
         if (!e.Sections.HasFlag(SettingsSection.Appearance)) return;
 
         var a = e.New.Appearance;
@@ -206,6 +207,7 @@ internal sealed partial class DockController
     private void OnItemsChanged(object? sender, DockItemsChangedEventArgs e)
     {
         StopLaunchBounces();
+        ClearAttention();
         var added = e.Added.ToList();
         if (_revive is not null && _model.Find(_revive) is not null && !added.Contains(_revive)) added.Add(_revive);
         var removed = e.Removed.Concat(_pendingRemoved).ToList();
@@ -442,7 +444,7 @@ internal sealed partial class DockController
 
         _renderer.Render(_layout, settings, key => _iconImages.GetValueOrDefault(key),
             key => _model.Find(key)?.Windows.Count ?? 0, _pressedKey,
-            key => _bounce.Lift(key, now) * BounceAnimator.HeightFactor * settings.IconSize);
+            key => _bounce.Lift(key, now) * BounceAnimator.HeightFactor * settings.IconSize, ShowsAttentionBadge);
 
         ApplySlide(now);
     }
