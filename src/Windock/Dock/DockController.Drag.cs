@@ -182,6 +182,7 @@ internal sealed partial class DockController
         _revive = drag.Item.Key;
         if (drop is not null) DropCompleted?.Invoke(drop);
         FlushPendingOrder();  // nothing changed (e.g. dropped where it was): still restore the icon
+        InteractionEnded?.Invoke();
         return true;
     }
 
@@ -196,6 +197,7 @@ internal sealed partial class DockController
         _gapIndex = -1;
         _revive = drag?.Item.Key;
         FlushPendingOrder();
+        InteractionEnded?.Invoke();
     }
 
     private void FlushPendingOrder()

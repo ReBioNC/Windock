@@ -47,6 +47,7 @@ internal sealed class AppHost
     public TaskbarModeCoordinator? Taskbar { get; private set; }
     public HotkeyService? Hotkey { get; private set; }
     public CommandChannel? Commands { get; private set; }
+    public AutoHideController? AutoHide { get; private set; }
 
     public void Start(string[] args)
     {
@@ -105,6 +106,8 @@ internal sealed class AppHost
         {
             var menu = menus.Build(item);
             menu.PlacementTarget = Dock.MenuAnchor;
+            Dock.SetMenuOpen(true);
+            menu.Closed += (_, _) => Dock.SetMenuOpen(false);
             menu.IsOpen = true;
         };
         Dock.DropCompleted += HandleDrop;
@@ -113,6 +116,7 @@ internal sealed class AppHost
         Dock.SetHidden(InWindowsMode);
         Dock.Start();
 
+        AutoHide = new AutoHideController(Dock, Windows, () => Settings.Current.Behavior.AutoHide, Log);
         AppBar = new AppBarService(Log);
         AppBar.Reserved += bottomPx => Dock.SetBottomEdge(bottomPx / Dock.DpiScale);
         // The shell also reports the desktop itself as "fullscreen"; treat its signal only as a cue to check.
@@ -214,6 +218,11 @@ internal sealed class AppHost
     {
         Dock?.ApplySettings(e);
         if (e.Sections.HasFlag(SettingsSection.Appearance) && e.New.Appearance.IconSize != e.Old.Appearance.IconSize) ReserveSpace();
+        if (e.New.Behavior.AutoHide != e.Old.Behavior.AutoHide)
+        {
+            ReserveSpace();
+            AutoHide?.Apply();
+        }
         if (e.New.Behavior.Mode != e.Old.Behavior.Mode) ApplyMode();
         else if (e.Sections.HasFlag(SettingsSection.Behavior) && !InWindowsMode) Taskbar?.Apply(e.New.Behavior.TaskbarMode);
         if (e.Sections.HasFlag(SettingsSection.Safety)) RegisterHotkey(e.New.Safety.EmergencyHotkey);
@@ -292,6 +301,11 @@ internal sealed class AppHost
     private void ReserveSpace()
     {
         if (InWindowsMode || Dock is null) return;
+        if (!AutoHidePolicy.ReservesScreenSpace(Settings.Current.Behavior.AutoHide))
+        {
+            AppBar?.Release();  // a hiding dock leaves the whole screen to windows
+            return;
+        }
         AppBar?.Reserve(DockMetrics.ReservedThickness(Settings.Current.Appearance.IconSize), Dock.DpiScale);
     }
 
@@ -304,7 +318,11 @@ internal sealed class AppHost
         UpdateDockVisibility();
     }
 
-    private void UpdateDockVisibility() => Dock?.SetHidden(InWindowsMode || _fullscreen);
+    private void UpdateDockVisibility()
+    {
+        Dock?.SetHidden(InWindowsMode || _fullscreen);
+        AutoHide?.SetSuspended(InWindowsMode || _fullscreen);
+    }
 
     private void OnSystemMessage(int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {

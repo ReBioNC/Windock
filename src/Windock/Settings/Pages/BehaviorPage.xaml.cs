@@ -18,7 +18,12 @@ internal partial class BehaviorPage : UserControl
         Hidden.Checked += (_, _) => SetMode(TaskbarMode.Hidden);
         AutoHide.Checked += (_, _) => SetMode(TaskbarMode.AutoHide);
         Visible.Checked += (_, _) => SetMode(TaskbarMode.Visible);
+        HideNever.Checked += (_, _) => SetAutoHide(DockAutoHide.Never);
+        HideWhenCovered.Checked += (_, _) => SetAutoHide(DockAutoHide.WhenCovered);
+        HideAlways.Checked += (_, _) => SetAutoHide(DockAutoHide.Always);
     }
+
+    private void SetAutoHide(DockAutoHide mode) => _sync.Edit(s => s with { Behavior = s.Behavior with { AutoHide = mode } });
 
     private void SetMode(TaskbarMode mode) => _sync.Edit(s => s with { Behavior = s.Behavior with { TaskbarMode = mode } });
 
@@ -27,6 +32,9 @@ internal partial class BehaviorPage : UserControl
         Hidden.IsChecked = s.Behavior.TaskbarMode == TaskbarMode.Hidden;
         AutoHide.IsChecked = s.Behavior.TaskbarMode == TaskbarMode.AutoHide;
         Visible.IsChecked = s.Behavior.TaskbarMode == TaskbarMode.Visible;
+        HideNever.IsChecked = s.Behavior.AutoHide == DockAutoHide.Never;
+        HideWhenCovered.IsChecked = s.Behavior.AutoHide == DockAutoHide.WhenCovered;
+        HideAlways.IsChecked = s.Behavior.AutoHide == DockAutoHide.Always;
         HiddenHint.Text = s.Behavior.TaskbarMode == TaskbarMode.Hidden
             ? $"Shortcut darurat: {s.Safety.EmergencyHotkey}. Tekan untuk mematikan Windock dan mengembalikan taskbar."
             : "";

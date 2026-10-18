@@ -238,6 +238,7 @@ internal sealed partial class DockController
         _pressedKey = null;
         HideTooltip();
         if (_preview is not null) _previewHideTimer.Start();
+        InteractionEnded?.Invoke();
         _animator.SetPointerInside(false, _clock.Now);
         Invalidate();
     }
@@ -309,8 +310,10 @@ internal sealed partial class DockController
     public void HidePreview()
     {
         _previewHideTimer.Stop();
-        _preview?.Close();
+        if (_preview is null) return;
+        _preview.Close();
         _preview = null;
+        InteractionEnded?.Invoke();
     }
 
     private void RefreshPreview()
@@ -341,7 +344,7 @@ internal sealed partial class DockController
         {
             var now = _clock.Now;
             RenderFrame(now);
-            if (!_animator.IsAnimating(now) && !_dirty)
+            if (!_animator.IsAnimating(now) && !IsSliding(now) && !_dirty)
             {
                 CompositionTarget.Rendering -= OnRendering;
                 _renderHooked = false;
@@ -372,7 +375,6 @@ internal sealed partial class DockController
         _renderer.Render(_layout, settings, key => _iconImages.GetValueOrDefault(key),
             key => _model.Find(key)?.Windows.Count ?? 0, _pressedKey);
 
-        var origin = _window.PhysicalOrigin;
-        _backdrop.Update(_layout.Plate, _window.DpiScale, origin.X, origin.Y, _window.Handle);
+        ApplySlide(now);
     }
 }

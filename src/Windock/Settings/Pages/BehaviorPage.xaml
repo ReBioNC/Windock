@@ -15,8 +15,20 @@
             </StackPanel>
         </Grid>
 
+        <Grid Style="{StaticResource Row}">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+            <TextBlock Text="Sembunyikan dock" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+            <StackPanel Grid.Column="1">
+                <RadioButton x:Name="HideNever" GroupName="AutoHide" Content="Tidak pernah" Margin="0,0,0,8" />
+                <RadioButton x:Name="HideWhenCovered" GroupName="AutoHide" Content="Saat jendela menutupi dock (mis. di-maximize)" Margin="0,0,0,8" />
+                <RadioButton x:Name="HideAlways" GroupName="AutoHide" Content="Selalu (seperti Mac)" Margin="0,0,0,8" />
+                <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
+                           Text="Saat tersembunyi, sentuhkan kursor ke tepi bawah layar untuk memunculkan dock. Jendela yang di-maximize memakai layar penuh." />
+            </StackPanel>
+        </Grid>
+
         <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"
-                   Text="Dock auto-hide, animasi memantul, dan jalan saat Windows nyala hadir di versi berikutnya." />
+                   Text="Animasi memantul dan jalan saat Windows nyala hadir di versi berikutnya." />
 
         <Button Content="Kembalikan ke default" HorizontalAlignment="Right" Margin="0,18,0,0" Click="OnReset" />
     </StackPanel>

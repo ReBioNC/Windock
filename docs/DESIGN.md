@@ -68,7 +68,7 @@ Smax   = ukuranMagnification / ukuranIkon
 | Ikon baru masuk dock | Lebar slot tumbuh dari 0 ke penuh dalam 200 ms, sementara ikon fade-in dari opacity 0 dan skala 0,6 |
 | Ikon keluar dock | Kebalikan animasi masuk, 200 ms |
 | Klik ikon | Ikon menggelap (brightness 70%) selama ditekan |
-| Dock auto-hide | Plate dan ikon meluncur keluar layar dalam 250 ms (*ease-in cubic*) setelah kursor keluar 500 ms. Masuk kembali dalam 250 ms (*ease-out cubic*) saat kursor menyentuh 2 DIP terakhir di tepi layar |
+| Dock auto-hide | Mode **Tidak pernah / Saat jendela menutupi dock / Selalu**. Plate dan ikon meluncur keluar layar dalam 250 ms (*ease-in cubic*) setelah kursor keluar 600 ms. Masuk kembali dalam 250 ms (*ease-out cubic*) saat kursor menyentuh 2 DIP terakhir di tepi layar (atau file diseret ke sana). Selama mode bukan "Tidak pernah", ruang layar tidak dicadangkan |
 | Drag urutkan pin | Ikon yang di-drag mengikuti kursor dengan opacity 80%, dan ikon lain bergeser memberi ruang dalam 150 ms |
 | Aplikasi layar penuh | Dock langsung disembunyikan tanpa animasi, supaya tidak mengganggu game |
 

@@ -32,6 +32,7 @@ internal sealed class WindowTracker : IWindowSource, IDisposable
                      (Native.EVENT_SYSTEM_MINIMIZESTART, Native.EVENT_SYSTEM_MINIMIZEEND),
                      (Native.EVENT_OBJECT_DESTROY, Native.EVENT_OBJECT_HIDE),
                      (Native.EVENT_OBJECT_NAMECHANGE, Native.EVENT_OBJECT_NAMECHANGE),
+                     (Native.EVENT_OBJECT_LOCATIONCHANGE, Native.EVENT_OBJECT_LOCATIONCHANGE),  // for dock auto-hide
                      (Native.EVENT_OBJECT_CLOAKED, Native.EVENT_OBJECT_UNCLOAKED),
                  })
         {
