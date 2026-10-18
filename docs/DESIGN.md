@@ -126,6 +126,16 @@ Menu konteks memakai gaya gelap yang serasi dengan dock (radius 8, latar `#2A2A2
 | Memantul saat membuka | Hidup | Hidup / Mati |
 | Jalankan saat Windows nyala | Mati, bisa dihidupkan lewat ajakan saat pertama kali dijalankan | Hidup / Mati |
 | Shortcut darurat | `Ctrl+Alt+Shift+W` | kombinasi tombol apa pun dengan minimal dua modifier |
+| Ikon minta perhatian (v0.6) | Memantul, sampai dibuka | Memantul / Titik merah / Mati; Sekali / Sampai dibuka |
+| Warna latar dock (v0.6) | `#1E1E1E` | preset atau `#RRGGBB`; atau ikuti warna wallpaper (mati) |
+| Kebulatan sudut (v0.6) | 16 | 0–30 |
+| Garis tepi (v0.6) | Hidup | Hidup / Mati |
+| Warna titik penanda (v0.6) | `#FFFFFF` | preset atau `#RRGGBB` |
+| Warna aksen (v0.6) | `#2F6FE4` | preset atau `#RRGGBB` |
+| Area status (v0.6) | Hidup, semua tombol tampil kecuali persen baterai dan detik | tiap tombol Hidup / Mati; jam 24/12 jam, tanggal, detik |
+| Launcher (v0.6) | Hidup, `Alt+Space`, 8 hasil, tanpa file | shortcut minimal satu modifier; 5–12 hasil; ikut cari file Desktop/Documents |
+| Recycle Bin (v0.6) | Tampil, tanya dulu sebelum membuang | Hidup / Mati |
+| Aplikasi disembunyikan (v0.6) | kosong | daftar di Isi Dock |
 | Pin awal | File Explorer, ditambah aplikasi yang terdeteksi dari daftar: Chrome, Edge, Discord, Steam, Spotify | — |
 
 ## 7. Jendela Pengaturan
@@ -153,8 +163,11 @@ Jendela biasa (bisa dipindah dan ditutup), 760 × 520, bertema gelap, dan dibuka
 | Halaman | Isi |
 |---|---|
 | Tampilan | S-01, S-02, S-03, S-04, S-05 |
-| Perilaku | S-06, S-07, S-08, S-09 |
-| Isi Dock | Daftar pin yang bisa di-drag untuk mengurutkan, dengan tombol Tambah (dialog pilih .exe atau .lnk) dan Hapus. S-10 |
+| Tema (v0.6) | Warna latar (preset, hex, ikuti wallpaper), kebulatan sudut, garis tepi, warna titik penanda, warna aksen |
+| Area status (v0.6) | Hidup/mati area, tiap tombol, format jam, tanggal, detik, persen baterai |
+| Perilaku | S-06, S-07, S-08, S-09, ikon minta perhatian |
+| Isi Dock | Daftar pin yang bisa di-drag untuk mengurutkan, dengan tombol Tambah (dialog pilih .exe atau .lnk) dan Hapus. S-10. Daftar aplikasi disembunyikan, opsi Recycle Bin, menu Explorer |
+| Launcher (v0.6) | Hidup/mati, shortcut, jumlah hasil, ikut cari file |
 | Pengaman | S-11 (kotak perekam shortcut), tombol "Pulihkan taskbar sekarang", tombol "Buka folder data" |
 | Tentang | Versi, link GitHub, lokasi file pengaturan dan log |
 
