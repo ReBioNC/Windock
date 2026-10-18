@@ -35,6 +35,14 @@ public class AutoHidePolicyTests
     }
 
     [Theory]
+    [InlineData(DockAutoHide.Always)]
+    [InlineData(DockAutoHide.WhenCovered)]
+    public void Dock_stays_visible_while_the_desktop_is_in_front(DockAutoHide mode)
+    {
+        Assert.False(AutoHidePolicy.ShouldHide(mode, windowCoversDock: true, pointerUsingDock: false, desktopInFront: true));
+    }
+
+    [Theory]
     [InlineData(DockAutoHide.Never, true)]
     [InlineData(DockAutoHide.WhenCovered, false)]
     [InlineData(DockAutoHide.Always, false)]

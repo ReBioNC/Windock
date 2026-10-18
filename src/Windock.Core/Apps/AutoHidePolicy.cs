@@ -6,7 +6,9 @@ namespace Windock.Core.Apps;
 public static class AutoHidePolicy
 {
     /// pointerUsingDock: the pointer is on the dock, its bottom edge trigger, a preview, a menu, or dragging.
-    public static bool ShouldHide(DockAutoHide mode, bool windowCoversDock, bool pointerUsingDock) => mode switch
+    /// desktopInFront: no app window is active (desktop clicked, Win+D, everything minimized) — the dock stays up.
+    public static bool ShouldHide(DockAutoHide mode, bool windowCoversDock, bool pointerUsingDock, bool desktopInFront = false) =>
+        !desktopInFront && mode switch
     {
         DockAutoHide.Always => !pointerUsingDock,
         DockAutoHide.WhenCovered => windowCoversDock && !pointerUsingDock,

@@ -109,7 +109,14 @@ internal sealed class AutoHideController
     {
         var mode = _mode();
         var covered = mode == DockAutoHide.WhenCovered && ForegroundCoversDock();
-        return AutoHidePolicy.ShouldHide(mode, covered, _dock.IsPointerUsingDock || _edgeHover);
+        return AutoHidePolicy.ShouldHide(mode, covered, _dock.IsPointerUsingDock || _edgeHover, DesktopInFront());
+    }
+
+    /// The desktop (or nothing) has focus: clicking the wallpaper, Win+D, or the last window minimized.
+    private static bool DesktopInFront()
+    {
+        var hwnd = Native.GetForegroundWindow();
+        return hwnd == IntPtr.Zero || Native.ClassName(hwnd) is "Progman" or "WorkerW" or "Shell_TrayWnd" or "Shell_SecondaryTrayWnd";
     }
 
     private bool ForegroundCoversDock()
