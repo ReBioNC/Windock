@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Runtime.InteropServices;
 using System.Windows.Interop;
 using System.Windows.Media;
 using Windock.Core.Status;
@@ -218,6 +219,51 @@ internal sealed class CalendarPopup : DockPopup
                 },
             };
             _days.Children.Add(cell);
+        }
+    }
+}
+
+/// Windock's own tray: every notification-area icon in a grid above the ^ button. Clicks go to the real icons,
+/// so apps show their windows and menus as usual; the Windows taskbar stays hidden.
+internal sealed class TrayPopup : DockPopup
+{
+    private const int Columns = 6;
+
+    public TrayPopup(IReadOnlyList<NotifyAreaIcon> icons)
+    {
+        var grid = new WrapPanel { Width = Math.Min(Math.Max(icons.Count, 1), Columns) * 40, Margin = new Thickness(6) };
+        foreach (var icon in icons)
+        {
+            var image = new Image { Width = 20, Height = 20, Source = ToImage(icon.Icon) };
+            RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
+            var button = FlatButton(image, string.IsNullOrWhiteSpace(icon.Tooltip) ? "(tanpa nama)" : icon.Tooltip);
+            button.Width = button.Height = 40;
+            button.PreviewMouseLeftButtonUp += (_, _) => TrayIcons.Click(icon, TrayClick.Left);
+            button.PreviewMouseRightButtonUp += (_, e) =>
+            {
+                e.Handled = true;
+                TrayIcons.Click(icon, TrayClick.Right);
+            };
+            button.MouseDoubleClick += (_, _) => TrayIcons.Click(icon, TrayClick.Double);
+            grid.Children.Add(button);
+        }
+        if (icons.Count == 0)
+            grid.Children.Add(new TextBlock { Text = "Tidak ada ikon tray.", Opacity = 0.7, Margin = new Thickness(8) });
+        Content = grid;
+    }
+
+    private static ImageSource? ToImage(IntPtr icon)
+    {
+        if (icon == IntPtr.Zero) return null;
+        try
+        {
+            var source = Imaging.CreateBitmapSourceFromHIcon(icon, Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
+            source.Freeze();
+            return source;
+        }
+        catch (Exception ex) when (ex is COMException or ArgumentException)
+        {
+            return null;  // the app replaced its icon meanwhile
         }
     }
 }

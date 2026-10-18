@@ -102,7 +102,7 @@ internal sealed class StatusArea : IDisposable
         if (s.Enabled)
         {
             var now = DateTime.Now;
-            if (s.ShowTray) list.Add(new StatusButton(Tray, StatusGlyphs.ChevronUp, null, null, "Tampilkan ikon tersembunyi (tray)"));
+            if (s.ShowTray) list.Add(new StatusButton(Tray, StatusGlyphs.ChevronUp, null, null, "Ikon tray"));
             if (s.ShowWifi)
                 list.Add(new StatusButton(Network, StatusGlyphs.Network(_network.Kind), null, null, StatusFormat.NetworkTooltip(_network.Kind, _network.Name)));
             if (s.ShowVolume && Audio.Available)

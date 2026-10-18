@@ -51,7 +51,6 @@ internal sealed class AppHost
     public RecycleBinWatcher? BinWatcher { get; private set; }
     public ShellHook? Shell { get; private set; }
     public Status.StatusArea? StatusArea { get; private set; }
-    private Win32TaskbarController? _taskbarWindows;
     private Launcher.LauncherWindow? _launcherWindow;
 
     public void Start(string[] args)
@@ -75,7 +74,7 @@ internal sealed class AppHost
         }
 
         // Undo anything a killed previous session left on the taskbar before showing anything (A-04).
-        var taskbarController = _taskbarWindows = new Win32TaskbarController(Log, Application.Current.Dispatcher, Windows);
+        var taskbarController = new Win32TaskbarController(Log, Application.Current.Dispatcher, Windows);
         Taskbar = new TaskbarModeCoordinator(taskbarController, new RecoveryStateStore(DataDirectory), Environment.ProcessId);
         var recovered = Taskbar.RecoverFromPreviousSession();
         if (File.Exists(SessionMarker) && !recovered)
@@ -273,7 +272,9 @@ internal sealed class AppHost
         switch (key)
         {
             case Status.StatusArea.Tray:
-                _taskbarWindows?.PeekTray();
+                var icons = TrayIcons.Read();
+                Log.Info($"tray popup: {icons.Count} icons");
+                ShowStatusPopup(new Status.TrayPopup(icons), anchor);
                 break;
             case Status.StatusArea.Network:
                 OpenUri("ms-availablenetworks:");

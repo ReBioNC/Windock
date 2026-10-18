@@ -13,7 +13,7 @@
                 <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
                 <TextBlock Text="Tombol" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
                 <StackPanel Grid.Column="1">
-                    <CheckBox x:Name="Tray" Content="^ Ikon tersembunyi (tray Windows)" Margin="0,0,0,8" />
+                    <CheckBox x:Name="Tray" Content="^ Ikon tray" Margin="0,0,0,8" />
                     <CheckBox x:Name="Wifi" Content="Jaringan (Wi-Fi / kabel)" Margin="0,0,0,8" />
                     <CheckBox x:Name="Volume" Content="Volume" Margin="0,0,0,8" />
                     <CheckBox x:Name="Battery" Content="Baterai" Margin="0,0,0,8" />
@@ -21,7 +21,7 @@
                     <CheckBox x:Name="Clock" Content="Jam" Margin="0,0,0,8" />
                     <CheckBox x:Name="Notifications" Content="Pusat notifikasi" />
                     <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"
-                               Text="Tray: Windock memunculkan taskbar asli sebentar dengan ikon tersembunyinya, lalu menyembunyikannya lagi. Volume: gulir mouse untuk mengatur, klik tengah untuk bisukan." />
+                               Text="Tray: kotak berisi semua ikon tray (yang tampil dan yang tersembunyi); klik kiri, klik kanan, atau klik dua kali seperti di taskbar. Volume: gulir mouse untuk mengatur, klik tengah untuk bisukan." />
                 </StackPanel>
             </Grid>
 
