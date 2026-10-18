@@ -50,6 +50,52 @@ public class DockModelTests
     }
 
     [Fact]
+    public void Hidden_running_apps_are_left_out()
+    {
+        _windows.Seed(Win(1, PathB), Win(2, PathC));
+        var m = Model(PathA);
+
+        var args = Capture(m, () => m.SetHiddenApps(new[] { C.ToUpperInvariant() }));
+
+        Assert.Equal(new[] { A, "sep:pinned", B, "sep:trash", "recyclebin" }, Keys(m));
+        Assert.Equal(new[] { C }, args!.Removed);
+    }
+
+    [Fact]
+    public void Pinning_a_hidden_app_shows_it()
+    {
+        _windows.Seed(Win(1, PathB));
+        var m = Model(PathA);
+        m.SetHiddenApps(new[] { B });
+
+        m.SetPins(new[] { new PinEntry(PathA), new PinEntry(PathB) });
+
+        Assert.Equal(new[] { A, B, "sep:trash", "recyclebin" }, Keys(m));
+    }
+
+    [Fact]
+    public void Showing_a_hidden_app_again_brings_it_back()
+    {
+        _windows.Seed(Win(1, PathB));
+        var m = Model(PathA);
+        m.SetHiddenApps(new[] { B });
+
+        m.SetHiddenApps(Array.Empty<string>());
+
+        Assert.Equal(new[] { A, "sep:pinned", B, "sep:trash", "recyclebin" }, Keys(m));
+    }
+
+    [Fact]
+    public void Recycle_bin_can_be_hidden()
+    {
+        var m = Model(PathA);
+
+        m.SetShowRecycleBin(false);
+
+        Assert.Equal(new[] { A }, Keys(m));
+    }
+
+    [Fact]
     public void No_pinned_separator_without_unpinned_running_apps()
     {
         _windows.Seed(Win(1, PathB));

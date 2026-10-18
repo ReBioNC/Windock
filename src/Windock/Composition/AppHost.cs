@@ -89,6 +89,8 @@ internal sealed class AppHost
         Icons = new IconProvider(Log, Application.Current.Dispatcher);
         Model = new DockModel(Windows, PinResolver);
         Model.SetPins(Settings.Current.Pins);
+        Model.SetHiddenApps(Settings.Current.HiddenApps.Select(h => h.AppId));
+        Model.SetShowRecycleBin(Settings.Current.Trash.ShowRecycleBin);
         Backdrop = new BackdropWindow();
         Dock = new DockController(Model, new StopwatchClock(), Settings, Icons, new DockWindow(), Backdrop, Log);
         Launcher = new AppLauncher(Log, (title, text) => Tray?.ShowBalloon(title, text));

@@ -46,6 +46,9 @@ internal sealed class DockContextMenu(AppLauncher launcher, SettingsStore settin
             ? Item("Hapus dari Dock", () => Unpin(item))
             : Item("Simpan di Dock", () => Pin(item), enabled: PinPathFor(item) is not null));
 
+        if (!item.IsPinned && item.AppId is { } hideId)
+            menu.Items.Add(Item("Jangan tampilkan di dock", () => Hide(hideId.Value, item.DisplayName)));
+
         var file = item.Windows.FirstOrDefault()?.ExePath ?? item.LaunchTarget;
         menu.Items.Add(Item("Tampilkan di Explorer", () => launcher.RevealInExplorer(file!),
             enabled: file is not null && File.Exists(file)));
@@ -73,6 +76,11 @@ internal sealed class DockContextMenu(AppLauncher launcher, SettingsStore settin
             ? s
             : s with { Pins = s.Pins.Append(new PinEntry(path)).ToList() });
     }
+
+    private void Hide(string appId, string name) =>
+        settings.Update(s => s.HiddenApps.Any(h => string.Equals(h.AppId, appId, StringComparison.OrdinalIgnoreCase))
+            ? s
+            : s with { HiddenApps = s.HiddenApps.Append(new HiddenApp(appId, name)).ToList() });
 
     private void Unpin(DockItem item) =>
         settings.Update(s => s with { Pins = s.Pins.Where(p => resolver.Resolve(p).AppId != item.AppId).ToList() });

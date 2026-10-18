@@ -26,6 +26,7 @@ internal partial class PinsPage : UserControl
         _sync = new PageSync(this, context.Store, Refresh);
 
         List.SelectionChanged += (_, _) => RemoveButton.IsEnabled = List.SelectedItem is not null;
+        HiddenList.SelectionChanged += (_, _) => ShowAgainButton.IsEnabled = HiddenList.SelectedItem is not null;
         ExplorerMenu.Checked += (_, _) => _sync.Edit(s => s with { Behavior = s.Behavior with { ExplorerContextMenu = true } });
         ExplorerMenu.Unchecked += (_, _) => _sync.Edit(s => s with { Behavior = s.Behavior with { ExplorerContextMenu = false } });
         List.PreviewMouseLeftButtonDown += (_, e) =>
@@ -51,6 +52,18 @@ internal partial class PinsPage : UserControl
         List.SelectedItem = _rows.FirstOrDefault(r => r.Path == selected);
         RemoveButton.IsEnabled = List.SelectedItem is not null;
         ExplorerMenu.IsChecked = s.Behavior.ExplorerContextMenu;
+
+        HiddenList.ItemsSource = s.HiddenApps;
+        HiddenList.Visibility = s.HiddenApps.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        HiddenEmpty.Visibility = s.HiddenApps.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
+        ShowAgainButton.Visibility = HiddenList.Visibility;
+        ShowAgainButton.IsEnabled = HiddenList.SelectedItem is not null;
+    }
+
+    private void OnShowAgain(object sender, RoutedEventArgs e)
+    {
+        if (HiddenList.SelectedItem is not HiddenApp app) return;
+        _sync.Edit(s => s with { HiddenApps = s.HiddenApps.Where(h => h != app).ToList() });
     }
 
     private void OnAdd(object sender, RoutedEventArgs e)

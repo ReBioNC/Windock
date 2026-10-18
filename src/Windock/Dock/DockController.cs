@@ -141,6 +141,8 @@ internal sealed partial class DockController
     public void ApplySettings(SettingsChangedEventArgs e)
     {
         if (e.Sections.HasFlag(SettingsSection.Pins)) _model.SetPins(e.New.Pins);
+        if (e.Sections.HasFlag(SettingsSection.HiddenApps)) _model.SetHiddenApps(e.New.HiddenApps.Select(h => h.AppId));
+        if (e.Sections.HasFlag(SettingsSection.Trash)) _model.SetShowRecycleBin(e.New.Trash.ShowRecycleBin);
         if (!e.Sections.HasFlag(SettingsSection.Appearance)) return;
 
         var a = e.New.Appearance;

@@ -13,6 +13,8 @@ public sealed class DockModel
     private readonly Dictionary<AppId, List<WindowInfo>> _running = new();
     private readonly List<AppId> _firstSeen = new();
     private IReadOnlyList<PinResolution> _pins = Array.Empty<PinResolution>();
+    private HashSet<string> _hidden = new(StringComparer.OrdinalIgnoreCase);
+    private bool _showRecycleBin = true;
 
     public DockModel(IWindowSource windows, IPinResolver resolver)
     {
@@ -38,6 +40,11 @@ public sealed class DockModel
         var seen = new HashSet<AppId>();
         _pins = pins.Select(_resolver.Resolve).Where(r => seen.Add(r.AppId)).ToList();
     });
+
+    /// Running apps the user chose not to show (pinning one shows it again).
+    public void SetHiddenApps(IEnumerable<string> appIds) => Mutate(() => _hidden = new HashSet<string>(appIds, StringComparer.OrdinalIgnoreCase));
+
+    public void SetShowRecycleBin(bool show) => Mutate(() => _showRecycleBin = show);
 
     private void Track(WindowInfo w)
     {
@@ -112,7 +119,7 @@ public sealed class DockModel
         }
 
         var pinned = _pins.Select(p => p.AppId).ToHashSet();
-        var unpinned = _firstSeen.Where(id => !pinned.Contains(id)).ToList();
+        var unpinned = _firstSeen.Where(id => !pinned.Contains(id) && !_hidden.Contains(id.Value)).ToList();
         if (unpinned.Count > 0)
         {
             if (_pins.Count > 0) items.Add(Fixed(DockItem.PinnedSeparatorKey, DockItemKind.Separator, ""));
@@ -124,8 +131,11 @@ public sealed class DockModel
             }
         }
 
-        items.Add(Fixed(DockItem.TrashSeparatorKey, DockItemKind.Separator, ""));
-        items.Add(Fixed(DockItem.RecycleBinKey, DockItemKind.RecycleBin, "Recycle Bin"));
+        if (_showRecycleBin)
+        {
+            items.Add(Fixed(DockItem.TrashSeparatorKey, DockItemKind.Separator, ""));
+            items.Add(Fixed(DockItem.RecycleBinKey, DockItemKind.RecycleBin, "Recycle Bin"));
+        }
         return items;
     }
 
