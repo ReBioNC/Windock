@@ -4,8 +4,9 @@ using Windock.Core.Launcher;
 
 namespace Windock.Interop;
 
-/// What the launcher can find: every app in Start (shell:AppsFolder, which covers Start Menu shortcuts
-/// and Store apps) and optionally the files directly on the Desktop and in Documents.
+/// What the launcher can find: every app in Start (shell:AppsFolder, mostly Store apps and registered
+/// programs), every Start Menu shortcut (the AppsFolder list misses some), and optionally the files directly
+/// on the Desktop and in Documents.
 /// Built when the launcher opens and dropped with it.
 internal static class LauncherIndex
 {
@@ -24,6 +25,7 @@ internal static class LauncherIndex
             {
                 var list = new List<LauncherEntry>();
                 AddApps(list);
+                AddStartMenuShortcuts(list);
                 if (includeFiles) AddFiles(list);
                 done.SetResult(list);
             }
@@ -74,6 +76,19 @@ internal static class LauncherIndex
         finally
         {
             Marshal.ReleaseComObject(folder);
+        }
+    }
+
+    private static void AddStartMenuShortcuts(List<LauncherEntry> list)
+    {
+        foreach (var root in new[] { Environment.SpecialFolder.Programs, Environment.SpecialFolder.CommonPrograms })
+        {
+            try
+            {
+                foreach (var path in Directory.EnumerateFiles(Environment.GetFolderPath(root), "*.lnk", SearchOption.AllDirectories))
+                    list.Add(new LauncherEntry(Path.GetFileNameWithoutExtension(path), path, LauncherEntryKind.App));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         }
     }
 

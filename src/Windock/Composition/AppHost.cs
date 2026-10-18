@@ -114,17 +114,14 @@ internal sealed class AppHost
             var menu = menus.Build(item);
             menu.PlacementTarget = Dock.MenuAnchor;
             Dock.SetMenuOpen(true);
-            // The dock never takes focus, so the menu would not notice clicks elsewhere: give it focus,
-            // and close it as soon as another window comes to the front.
-            menu.Opened += (_, _) =>
-            {
-                if (PresentationSource.FromVisual(menu) is System.Windows.Interop.HwndSource source) Native.SetForegroundWindow(source.Handle);
-            };
-            EventHandler<IntPtr> closeOnFocus = (_, _) => menu.IsOpen = false;
-            Windows.ForegroundChanged += closeOnFocus;
+            // The dock never takes focus, so the menu would not notice clicks elsewhere; watch for them.
+            OutsideClickWatcher? outside = null;
+            menu.Opened += (_, _) => outside = new OutsideClickWatcher(
+                () => PresentationSource.FromVisual(menu) is System.Windows.Interop.HwndSource source ? source.Handle : IntPtr.Zero,
+                () => menu.IsOpen = false);
             menu.Closed += (_, _) =>
             {
-                Windows.ForegroundChanged -= closeOnFocus;
+                outside?.Dispose();
                 Dock.SetMenuOpen(false);
             };
             menu.IsOpen = true;
