@@ -310,11 +310,51 @@ internal sealed class AppHost
     }
 
     /// Keeps an auto-hiding dock on screen while the popup is open.
+    /// Keeps an auto-hiding dock on screen while the popup is open.
     private void ShowStatusPopup(Status.DockPopup popup, Point anchor)
     {
         Dock?.SetMenuOpen(true);
-        popup.Closed += (_, _) => Dock?.SetMenuOpen(false);
+        popup.Closed += (_, _) =>
+        {
+            // A tray icon's own menu opens as the tray popup closes: keep the dock up for it too.
+            if (popup is Status.TrayPopup { MenuOwner: { } icon }) HoldDockForAppMenu(icon.Owner);
+            else Dock?.SetMenuOpen(false);
+        };
         popup.ShowAt(anchor);
+    }
+
+    /// Keeps the dock shown while a tray app's menu is up: until the next click (a menu item or elsewhere),
+    /// or until neither a menu window nor that app is in front any more. Checks run only during this hold.
+    private void HoldDockForAppMenu(IntPtr owner)
+    {
+        Native.GetWindowThreadProcessId(owner, out var ownerPid);
+        var started = DateTime.UtcNow;
+        var lastSeen = started;
+        DateTime? clicked = null;
+        var clicks = new OutsideClickWatcher(() => IntPtr.Zero, () => clicked ??= DateTime.UtcNow);
+        var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+        timer.Tick += (_, _) =>
+        {
+            var now = DateTime.UtcNow;
+            Native.GetWindowThreadProcessId(Native.GetForegroundWindow(), out var foregroundPid);
+            if (AnyMenuVisible() || foregroundPid == ownerPid) lastSeen = now;
+            var done = (clicked is { } at && now - at > TimeSpan.FromMilliseconds(400))
+                       || now - lastSeen > TimeSpan.FromMilliseconds(800)
+                       || now - started > TimeSpan.FromMinutes(1);
+            if (!done) return;
+            timer.Stop();
+            clicks.Dispose();
+            Dock?.SetMenuOpen(false);
+        };
+        timer.Start();
+    }
+
+    private static bool AnyMenuVisible()
+    {
+        var h = IntPtr.Zero;
+        while ((h = Native.FindWindowEx(IntPtr.Zero, h, "#32768", null)) != IntPtr.Zero)
+            if (Native.IsWindowVisible(h)) return true;
+        return false;
     }
 
     private void OpenUri(string uri)

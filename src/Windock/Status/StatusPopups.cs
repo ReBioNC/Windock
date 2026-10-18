@@ -229,6 +229,9 @@ internal sealed class TrayPopup : DockPopup
 {
     private const int Columns = 6;
 
+    /// The icon whose menu was asked for (right click), if any.
+    public NotifyAreaIcon? MenuOwner { get; private set; }
+
     public TrayPopup(IReadOnlyList<NotifyAreaIcon> icons)
     {
         var grid = new WrapPanel { Width = Math.Min(Math.Max(icons.Count, 1), Columns) * 40, Margin = new Thickness(6) };
@@ -242,6 +245,7 @@ internal sealed class TrayPopup : DockPopup
             button.PreviewMouseRightButtonUp += (_, e) =>
             {
                 e.Handled = true;
+                MenuOwner = icon;
                 TrayIcons.Click(icon, TrayClick.Right);
             };
             button.MouseDoubleClick += (_, _) => TrayIcons.Click(icon, TrayClick.Double);
