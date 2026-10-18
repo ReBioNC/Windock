@@ -26,6 +26,8 @@ internal partial class PinsPage : UserControl
         _sync = new PageSync(this, context.Store, Refresh);
 
         List.SelectionChanged += (_, _) => RemoveButton.IsEnabled = List.SelectedItem is not null;
+        ShowBin.Click += (_, _) => _sync.Edit(s => s with { Trash = s.Trash with { ShowRecycleBin = ShowBin.IsChecked == true } });
+        ConfirmTrash.Click += (_, _) => _sync.Edit(s => s with { Trash = s.Trash with { ConfirmBeforeTrash = ConfirmTrash.IsChecked == true } });
         HiddenList.SelectionChanged += (_, _) => ShowAgainButton.IsEnabled = HiddenList.SelectedItem is not null;
         ExplorerMenu.Checked += (_, _) => _sync.Edit(s => s with { Behavior = s.Behavior with { ExplorerContextMenu = true } });
         ExplorerMenu.Unchecked += (_, _) => _sync.Edit(s => s with { Behavior = s.Behavior with { ExplorerContextMenu = false } });
@@ -52,6 +54,10 @@ internal partial class PinsPage : UserControl
         List.SelectedItem = _rows.FirstOrDefault(r => r.Path == selected);
         RemoveButton.IsEnabled = List.SelectedItem is not null;
         ExplorerMenu.IsChecked = s.Behavior.ExplorerContextMenu;
+
+        ShowBin.IsChecked = s.Trash.ShowRecycleBin;
+        ConfirmTrash.IsChecked = s.Trash.ConfirmBeforeTrash;
+        ConfirmTrash.IsEnabled = s.Trash.ShowRecycleBin;
 
         HiddenList.ItemsSource = s.HiddenApps;
         HiddenList.Visibility = s.HiddenApps.Count > 0 ? Visibility.Visible : Visibility.Collapsed;

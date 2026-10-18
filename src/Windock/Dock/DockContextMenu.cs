@@ -9,7 +9,8 @@ using Windock.Interop;
 namespace Windock.Dock;
 
 /// Right-click menus for dock items and the empty plate (DESIGN.md §5).
-internal sealed class DockContextMenu(AppLauncher launcher, SettingsStore settings, IPinResolver resolver, Action openSettings, Action exit)
+internal sealed class DockContextMenu(AppLauncher launcher, SettingsStore settings, IPinResolver resolver, Action openSettings, Action exit,
+    Action emptyRecycleBin)
 {
     private const int MaxWindows = 10;
 
@@ -25,6 +26,8 @@ internal sealed class DockContextMenu(AppLauncher launcher, SettingsStore settin
         if (item.Kind == DockItemKind.RecycleBin)
         {
             menu.Items.Add(Item("Buka", () => launcher.Execute(ClickAction.OpenRecycleBin.Instance, item)));
+            menu.Items.Add(new Separator());
+            menu.Items.Add(Item("Kosongkan Recycle Bin…", emptyRecycleBin, enabled: !RecycleBin.IsEmpty()));
             return menu;
         }
 

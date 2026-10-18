@@ -48,6 +48,7 @@ internal sealed class AppHost
     public HotkeyService? Hotkey { get; private set; }
     public CommandChannel? Commands { get; private set; }
     public AutoHideController? AutoHide { get; private set; }
+    public RecycleBinWatcher? BinWatcher { get; private set; }
 
     public void Start(string[] args)
     {
@@ -94,7 +95,7 @@ internal sealed class AppHost
         Backdrop = new BackdropWindow();
         Dock = new DockController(Model, new StopwatchClock(), Settings, Icons, new DockWindow(), Backdrop, Log);
         Launcher = new AppLauncher(Log, (title, text) => Tray?.ShowBalloon(title, text));
-        var menus = new DockContextMenu(Launcher, Settings, PinResolver, OpenSettings, Exit);
+        var menus = new DockContextMenu(Launcher, Settings, PinResolver, OpenSettings, Exit, EmptyRecycleBin);
         // Live foreground: the tracker skips our own windows, so its value is stale while Pengaturan is active.
         Dock.ItemClicked += (item, shift) =>
         {
@@ -118,6 +119,9 @@ internal sealed class AppHost
         Dock.PreviewCloseRequested += hwnd => Launcher.CloseWindows(new[] { hwnd });
         Dock.SetHidden(InWindowsMode);
         Dock.Start();
+        BinWatcher = new RecycleBinWatcher();
+        BinWatcher.Changed += RefreshRecycleBin;
+        RefreshRecycleBin();
 
         AutoHide = new AutoHideController(Dock, Windows, () => Settings.Current.Behavior.AutoHide, Log);
         AppBar = new AppBarService(Log);
@@ -279,11 +283,38 @@ internal sealed class AppHost
             case DockDrop.PinFiles files:
                 for (var i = 0; i < files.Paths.Count; i++) PinPath(files.Paths[i], files.GapIndex + i);
                 break;
+            case DockDrop.TrashFiles trash:
+                TrashFiles(trash.Paths);
+                break;
             case DockDrop.Remove { Item.AppId: { } removeId }:
                 Settings.Update(s => s with { Pins = PinListEditor.Remove(s.Pins, removeId, IdOf) });
                 break;
         }
     }
+
+    /// Files dropped on the Recycle Bin icon go to the Recycle Bin (undoable), after an optional question.
+    private void TrashFiles(IReadOnlyList<string> paths)
+    {
+        if (paths.Count == 0) return;
+        if (Settings.Current.Trash.ConfirmBeforeTrash)
+        {
+            var what = paths.Count == 1 ? $"\"{Path.GetFileName(paths[0].TrimEnd('\\'))}\"" : $"{paths.Count} item";
+            var answer = MessageBox.Show($"Pindahkan {what} ke Recycle Bin?\n\nBisa dipulihkan lagi dari Recycle Bin.", "Windock",
+                MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.OK);
+            if (answer != MessageBoxResult.OK) return;
+        }
+        var ok = RecycleBin.Send(paths, IntPtr.Zero);
+        Log.Info($"trash {paths.Count} item(s): {(ok ? "done" : "cancelled or failed")}");
+        RefreshRecycleBin();
+    }
+
+    private void EmptyRecycleBin()
+    {
+        RecycleBin.Empty(IntPtr.Zero);
+        RefreshRecycleBin();
+    }
+
+    private void RefreshRecycleBin() => Dock?.SetRecycleBinFull(!RecycleBin.IsEmpty());
 
     private void SyncExplorerMenu(bool enabled)
     {

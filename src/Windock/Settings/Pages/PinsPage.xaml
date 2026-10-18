@@ -44,6 +44,12 @@
         <TextBlock x:Name="HiddenEmpty" Style="{StaticResource Hint}" Margin="0,6,0,0" Text="Belum ada aplikasi yang disembunyikan." />
         <Button x:Name="ShowAgainButton" Content="Tampilkan lagi" Click="OnShowAgain" HorizontalAlignment="Left" Margin="0,10,0,0" />
 
+        <TextBlock Text="Recycle Bin" Style="{StaticResource Label}" Margin="0,22,0,6" />
+        <CheckBox x:Name="ShowBin" Content="Tampilkan Recycle Bin di ujung dock" />
+        <CheckBox x:Name="ConfirmTrash" Content="Tanya dulu sebelum memindahkan file ke Recycle Bin" Margin="0,8,0,0" />
+        <TextBlock Style="{StaticResource Hint}" Margin="22,6,0,0"
+                   Text="Seret file ke ikon Recycle Bin untuk membuangnya. File tetap bisa dipulihkan dari Recycle Bin." />
+
         <CheckBox x:Name="ExplorerMenu" Margin="0,22,0,0"
                   Content="Tampilkan &quot;Pin ke Windock&quot; di menu klik kanan Explorer dan Desktop" />
         <TextBlock Style="{StaticResource Hint}" Margin="22,6,0,0"

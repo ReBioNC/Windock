@@ -14,6 +14,7 @@ internal abstract record DockDrop
     public sealed record PinRunning(DockItem Item, int GapIndex) : DockDrop;
     public sealed record PinFiles(IReadOnlyList<string> Paths, int GapIndex) : DockDrop;
     public sealed record Remove(DockItem Item) : DockDrop;
+    public sealed record TrashFiles(IReadOnlyList<string> Paths) : DockDrop;
 }
 
 /// Drag and drop: drop programs/shortcuts from Explorer onto the dock, drag icons to reorder,
@@ -48,7 +49,12 @@ internal sealed partial class DockController
         root.AllowDrop = true;
         root.DragEnter += OnExternalDragOver;
         root.DragOver += OnExternalDragOver;
-        root.DragLeave += (_, _) => SetGap(null);
+        root.DragLeave += (_, _) =>
+        {
+            SetGap(null);
+            _pressedKey = null;
+            Invalidate();
+        };
         root.Drop += OnExternalDrop;
         root.LostMouseCapture += (_, _) =>
         {
@@ -215,9 +221,29 @@ internal sealed partial class DockController
     private static IReadOnlyList<string> PinnablePaths(IDataObject data) =>
         data.GetData(DataFormats.FileDrop) is string[] files ? files.Where(PinListEditor.CanPin).ToList() : Array.Empty<string>();
 
+    private static IReadOnlyList<string> DroppedFiles(IDataObject data) =>
+        data.GetData(DataFormats.FileDrop) is string[] files ? files : Array.Empty<string>();
+
+    private bool OverRecycleBin(DragEventArgs e) =>
+        HitTest(e.GetPosition(_window.Root))?.Kind == DockItemKind.RecycleBin && DroppedFiles(e.Data).Count > 0;
+
     private void OnExternalDragOver(object sender, DragEventArgs e)
     {
         e.Handled = true;
+        var overBin = OverRecycleBin(e);
+        var binKey = overBin ? DockItem.RecycleBinKey : null;
+        if (_pressedKey != binKey)
+        {
+            _pressedKey = binKey;  // dims the bin while files hover over it
+            Invalidate();
+        }
+        if (overBin)
+        {
+            // Never Move: Explorer would then delete the source itself after the drop.
+            e.Effects = DragDropEffects.Copy;
+            SetGap(null);
+            return;
+        }
         if (PinnablePaths(e.Data).Count == 0)
         {
             e.Effects = DragDropEffects.None;
@@ -231,6 +257,16 @@ internal sealed partial class DockController
     private void OnExternalDrop(object sender, DragEventArgs e)
     {
         e.Handled = true;
+        _pressedKey = null;
+        if (OverRecycleBin(e))
+        {
+            e.Effects = DragDropEffects.Copy;
+            var files = DroppedFiles(e.Data).ToList();
+            SetGap(null);
+            // Let Explorer's drag loop finish before the (possibly modal) recycle step runs.
+            _window.Root.Dispatcher.BeginInvoke(() => DropCompleted?.Invoke(new DockDrop.TrashFiles(files)));
+            return;
+        }
         var paths = PinnablePaths(e.Data);
         var gap = Math.Max(0, _gapIndex);
         if (_gapKey is not null) _pendingRemoved.Add(_gapKey);

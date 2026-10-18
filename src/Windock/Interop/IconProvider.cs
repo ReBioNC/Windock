@@ -35,6 +35,9 @@ internal sealed class IconProvider : IDisposable
 
     public ImageSource Generic { get; }
 
+    /// Icon path for a Windows stock icon (SHSTOCKICONID), e.g. the empty or full Recycle Bin.
+    public const string StockPrefix = "stock:";
+
     /// Smallest standard size that covers the requested physical pixel size.
     public static int PixelSizeFor(double dip, double dpiScale) =>
         Sizes.FirstOrDefault(s => s >= Math.Ceiling(dip * dpiScale), Sizes[^1]);
@@ -51,6 +54,21 @@ internal sealed class IconProvider : IDisposable
         var parsingName = key.StartsWith("aumid:", StringComparison.Ordinal) ? @"shell:AppsFolder\" + key["aumid:".Length..] : iconPath;
         // Window icons must be read on the UI thread (message to the owning window).
         var windowIcon = parsingName is null && hwndFallback != IntPtr.Zero ? WindowIcon(hwndFallback) : null;
+
+        if (iconPath?.StartsWith(StockPrefix, StringComparison.Ordinal) == true && int.TryParse(iconPath[StockPrefix.Length..], out var stockId))
+        {
+            _queue.Add(() =>
+            {
+                var stock = StockIcon(stockId, pixelSize);
+                _ui.BeginInvoke(() =>
+                {
+                    var result = stock ?? Generic;
+                    _cache[(key, pixelSize)] = result;
+                    onReady(key, result);
+                });
+            });
+            return;
+        }
 
         _queue.Add(() =>
         {
@@ -136,6 +154,28 @@ internal sealed class IconProvider : IDisposable
         }
     }
 
+    private BitmapSource? StockIcon(int id, int px)
+    {
+        var info = new SHSTOCKICONINFO { cbSize = (uint)Marshal.SizeOf<SHSTOCKICONINFO>() };
+        if (SHGetStockIconInfo(id, SHGSI_ICONLOCATION, ref info) != 0) return null;
+        var icons = new IntPtr[1];
+        if (PrivateExtractIcons(info.szPath, info.iIcon, px, px, icons, IntPtr.Zero, 1, 0) != 1 || icons[0] == IntPtr.Zero)
+        {
+            _log.Info($"stock icon {id} not found in {info.szPath},{info.iIcon}");
+            return null;
+        }
+        try
+        {
+            var source = Imaging.CreateBitmapSourceFromHIcon(icons[0], Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+            source.Freeze();
+            return source;
+        }
+        finally
+        {
+            DestroyIcon(icons[0]);
+        }
+    }
+
     private static BitmapSource? WindowIcon(IntPtr hwnd)
     {
         Native.SendMessageTimeout(hwnd, Native.WM_GETICON, Native.ICON_BIG, IntPtr.Zero, 0x2 /* SMTO_ABORTIFHUNG */, 200, out var icon);
@@ -204,6 +244,21 @@ internal sealed class IconProvider : IDisposable
         public uint biClrUsed, biClrImportant;
     }
 
+    private const uint SHGSI_ICONLOCATION = 0;
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct SHSTOCKICONINFO
+    {
+        public uint cbSize;
+        public IntPtr hIcon;
+        public int iSysImageIndex, iIcon;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)] public string szPath;
+    }
+
+    [DllImport("shell32.dll")] private static extern int SHGetStockIconInfo(int siid, uint flags, ref SHSTOCKICONINFO info);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern uint PrivateExtractIcons(string file, int index, int cx, int cy, IntPtr[] icons, IntPtr ids, uint count, uint flags);
+    [DllImport("user32.dll")] private static extern bool DestroyIcon(IntPtr icon);
     [DllImport("gdi32.dll")] private static extern int GetObject(IntPtr obj, int size, out BITMAP bitmap);
     [DllImport("gdi32.dll")] private static extern int GetDIBits(IntPtr dc, IntPtr bitmap, uint start, uint lines, byte[] bits, ref BITMAPINFOHEADER info, uint usage);
     [DllImport("user32.dll")] private static extern IntPtr GetDC(IntPtr hwnd);

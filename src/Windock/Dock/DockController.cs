@@ -16,7 +16,6 @@ namespace Windock.Dock;
 /// The render loop only runs while something moves; an idle dock costs no CPU (N-02).
 internal sealed partial class DockController
 {
-    private const string RecycleBinParsingName = "::{645FF040-5081-101B-9F08-00AA002F954E}";
 
     private readonly DockModel _model;
     private readonly DockAnimator _animator = new();
@@ -49,6 +48,7 @@ internal sealed partial class DockController
     private string? _pressedKey;
     private int _iconPixels;
     private double? _bottomEdge;
+    private bool _binFull;
 
     public DockController(DockModel model, IClock clock, SettingsStore settings, IconProvider icons, DockWindow window, BackdropWindow backdrop, ILog log)
     {
@@ -235,11 +235,34 @@ internal sealed partial class DockController
         if (_model.Find(key) is not { } item || item.Kind == DockItemKind.Separator) return;
         _lastKnown[key] = item;
         if (!_iconRequested.Add(key)) return;
-        var path = item.Kind == DockItemKind.RecycleBin ? RecycleBinParsingName : item.IconPath;
+        if (item.Kind == DockItemKind.RecycleBin)
+        {
+            RequestBinIcon();
+            return;
+        }
         var hwnd = item.Windows.Count > 0 ? item.Windows[0].Handle : IntPtr.Zero;
-        _icons.Request(key, path, hwnd, _iconPixels, (k, image) =>
+        _icons.Request(key, item.IconPath, hwnd, _iconPixels, (k, image) =>
         {
             _iconImages[k] = image;
+            Invalidate();
+        });
+    }
+
+    /// Shows the full or empty Recycle Bin icon.
+    public void SetRecycleBinFull(bool full)
+    {
+        if (_binFull == full) return;
+        _binFull = full;
+        RequestBinIcon();
+    }
+
+    private void RequestBinIcon()
+    {
+        var state = _binFull ? RecycleBin.StockFull : RecycleBin.StockEmpty;
+        _icons.Request($"{DockItem.RecycleBinKey}#{state}", IconProvider.StockPrefix + state, IntPtr.Zero, _iconPixels, (_, image) =>
+        {
+            if ((_binFull ? RecycleBin.StockFull : RecycleBin.StockEmpty) != state) return;  // a newer state won
+            _iconImages[DockItem.RecycleBinKey] = image;
             Invalidate();
         });
     }
