@@ -4,6 +4,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using Windock.Core.Layout;
 using Windock.Core.Settings;
+using Windock.Status;
 
 namespace Windock.Dock;
 
@@ -37,7 +38,8 @@ internal sealed class DockRenderer
 
     /// theme.PlateColor is the color actually shown (already resolved for "ikuti warna wallpaper").
     public void Render(LayoutResult layout, AppearanceSettings appearance, ThemeSettings theme, Func<string, ImageSource?> iconFor,
-        Func<string, int> windowCount, string? pressedKey, Func<string, double> liftFor, Func<string, bool> badgeFor)
+        Func<string, int> windowCount, string? pressedKey, Func<string, double> liftFor, Func<string, bool> badgeFor,
+        Func<string, StatusButton?> statusFor, string? hoverKey)
     {
         Place(_activeZone, layout.ActiveZone);
         Place(_plate, layout.Plate);
@@ -80,6 +82,11 @@ internal sealed class DockRenderer
             v.Element.RenderTransform = p >= 1 ? Transform.Identity : new ScaleTransform(scale, scale, item.Bounds.Width / 2, item.Bounds.Height / 2);
 
             if (v.Element is Image image) image.Source = iconFor(item.Key);
+            else if (v.Element is Border box && statusFor(item.Key) is { } button)
+            {
+                ShowStatus(box, button, item.Bounds.Height);
+                box.Background = item.Key == pressedKey ? StatusPressed : item.Key == hoverKey ? StatusHover : Brushes.Transparent;
+            }
             var offsets = appearance.ShowRunningIndicators ? IndicatorDots.Offsets(windowCount(item.Key)) : Array.Empty<double>();
             for (var d = 0; d < v.Dots.Count; d++)
             {
@@ -114,11 +121,61 @@ internal sealed class DockRenderer
 
     public void HideTooltip() => _tooltip.Visibility = Visibility.Collapsed;
 
+    private static readonly FontFamily GlyphFont = new("Segoe MDL2 Assets");
+    private static readonly Brush StatusHover = Frozen(Color.FromArgb(0x26, 0xFF, 0xFF, 0xFF));
+    private static readonly Brush StatusPressed = Frozen(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF));
+
+    private static Brush Frozen(Color c)
+    {
+        var brush = new SolidColorBrush(c);
+        brush.Freeze();
+        return brush;
+    }
+
+    private static (double Glyph, double Text, double Sub) StatusFontSizes(double icon) =>
+        (Math.Round(icon * 0.40), Math.Round(icon * 0.31), Math.Round(icon * 0.25));
+
+    /// Width (DIP) a status button needs at this icon size.
+    public double MeasureStatus(StatusButton b, double icon)
+    {
+        var (glyphSize, textSize, subSize) = StatusFontSizes(icon);
+        double Measure(string? text, FontFamily font, double size) => string.IsNullOrEmpty(text) ? 0
+            : new FormattedText(text, System.Globalization.CultureInfo.CurrentUICulture, FlowDirection.LeftToRight,
+                new Typeface(font, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal), size, Brushes.White, 1.0).WidthIncludingTrailingWhitespace;
+        var glyph = Measure(b.Glyph, GlyphFont, glyphSize);
+        var text = Math.Max(Measure(b.Text, SystemFonts.MessageFontFamily, textSize), Measure(b.SubText, SystemFonts.MessageFontFamily, subSize));
+        var content = glyph + text + (glyph > 0 && text > 0 ? 4 : 0);
+        return Math.Ceiling(Math.Max(icon * 0.62, content + 12));
+    }
+
+    private static void ShowStatus(Border box, StatusButton b, double icon)
+    {
+        if (box.Tag is (StatusButton shown, double size) && shown == b && size == icon) return;
+        box.Tag = (b, icon);
+        var (glyphSize, textSize, subSize) = StatusFontSizes(icon);
+        var row = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        if (b.Glyph is not null)
+            row.Children.Add(new TextBlock { Text = b.Glyph, FontFamily = GlyphFont, FontSize = glyphSize, Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center });
+        if (b.Text is not null || b.SubText is not null)
+        {
+            var lines = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(b.Glyph is null ? 0 : 4, 0, 0, 0) };
+            if (b.Text is not null)
+                lines.Children.Add(new TextBlock { Text = b.Text, FontSize = textSize, Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Center });
+            if (b.SubText is not null)
+                lines.Children.Add(new TextBlock { Text = b.SubText, FontSize = subSize, Foreground = Brushes.White, Opacity = 0.75, HorizontalAlignment = HorizontalAlignment.Center });
+            row.Children.Add(lines);
+        }
+        box.Child = row;
+    }
+
     private Visuals Create(LayoutItemKind kind)
     {
-        FrameworkElement element = kind == LayoutItemKind.Icon
-            ? new Image { Stretch = Stretch.Uniform }
-            : new Rectangle { Fill = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF)) };
+        FrameworkElement element = kind switch
+        {
+            LayoutItemKind.Icon => new Image { Stretch = Stretch.Uniform },
+            LayoutItemKind.Fixed => new Border { CornerRadius = new CornerRadius(6), Background = Brushes.Transparent, IsHitTestVisible = false },
+            _ => new Rectangle { Fill = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF)) },
+        };
         _canvas.Children.Add(element);
         var dots = new List<Ellipse>();
         for (var i = 0; kind == LayoutItemKind.Icon && i < IndicatorDots.MaxDots; i++)

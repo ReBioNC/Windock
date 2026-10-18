@@ -16,6 +16,7 @@ public static class DockMetrics
     public const double ScreenMargin = 8;
     public const double ReachFactor = 2.5;
     public const double SeparatorHeightFactor = 0.6;
+    public const double FixedSpacing = 4;
 
     public static double PlateHeight(double icon) => icon + 2 * PlatePaddingV + IndicatorSpace;
 

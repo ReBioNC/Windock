@@ -294,7 +294,7 @@ internal sealed partial class DockController
         if (_layout is null) return;
         _cursorX = p.X;
         _animator.SetPointerInside(true, _clock.Now);
-        var hover = HitTest(p)?.Key;
+        var hover = HitTest(p)?.Key ?? StatusAt(p)?.Key;
         if (hover != _hoverKey)
         {
             _hoverKey = hover;
@@ -335,6 +335,8 @@ internal sealed partial class DockController
         Invalidate();
         if (hit is not null && hit.Key == pressed)
             ItemClicked?.Invoke(hit, _shiftAtPress || Native.IsShiftDown());
+        else if (pressed is not null && StatusAt(p)?.Key == pressed)
+            RaiseStatusClicked(pressed);
     }
 
     private DockItem? HitTest(Point p)
@@ -353,9 +355,11 @@ internal sealed partial class DockController
 
     private void ShowTooltip()
     {
-        if (_hoverKey is null || _layout is null || _model.Find(_hoverKey) is not { } item) return;
+        if (_hoverKey is null || _layout is null) return;
+        var text = _model.Find(_hoverKey)?.DisplayName ?? StatusButtonFor(_hoverKey)?.Tooltip;
+        if (text is null) return;
         var bounds = _layout.Items.FirstOrDefault(l => l.Key == _hoverKey).Bounds;
-        _renderer.ShowTooltip(item.DisplayName, bounds);
+        _renderer.ShowTooltip(text, bounds);
     }
 
     /// Window previews for a running app (title, live thumbnail, ✕) after PreviewDelay of hovering.
@@ -458,13 +462,15 @@ internal sealed partial class DockController
             var kind = item?.Kind == DockItemKind.Separator || s.Key.StartsWith("sep:", StringComparison.Ordinal) ? LayoutItemKind.Separator : LayoutItemKind.Icon;
             return new LayoutItem(s.Key, kind, s.SlotProgress);
         }).ToList();
+        items.AddRange(StatusLayoutItems(settings.IconSize));
 
         _layout = DockLayoutEngine.Compute(new LayoutInput(items, settings.IconSize, settings.Magnification.Size,
             settings.Magnification.Enabled, _cursorX, _animator.MagnifyProgress(now), _window.Width, _window.Height));
 
         _renderer.Render(_layout, settings, EffectiveTheme(), key => _iconImages.GetValueOrDefault(key),
             key => _model.Find(key)?.Windows.Count ?? 0, _pressedKey,
-            key => _bounce.Lift(key, now) * BounceAnimator.HeightFactor * settings.IconSize, ShowsAttentionBadge);
+            key => _bounce.Lift(key, now) * BounceAnimator.HeightFactor * settings.IconSize, ShowsAttentionBadge,
+            StatusButtonFor, _hoverKey);
 
         ApplySlide(now);
     }

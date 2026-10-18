@@ -39,9 +39,12 @@ public static class DockLayoutEngine
         }
 
         // 3. Plate from the actual (magnified) slot widths, centred on screen.
-        var widths = items.Select((item, i) => item.Kind == LayoutItemKind.Icon
-            ? (sizes[i] + IconSpacing) * item.SlotProgress
-            : SeparatorSlotWidth * item.SlotProgress).ToArray();
+        var widths = items.Select((item, i) => item.Kind switch
+        {
+            LayoutItemKind.Icon => (sizes[i] + IconSpacing) * item.SlotProgress,
+            LayoutItemKind.Fixed => (item.Width + FixedSpacing) * item.SlotProgress,
+            _ => SeparatorSlotWidth * item.SlotProgress,
+        }).ToArray();
         var plateHeight = PlateHeight(baseIcon);
         var plateWidth = 2 * PlatePaddingH + widths.Sum();
         var plate = new RectD((input.ScreenWidth - plateWidth) / 2, input.WindowHeight - EdgeGap - plateHeight, plateWidth, plateHeight);
@@ -57,6 +60,10 @@ public static class DockLayoutEngine
             if (items[i].Kind == LayoutItemKind.Icon)
             {
                 bounds = new RectD(center - sizes[i] / 2, iconBottom - sizes[i], sizes[i], sizes[i]);
+            }
+            else if (items[i].Kind == LayoutItemKind.Fixed)
+            {
+                bounds = new RectD(center - items[i].Width / 2, iconBottom - baseIcon, items[i].Width, baseIcon);
             }
             else
             {
@@ -76,8 +83,12 @@ public static class DockLayoutEngine
         return new LayoutResult(plate, activeZone, layouts, baseIcon);
     }
 
-    private static double SlotWidth(LayoutItem item, double icon) =>
-        (item.Kind == LayoutItemKind.Icon ? icon + IconSpacing : SeparatorSlotWidth) * item.SlotProgress;
+    private static double SlotWidth(LayoutItem item, double icon) => item.SlotProgress * item.Kind switch
+    {
+        LayoutItemKind.Icon => icon + IconSpacing,
+        LayoutItemKind.Fixed => item.Width + FixedSpacing,
+        _ => SeparatorSlotWidth,
+    };
 
     /// Shrinks icons uniformly when the unmagnified dock would not fit the screen.
     private static double FitIconSize(LayoutInput input)
@@ -88,7 +99,7 @@ public static class DockLayoutEngine
 
         var iconWeight = input.Items.Where(i => i.Kind == LayoutItemKind.Icon).Sum(i => i.SlotProgress);
         if (iconWeight <= 0) return input.IconSize;
-        var separators = input.Items.Where(i => i.Kind == LayoutItemKind.Separator).Sum(i => SeparatorSlotWidth * i.SlotProgress);
+        var separators = input.Items.Where(i => i.Kind != LayoutItemKind.Icon).Sum(i => SlotWidth(i, 0));
         var fitted = (available - 2 * PlatePaddingH - separators - iconWeight * IconSpacing) / iconWeight;
         return Math.Max(1, fitted);
     }

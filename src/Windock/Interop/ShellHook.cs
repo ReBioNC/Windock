@@ -5,7 +5,7 @@ namespace Windock.Interop;
 /// Shell hook messages for our message window: windows asking for attention (FlashWindow) and activations.
 internal sealed class ShellHook : IDisposable
 {
-    private const int HSHELL_WINDOWACTIVATED = 4, HSHELL_RUDEAPPACTIVATED = 0x8004, HSHELL_FLASH = 0x8006;
+    private const int HSHELL_WINDOWACTIVATED = 4, HSHELL_LANGUAGE = 8, HSHELL_RUDEAPPACTIVATED = 0x8004, HSHELL_FLASH = 0x8006;
 
     private readonly MessageWindow _window;
     private readonly uint _message;
@@ -24,6 +24,9 @@ internal sealed class ShellHook : IDisposable
 
     public event Action<IntPtr>? Activated;
 
+    /// The keyboard language of some window changed.
+    public event Action? LanguageChanged;
+
     private void OnMessage(int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         if (_message == 0 || (uint)msg != _message) return;
@@ -31,6 +34,7 @@ internal sealed class ShellHook : IDisposable
         {
             case HSHELL_FLASH: Flashed?.Invoke(lParam); break;
             case HSHELL_WINDOWACTIVATED or HSHELL_RUDEAPPACTIVATED: Activated?.Invoke(lParam); break;
+            case HSHELL_LANGUAGE: LanguageChanged?.Invoke(); break;
         }
     }
 

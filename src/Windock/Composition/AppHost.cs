@@ -50,6 +50,8 @@ internal sealed class AppHost
     public AutoHideController? AutoHide { get; private set; }
     public RecycleBinWatcher? BinWatcher { get; private set; }
     public ShellHook? Shell { get; private set; }
+    public Status.StatusArea? StatusArea { get; private set; }
+    private Win32TaskbarController? _taskbarWindows;
 
     public void Start(string[] args)
     {
@@ -72,7 +74,7 @@ internal sealed class AppHost
         }
 
         // Undo anything a killed previous session left on the taskbar before showing anything (A-04).
-        var taskbarController = new Win32TaskbarController(Log, Application.Current.Dispatcher, Windows);
+        var taskbarController = _taskbarWindows = new Win32TaskbarController(Log, Application.Current.Dispatcher, Windows);
         Taskbar = new TaskbarModeCoordinator(taskbarController, new RecoveryStateStore(DataDirectory), Environment.ProcessId);
         var recovered = Taskbar.RecoverFromPreviousSession();
         if (File.Exists(SessionMarker) && !recovered)
@@ -122,6 +124,11 @@ internal sealed class AppHost
         Dock.Start();
         Shell = new ShellHook(Messages);
         Shell.Flashed += hwnd => Dock.RequestAttention(hwnd);
+        StatusArea = new Status.StatusArea(Settings, Application.Current.Dispatcher, Log);
+        Dock.AttachStatus(StatusArea);
+        Dock.StatusClicked += OnStatusClicked;
+        Shell.LanguageChanged += () => StatusArea.RefreshLanguage();
+        Shell.Activated += _ => StatusArea.RefreshLanguage();
         BinWatcher = new RecycleBinWatcher();
         BinWatcher.Changed += RefreshRecycleBin;
         RefreshRecycleBin();
@@ -248,7 +255,60 @@ internal sealed class AppHost
         if (e.New.Behavior.ExplorerContextMenu != e.Old.Behavior.ExplorerContextMenu) SyncExplorerMenu(e.New.Behavior.ExplorerContextMenu);
         if (e.New.Behavior.StartWithWindows != e.Old.Behavior.StartWithWindows) SyncStartup(e.New.Behavior.StartWithWindows);
         if (e.New.Theme.AccentColor != e.Old.Theme.AccentColor) ApplyAccent(e.New.Theme.AccentColor);
+        if (e.Sections.HasFlag(SettingsSection.Status)) StatusArea?.ApplySettings();
         if (e.New.Theme.FollowWallpaper && !e.Old.Theme.FollowWallpaper) UpdateWallpaperColor();
+    }
+
+    private void OnStatusClicked(string key, Point anchor)
+    {
+        Log.Info($"status click {key}");
+        switch (key)
+        {
+            case Status.StatusArea.Tray:
+                _taskbarWindows?.PeekTray();
+                break;
+            case Status.StatusArea.Network:
+                OpenUri("ms-availablenetworks:");
+                break;
+            case Status.StatusArea.Volume when StatusArea is not null:
+                ShowStatusPopup(new Status.VolumePopup(StatusArea.Audio), anchor);
+                break;
+            case Status.StatusArea.Battery:
+                OpenUri("ms-settings:batterysaver");
+                break;
+            case Status.StatusArea.Language:
+                SystemStatus.SwitchInputLanguage();
+                var later = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+                later.Tick += (_, _) => { later.Stop(); StatusArea?.RefreshLanguage(); };
+                later.Start();
+                break;
+            case Status.StatusArea.Clock:
+                ShowStatusPopup(new Status.CalendarPopup(Settings.Current.Status.Clock24Hour), anchor);
+                break;
+            case Status.StatusArea.Notifications:
+                OpenUri("ms-actioncenter:");
+                break;
+        }
+    }
+
+    /// Keeps an auto-hiding dock on screen while the popup is open.
+    private void ShowStatusPopup(Status.DockPopup popup, Point anchor)
+    {
+        Dock?.SetMenuOpen(true);
+        popup.Closed += (_, _) => Dock?.SetMenuOpen(false);
+        popup.ShowAt(anchor);
+    }
+
+    private void OpenUri(string uri)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(uri) { UseShellExecute = true })?.Dispose();
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            Log.Error($"cannot open {uri}", ex);
+        }
     }
 
     /// Accent color of menus, highlights and Pengaturan (dynamic resources, so open windows update too).

@@ -46,6 +46,7 @@
                 </ListBox.ItemContainerStyle>
                 <ListBoxItem Content="Tampilan" />
                 <ListBoxItem Content="Tema" />
+                <ListBoxItem Content="Area status" />
                 <ListBoxItem Content="Perilaku" />
                 <ListBoxItem Content="Isi Dock" />
                 <ListBoxItem Content="Pengaman" />

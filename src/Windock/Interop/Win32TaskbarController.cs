@@ -13,6 +13,13 @@ internal sealed class Win32TaskbarController : ITaskbarController
     private readonly ILog _log;
     private readonly DispatcherTimer _hideTimer;
     private bool _keepHidden;
+    private bool _peeking;
+
+    /// Windows that belong to the tray while it is peeked: the taskbar, the hidden-icons overflow, shell flyouts, menus.
+    private static readonly HashSet<string> TrayClasses = new(StringComparer.Ordinal)
+    {
+        "Shell_TrayWnd", "NotifyIconOverflowWindow", "TopLevelWindowForOverflowXamlIsland", "Windows.UI.Core.CoreWindow", "#32768",
+    };
 
     public Win32TaskbarController(ILog log, Dispatcher dispatcher, WindowTracker tracker)
     {
@@ -77,8 +84,31 @@ internal sealed class Win32TaskbarController : ITaskbarController
         foreach (var h in TaskbarWindows()) Native.ShowWindow(h, Native.SW_SHOW);
     }
 
+    /// "Cara A": shows the real Windows taskbar for a moment with its hidden-icons tray open; it goes
+    /// back to the chosen mode as soon as something outside the tray takes the focus.
+    public void PeekTray()
+    {
+        var main = Native.FindWindow("Shell_TrayWnd", null);
+        if (main == IntPtr.Zero) return;
+        _peeking = true;
+        Native.ShowWindow(main, Native.SW_SHOW);
+        Native.SetForegroundWindow(main);
+        var notify = Native.FindWindowEx(main, IntPtr.Zero, "TrayNotifyWnd", null);
+        var chevron = notify == IntPtr.Zero ? IntPtr.Zero : Native.FindWindowEx(notify, IntPtr.Zero, "Button", null);
+        if (chevron != IntPtr.Zero) Native.PostMessage(chevron, BM_CLICK, IntPtr.Zero, IntPtr.Zero);
+        _log.Info($"tray peek (overflow button {(chevron != IntPtr.Zero ? "clicked" : "not found")})");
+    }
+
+    private const int BM_CLICK = 0x00F5;
+
     private void OnWindowEvent(uint evt, IntPtr hwnd)
     {
+        if (_peeking)
+        {
+            if (evt != Native.EVENT_SYSTEM_FOREGROUND || TrayClasses.Contains(Native.ClassName(Native.GetForegroundWindow()))) return;
+            _peeking = false;
+            _log.Info("tray peek ended");
+        }
         if (!_keepHidden || (evt != Native.EVENT_OBJECT_SHOW && evt != Native.EVENT_SYSTEM_FOREGROUND)) return;
         if (StartMenuInFront()) return;  // Start/Search in use; hidden again when focus moves on
         if (TaskbarWindows().Any(Native.IsWindowVisible)) HideNow();

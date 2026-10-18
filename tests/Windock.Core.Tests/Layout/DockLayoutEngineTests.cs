@@ -21,6 +21,31 @@ public class DockLayoutEngineTests
     private static ItemLayout Item(LayoutResult r, string key) => r.Items.Single(i => i.Key == key);
 
     [Fact]
+    public void Fixed_items_keep_their_width_and_never_magnify()
+    {
+        var input = Input(3, cursor: 1100);
+        var items = input.Items.Append(new LayoutItem("status:clock", LayoutItemKind.Fixed, 1, Width: 60)).ToList();
+
+        var r = DockLayoutEngine.Compute(input with { Items = items });
+
+        var clock = Item(r, "status:clock");
+        Assert.Equal(60, clock.Bounds.Width, 3);
+        Assert.Equal(48, clock.Bounds.Height, 3);
+        Assert.Equal(r.Plate.Right - DockMetrics.PlatePaddingH - (60 + DockMetrics.FixedSpacing) / 2, clock.Bounds.CenterX, 3);
+        Assert.Equal(Item(r, "app0").Bounds.Bottom, clock.Bounds.Bottom, 3);
+    }
+
+    [Fact]
+    public void Fixed_items_widen_the_plate()
+    {
+        var plain = DockLayoutEngine.Compute(Input(3));
+        var input = Input(3);
+        var withStatus = DockLayoutEngine.Compute(input with { Items = input.Items.Append(new LayoutItem("s", LayoutItemKind.Fixed, 1, 30)).ToList() });
+
+        Assert.Equal(plain.Plate.Width + 30 + DockMetrics.FixedSpacing, withStatus.Plate.Width, 3);
+    }
+
+    [Fact]
     public void Metrics_match_design()
     {
         Assert.Equal(66, DockMetrics.PlateHeight(48));

@@ -7,9 +7,11 @@ public readonly record struct RectD(double X, double Y, double Width, double Hei
     public double CenterX => X + Width / 2;
 }
 
-public enum LayoutItemKind { Icon, Separator }
+/// Fixed: a status-area button with its own width that never magnifies.
+public enum LayoutItemKind { Icon, Separator, Fixed }
 
-public readonly record struct LayoutItem(string Key, LayoutItemKind Kind, double SlotProgress);
+/// Width is only used by Fixed items (DIP, without spacing).
+public readonly record struct LayoutItem(string Key, LayoutItemKind Kind, double SlotProgress, double Width = 0);
 
 public sealed record LayoutInput(
     IReadOnlyList<LayoutItem> Items,
