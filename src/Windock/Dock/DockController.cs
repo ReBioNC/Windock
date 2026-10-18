@@ -20,6 +20,8 @@ internal sealed partial class DockController
 
     private readonly DockModel _model;
     private readonly DockAnimator _animator = new();
+    private readonly BounceAnimator _bounce = new();
+    private readonly Dictionary<string, int> _launchWindows = new();  // bouncing launches: window count at click
     private readonly IClock _clock;
     private readonly SettingsStore _settings;
     private readonly IconProvider _icons;
@@ -104,10 +106,11 @@ internal sealed partial class DockController
         _window.Place(DockMetrics.WindowHeight(appearance.IconSize, appearance.Magnification.Size), _bottomEdge);
         if (!_hidden) _window.Show();
         _backdrop.SetBlur(appearance.Blur);
-        _animator.AnimationsEnabled = SystemParameters.ClientAreaAnimation;
+        _animator.AnimationsEnabled = _bounce.AnimationsEnabled = SystemParameters.ClientAreaAnimation;
         SystemParameters.StaticPropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(SystemParameters.ClientAreaAnimation)) _animator.AnimationsEnabled = SystemParameters.ClientAreaAnimation;
+            if (e.PropertyName == nameof(SystemParameters.ClientAreaAnimation))
+                _animator.AnimationsEnabled = _bounce.AnimationsEnabled = SystemParameters.ClientAreaAnimation;
         };
 
         _animator.Reset(_model.Items.Select(i => i.Key).ToList());
@@ -166,8 +169,41 @@ internal sealed partial class DockController
         }
     }
 
+    /// Bounces an icon while its app starts: until a new window shows up or LaunchTimeout passes.
+    public void BounceLaunch(string key)
+    {
+        if (!_settings.Current.Behavior.BounceOnLaunch || _model.Find(key) is not { } item) return;
+        _launchWindows[key] = item.Windows.Count;
+        _bounce.Start(key, _clock.Now, BounceAnimator.LaunchTimeout);
+        Invalidate();
+    }
+
+    /// Bounces an icon for `limit` (attention requests); Stop lands it.
+    public void Bounce(string key, TimeSpan limit)
+    {
+        _bounce.Start(key, _clock.Now, limit);
+        Invalidate();
+    }
+
+    public void StopBounce(string key)
+    {
+        _bounce.Stop(key, _clock.Now);
+        Invalidate();
+    }
+
+    private void StopLaunchBounces()
+    {
+        foreach (var (key, count) in _launchWindows.ToList())
+        {
+            if (_model.Find(key) is { } item && item.Windows.Count <= count) continue;
+            _launchWindows.Remove(key);
+            _bounce.Stop(key, _clock.Now);
+        }
+    }
+
     private void OnItemsChanged(object? sender, DockItemsChangedEventArgs e)
     {
+        StopLaunchBounces();
         var added = e.Added.ToList();
         if (_revive is not null && _model.Find(_revive) is not null && !added.Contains(_revive)) added.Add(_revive);
         var removed = e.Removed.Concat(_pendingRemoved).ToList();
@@ -351,7 +387,7 @@ internal sealed partial class DockController
         {
             var now = _clock.Now;
             RenderFrame(now);
-            if (!_animator.IsAnimating(now) && !IsSliding(now) && !_dirty)
+            if (!_animator.IsAnimating(now) && !_bounce.IsAnimating(now) && !IsSliding(now) && !_dirty)
             {
                 CompositionTarget.Rendering -= OnRendering;
                 _renderHooked = false;
@@ -380,7 +416,8 @@ internal sealed partial class DockController
             settings.Magnification.Enabled, _cursorX, _animator.MagnifyProgress(now), _window.Width, _window.Height));
 
         _renderer.Render(_layout, settings, key => _iconImages.GetValueOrDefault(key),
-            key => _model.Find(key)?.Windows.Count ?? 0, _pressedKey);
+            key => _model.Find(key)?.Windows.Count ?? 0, _pressedKey,
+            key => _bounce.Lift(key, now) * BounceAnimator.HeightFactor * settings.IconSize);
 
         ApplySlide(now);
     }

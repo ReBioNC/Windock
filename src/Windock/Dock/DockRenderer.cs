@@ -34,7 +34,7 @@ internal sealed class DockRenderer
     }
 
     public void Render(LayoutResult layout, AppearanceSettings appearance, Func<string, ImageSource?> iconFor,
-        Func<string, int> windowCount, string? pressedKey)
+        Func<string, int> windowCount, string? pressedKey, Func<string, double> liftFor)
     {
         Place(_activeZone, layout.ActiveZone);
         Place(_plate, layout.Plate);
@@ -46,6 +46,7 @@ internal sealed class DockRenderer
             seen.Add(item.Key);
             if (!_visuals.TryGetValue(item.Key, out var v)) _visuals[item.Key] = v = Create(item.Kind);
             Place(v.Element, item.Bounds);
+            if (liftFor(item.Key) is var lift and > 0) Canvas.SetTop(v.Element, item.Bounds.Y - lift);
 
             // Entering/leaving items fade and scale between 60% and 100% (DESIGN §4).
             var p = Math.Clamp(item.SlotProgress, 0, 1);

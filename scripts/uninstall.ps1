@@ -22,6 +22,10 @@ foreach ($progId in "exefile", "lnkfile") {
     $key = "HKCU:\Software\Classes\$progId\shell\WindockPin"
     if (Test-Path $key) { Remove-Item $key -Recurse; Write-Host "Menu klik kanan dihapus: $progId" }
 }
+$run = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+if (Get-ItemProperty $run -Name Windock -ErrorAction SilentlyContinue) {
+    Remove-ItemProperty $run -Name Windock; Write-Host "Startup Windows dihapus"
+}
 if (Test-Path $dest) { Remove-Item $dest -Recurse; Write-Host "Dihapus: $dest" }
 if ($RemoveSettings) {
     $data = Join-Path $env:APPDATA "Windock"

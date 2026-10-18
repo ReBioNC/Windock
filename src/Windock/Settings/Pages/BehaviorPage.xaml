@@ -27,8 +27,41 @@
             </StackPanel>
         </Grid>
 
-        <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"
-                   Text="Animasi memantul dan jalan saat Windows nyala hadir di versi berikutnya." />
+        <Grid Style="{StaticResource Row}">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+            <TextBlock Text="Animasi" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+            <StackPanel Grid.Column="1">
+                <CheckBox x:Name="Bounce" Content="Ikon memantul saat aplikasi dibuka" />
+                <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
+                           Text="Berhenti saat jendelanya muncul (paling lama 10 detik). Mati otomatis jika animasi Windows dimatikan." />
+            </StackPanel>
+        </Grid>
+
+        <Grid Style="{StaticResource Row}">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+            <TextBlock Text="Ikon minta perhatian" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+            <StackPanel Grid.Column="1">
+                <RadioButton x:Name="AttentionBounce" GroupName="Attention" Content="Memantul" Margin="0,0,0,8" />
+                <RadioButton x:Name="AttentionDot" GroupName="Attention" Content="Titik merah" Margin="0,0,0,8" />
+                <RadioButton x:Name="AttentionOff" GroupName="Attention" Content="Mati" Margin="0,0,0,8" />
+                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                    <RadioButton x:Name="RepeatUntilOpened" GroupName="AttentionRepeat" Content="Sampai dibuka" Margin="0,0,16,0" />
+                    <RadioButton x:Name="RepeatOnce" GroupName="AttentionRepeat" Content="Sekali" />
+                </StackPanel>
+                <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0"
+                           Text="Saat aplikasi berkedip minta dilihat (mis. pesan masuk), ikonnya di dock ditandai." />
+            </StackPanel>
+        </Grid>
+
+        <Grid Style="{StaticResource Row}">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+            <TextBlock Text="Saat Windows nyala" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+            <StackPanel Grid.Column="1">
+                <CheckBox x:Name="Startup" Content="Jalankan Windock otomatis" />
+                <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
+                           Text="Disimpan di daftar startup akun kamu saja (bisa dilihat di Task Manager &gt; Startup)." />
+            </StackPanel>
+        </Grid>
 
         <Button Content="Kembalikan ke default" HorizontalAlignment="Right" Margin="0,18,0,0" Click="OnReset" />
     </StackPanel>

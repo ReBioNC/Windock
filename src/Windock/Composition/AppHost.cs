@@ -101,6 +101,7 @@ internal sealed class AppHost
             Log.Info($"click {item.Key} windows=[{string.Join(",", item.Windows.Select(w => $"0x{w.Handle:X}"))}] fg=0x{foreground:X} -> {action}");
             if (action is ClickAction.ShowWindows) Dock.ShowPreview(item);
             else Launcher.Execute(action, item);
+            if (action is ClickAction.Launch) Dock.BounceLaunch(item.Key);
         };
         Dock.ContextRequested += item =>
         {
@@ -139,6 +140,7 @@ internal sealed class AppHost
             if (verb == "pin") PinPath(argument);
         };
         SyncExplorerMenu(Settings.Current.Behavior.ExplorerContextMenu);
+        SyncStartup(Settings.Current.Behavior.StartWithWindows);
 
         Settings.Changed += OnSettingsChanged;
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
@@ -228,6 +230,7 @@ internal sealed class AppHost
         else if (e.Sections.HasFlag(SettingsSection.Behavior) && !InWindowsMode) Taskbar?.Apply(e.New.Behavior.TaskbarMode);
         if (e.Sections.HasFlag(SettingsSection.Safety)) RegisterHotkey(e.New.Safety.EmergencyHotkey);
         if (e.New.Behavior.ExplorerContextMenu != e.Old.Behavior.ExplorerContextMenu) SyncExplorerMenu(e.New.Behavior.ExplorerContextMenu);
+        if (e.New.Behavior.StartWithWindows != e.Old.Behavior.StartWithWindows) SyncStartup(e.New.Behavior.StartWithWindows);
     }
 
     /// Registers the emergency hotkey; returns false (and tells the user) when it is invalid or taken.
@@ -290,6 +293,18 @@ internal sealed class AppHost
         catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
         {
             Log.Error("explorer context menu registration failed", ex);
+        }
+    }
+
+    private void SyncStartup(bool enabled)
+    {
+        try
+        {
+            if (Environment.ProcessPath is { } exe) StartupRegistration.Sync(enabled, exe);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
+        {
+            Log.Error("startup registration failed", ex);
         }
     }
 

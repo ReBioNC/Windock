@@ -19,7 +19,9 @@ public static class DockMetrics
 
     public static double PlateHeight(double icon) => icon + 2 * PlatePaddingV + IndicatorSpace;
 
-    public static double WindowHeight(double icon, double magnified) => PlateHeight(icon) + EdgeGap + (magnified - icon) + TooltipSpace;
+    /// Room above the plate fits the magnified icon or a bouncing one, whichever is taller.
+    public static double WindowHeight(double icon, double magnified) =>
+        PlateHeight(icon) + EdgeGap + Math.Max(magnified - icon, icon * Animation.BounceAnimator.HeightFactor) + TooltipSpace;
 
     public static double ReservedThickness(double icon) => PlateHeight(icon) + EdgeGap;
 }
