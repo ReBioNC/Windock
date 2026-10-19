@@ -71,6 +71,7 @@ internal sealed class AutoHideController
             // Suspended (a fullscreen window, including the Alt+Tab switcher) only pauses auto-hide: a hidden dock
             // stays hidden instead of popping up for a moment when the pause ends. Mode Never shows it for good.
             if (_mode() == DockAutoHide.Never) _dock.SetSlidOut(false);
+            else if (_suspended && !_dock.IsPointerUsingDock) _dock.SetSlidOut(true);  // e.g. a game opened from the dock
             return;
         }
         _edge.Place();

@@ -169,6 +169,11 @@ internal sealed partial class DockController
         {
             HideTooltip();
             HidePreview();
+            // A hidden window gets no MouseLeave: forget the pointer, or auto-hide would think it is still on the dock.
+            _cursorX = null;
+            _hoverKey = null;
+            _pressedKey = null;
+            _animator.SetPointerInside(false, _clock.Now);
             _window.Hide();
             _backdrop.Hide();
         }
