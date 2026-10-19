@@ -575,6 +575,30 @@ internal sealed class AppHost
 
     private void OnSystemMessage(int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        if (msg == Native.WM_QUERYENDSESSION)
+        {
+            // Shutdown, restart or sign-out: Windows may end the process before any exit code runs,
+            // so give the taskbar back now. If the shutdown is cancelled, WM_ENDSESSION(false) re-applies.
+            Log.Info("session ending: restoring the taskbar");
+            Try(() => Taskbar?.Restore());
+            Try(() => AppBar?.Release());
+            Settings.Flush();
+            return;  // default handling allows the session to end
+        }
+        if (msg == Native.WM_ENDSESSION)
+        {
+            if (wParam != IntPtr.Zero)
+            {
+                Log.Info("session ended");
+                RestoreAll();
+            }
+            else
+            {
+                Log.Info("session end cancelled: re-applying");
+                ApplyMode();
+            }
+            return;
+        }
         if (msg is Native.WM_DISPLAYCHANGE or Native.WM_DPICHANGED)
         {
             Log.Info($"display change 0x{msg:X}");

@@ -21,7 +21,8 @@ internal static class Native
     public static readonly IntPtr HWND_TOPMOST = new(-1);
 
     // Messages
-    public const int WM_CLOSE = 0x0010, WM_GETICON = 0x007F, WM_HOTKEY = 0x0312, WM_DISPLAYCHANGE = 0x007E, WM_DPICHANGED = 0x02E0, WM_SETTINGCHANGE = 0x001A;
+    public const int WM_CLOSE = 0x0010, WM_GETICON = 0x007F, WM_HOTKEY = 0x0312, WM_DISPLAYCHANGE = 0x007E, WM_DPICHANGED = 0x02E0, WM_SETTINGCHANGE = 0x001A,
+        WM_QUERYENDSESSION = 0x0011, WM_ENDSESSION = 0x0016;
     public const int ICON_BIG = 1, ICON_SMALL2 = 2;
     public const int GCLP_HICON = -14;
 
