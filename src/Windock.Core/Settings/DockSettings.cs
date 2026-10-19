@@ -57,7 +57,8 @@ public sealed record AppearanceSettings(
 
 public sealed record BehaviorSettings(TaskbarMode TaskbarMode, DockAutoHide AutoHide, bool BounceOnLaunch, bool StartWithWindows,
     bool ExplorerContextMenu = true, DockMode Mode = DockMode.Windock,
-    AttentionStyle Attention = AttentionStyle.Bounce, AttentionRepeat AttentionRepeat = AttentionRepeat.UntilOpened);
+    AttentionStyle Attention = AttentionStyle.Bounce, AttentionRepeat AttentionRepeat = AttentionRepeat.UntilOpened,
+    bool AttentionFromNotifications = true);
 
 public sealed record SafetySettings(string EmergencyHotkey);
 

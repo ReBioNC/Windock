@@ -50,6 +50,7 @@ internal sealed class AppHost
     public AutoHideController? AutoHide { get; private set; }
     public RecycleBinWatcher? BinWatcher { get; private set; }
     public ShellHook? Shell { get; private set; }
+    private NotificationWatcher? _notifications;
     public Status.StatusArea? StatusArea { get; private set; }
     private Launcher.LauncherWindow? _launcherWindow;
 
@@ -133,6 +134,7 @@ internal sealed class AppHost
         Dock.Start();
         Shell = new ShellHook(Messages);
         Shell.Flashed += hwnd => Dock.RequestAttention(hwnd);
+        SyncNotificationWatcher();
         StatusArea = new Status.StatusArea(Settings, Application.Current.Dispatcher, Log);
         Dock.AttachStatus(StatusArea);
         Dock.StatusClicked += OnStatusClicked;
@@ -271,8 +273,25 @@ internal sealed class AppHost
         if (e.New.Behavior.StartWithWindows != e.Old.Behavior.StartWithWindows) SyncStartup(e.New.Behavior.StartWithWindows);
         if (e.New.Theme.AccentColor != e.Old.Theme.AccentColor) ApplyAccent(e.New.Theme.AccentColor);
         if (e.Sections.HasFlag(SettingsSection.Status)) StatusArea?.ApplySettings();
+        if (e.New.Behavior.AttentionFromNotifications != e.Old.Behavior.AttentionFromNotifications) SyncNotificationWatcher();
         if (e.Sections.HasFlag(SettingsSection.Launcher)) RegisterLauncherHotkey(e.New.Launcher);
         if (e.New.Theme.FollowWallpaper && !e.Old.Theme.FollowWallpaper) UpdateWallpaperColor();
+    }
+
+    /// Windows notifications (WhatsApp and other apps that send toasts or badges instead of flashing) also mark icons.
+    private void SyncNotificationWatcher()
+    {
+        if (Settings.Current.Behavior.AttentionFromNotifications && _notifications is null && Dock is not null)
+        {
+            _notifications = new NotificationWatcher(Application.Current.Dispatcher, Log);
+            _notifications.Raised += apps => Dock.RequestAppAttention(apps);
+            _notifications.Cleared += apps => Dock.ClearAppAttention(apps);
+        }
+        else if (!Settings.Current.Behavior.AttentionFromNotifications && _notifications is not null)
+        {
+            _notifications.Dispose();
+            _notifications = null;
+        }
     }
 
     private void OnStatusClicked(string key, Point anchor)

@@ -23,6 +23,34 @@ internal sealed partial class DockController
         UpdateAttention();
     }
 
+    /// Windows notifications (toasts, badges) for apps identified by AUMID (lower case).
+    public void RequestAppAttention(IEnumerable<string> aumids)
+    {
+        if (_settings.Current.Behavior.Attention == AttentionStyle.Off) return;
+        var changed = false;
+        foreach (var aumid in aumids)
+        {
+            if (_model.Find("aumid:" + aumid) is not { IsActive: false } item || !_attention.Request(item.Key)) continue;
+            _log.Info($"attention (notification): {item.Key}");
+            changed = true;
+        }
+        if (changed) UpdateAttention();
+    }
+
+    /// The app's notifications were all read (its badge went back to zero).
+    public void ClearAppAttention(IEnumerable<string> aumids)
+    {
+        var changed = false;
+        foreach (var aumid in aumids)
+        {
+            var key = "aumid:" + aumid;
+            if (!_attention.Clear(key)) continue;
+            _bounce.Stop(key, _clock.Now);
+            changed = true;
+        }
+        if (changed) UpdateAttention();
+    }
+
     private DockItem? ItemWithWindow(IntPtr hwnd) =>
         hwnd == IntPtr.Zero ? null : _model.Items.FirstOrDefault(i => i.Windows.Any(w => w.Handle == hwnd));
 

@@ -53,7 +53,8 @@ public static class SettingsJson
                 ExplorerContextMenu: Get(b, "explorerContextMenu", d.Behavior.ExplorerContextMenu),
                 Mode: GetEnum(b, "mode", d.Behavior.Mode),
                 Attention: GetEnum(b, "attention", d.Behavior.Attention),
-                AttentionRepeat: GetEnum(b, "attentionRepeat", d.Behavior.AttentionRepeat)),
+                AttentionRepeat: GetEnum(b, "attentionRepeat", d.Behavior.AttentionRepeat),
+                AttentionFromNotifications: Get(b, "attentionFromNotifications", d.Behavior.AttentionFromNotifications)),
             Pins: ReadPins(obj["pins"] as JsonArray),
             Safety: new SafetySettings(GetString(safety, "emergencyHotkey") ?? d.Safety.EmergencyHotkey),
             FirstRunCompleted: Get(obj, "firstRunCompleted", d.FirstRunCompleted))
@@ -120,6 +121,7 @@ public static class SettingsJson
                 ["mode"] = s.Behavior.Mode.ToString(),
                 ["attention"] = s.Behavior.Attention.ToString(),
                 ["attentionRepeat"] = s.Behavior.AttentionRepeat.ToString(),
+                ["attentionFromNotifications"] = s.Behavior.AttentionFromNotifications,
             },
             ["pins"] = new JsonArray(s.Pins.Select(p => (JsonNode)new JsonObject { ["path"] = p.Path }).ToArray()),
             ["safety"] = new JsonObject { ["emergencyHotkey"] = s.Safety.EmergencyHotkey },
