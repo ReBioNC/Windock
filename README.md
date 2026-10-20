@@ -2,7 +2,7 @@
 
 Dock ala macOS untuk Windows 10, dibuat dengan C# WPF di .NET 8.
 
-> Status: **v0.8.1**. Bisa dipakai harian sebagai pengganti taskbar.
+> Status: **v0.8.2**. Bisa dipakai harian sebagai pengganti taskbar.
 
 ## Baru di v0.6
 

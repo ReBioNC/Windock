@@ -21,7 +21,12 @@ internal sealed class PinResolver(ILog log) : IPinResolver
 
         var name = Path.GetFileNameWithoutExtension(pin.Path);
         if (!pin.Path.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
+        {
+            // The exe of a Store/system app (e.g. Windows Settings) cannot be started directly: use its AUMID.
+            if (PackagedAumid(pin.Path) is { } packaged)
+                return Resolve(new PinEntry(AppLauncher.AppsFolderPrefix + packaged));
             return new PinResolution(AppId.FromExePath(pin.Path), DisplayName(pin.Path) ?? name, pin.Path, pin.Path, File.Exists(pin.Path));
+        }
 
         string? target = null, arguments = null, linkAumid = null;
         if (File.Exists(pin.Path))
@@ -41,6 +46,32 @@ internal sealed class PinResolver(ILog log) : IPinResolver
         var id = target is not null ? AppId.FromExePath(target) : AppId.Choose(linkAumid, null, name, 0);
         var exists = target is null ? File.Exists(pin.Path) : File.Exists(target);
         return new PinResolution(id, name, pin.Path, pin.Path, exists);
+    }
+
+    private readonly Dictionary<string, string?> _packaged = new(StringComparer.OrdinalIgnoreCase);
+
+    /// AUMID when the exe belongs to a packaged app (an AppxManifest.xml in its folder or up to three folders up).
+    private string? PackagedAumid(string exe)
+    {
+        if (_packaged.TryGetValue(exe, out var cached)) return cached;
+        string? aumid = null;
+        try
+        {
+            var dir = Path.GetDirectoryName(exe);
+            for (var i = 0; dir is not null && i < 4 && aumid is null; i++, dir = Path.GetDirectoryName(dir))
+            {
+                var manifest = Path.Combine(dir, "AppxManifest.xml");
+                if (!File.Exists(manifest)) continue;
+                aumid = PackageIdentity.Aumid(File.ReadAllText(manifest), Path.GetRelativePath(dir, exe));
+                break;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            log.Error($"cannot read package manifest for {exe}", ex);
+        }
+        _packaged[exe] = aumid;
+        return aumid;
     }
 
     /// Squirrel apps (Discord, Slack…) pin "Update.exe --processStart App.exe"; the window belongs to the newest app-*\App.exe.
