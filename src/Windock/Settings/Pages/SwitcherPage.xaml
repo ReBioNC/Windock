@@ -1,0 +1,56 @@
+<UserControl x:Class="Windock.Settings.Pages.SwitcherPage" x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel>
+        <TextBlock Text="Alt+Tab" Style="{StaticResource PageTitle}" />
+        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,10"
+                   Text="Pakai pengalih jendela Windock saat Alt+Tab: pratinjau langsung, dikelompokkan per aplikasi, dan bisa diketik untuk mencari. Matikan untuk kembali ke Alt+Tab bawaan Windows." />
+
+        <CheckBox x:Name="Enabled" Content="Ganti Alt+Tab dengan pengalih Windock" FontWeight="SemiBold" />
+
+        <StackPanel x:Name="Options" Margin="0,8,0,0">
+            <Grid Style="{StaticResource Row}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                <TextBlock Text="Urutan" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                <StackPanel Grid.Column="1">
+                    <RadioButton x:Name="Grouped" GroupName="Order" Content="Kelompokkan per aplikasi" Margin="0,0,0,8" />
+                    <RadioButton x:Name="Flat" GroupName="Order" Content="Semua jendela, yang terakhir dipakai duluan" />
+                </StackPanel>
+            </Grid>
+
+            <Grid Style="{StaticResource Row}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                <TextBlock Text="Ukuran kartu" Style="{StaticResource Label}" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <RadioButton x:Name="Small" GroupName="Size" Content="Kecil" Margin="0,0,16,0" />
+                    <RadioButton x:Name="Medium" GroupName="Size" Content="Sedang" Margin="0,0,16,0" />
+                    <RadioButton x:Name="Large" GroupName="Size" Content="Besar" />
+                </StackPanel>
+            </Grid>
+
+            <Grid Style="{StaticResource Row}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                <TextBlock Text="Tampilan" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                <StackPanel Grid.Column="1">
+                    <CheckBox x:Name="Previews" Content="Pratinjau langsung isi jendela (matikan untuk ikon saja, paling hemat)" Margin="0,0,0,8" />
+                    <CheckBox x:Name="CurrentScreen" Content="Hanya jendela di layar tempat kursor berada" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="22,4,0,0" Text="Berguna untuk laptop + monitor: Alt+Tab di monitor hanya menampilkan jendela di monitor itu." />
+                </StackPanel>
+            </Grid>
+
+            <Grid Style="{StaticResource Row}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                <TextBlock Text="Game layar penuh" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                <StackPanel Grid.Column="1">
+                    <CheckBox x:Name="FullscreenFallback" Content="Pakai Alt+Tab Windows saat game layar penuh di depan" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="22,4,0,0" Text="Beberapa game layar penuh tidak bisa ditimpa jendela lain, jadi Alt+Tab bawaan lebih aman di sana." />
+                </StackPanel>
+            </Grid>
+
+            <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0"
+                       Text="Cara pakai: tahan Alt, tekan Tab (Shift+Tab mundur, panah juga bisa). Sambil menahan Alt, ketik untuk mencari, Del menutup jendela terpilih, Esc batal. Lepas Alt untuk pindah." />
+        </StackPanel>
+
+        <Button Content="Kembalikan ke default" HorizontalAlignment="Right" Margin="0,12,0,0" Click="OnReset" />
+    </StackPanel>
+</UserControl>

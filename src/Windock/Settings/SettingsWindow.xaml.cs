@@ -66,7 +66,8 @@ internal partial class SettingsWindow : Window
                 3 => new BehaviorPage(_context),
                 4 => new PinsPage(_context),
                 5 => new LauncherPage(_context),
-                6 => new SafetyPage(_context),
+                6 => new SwitcherPage(_context),
+                7 => new SafetyPage(_context),
                 _ => new AboutPage(_context),
             };
             _pages[index] = page;

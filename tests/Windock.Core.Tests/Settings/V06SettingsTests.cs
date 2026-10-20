@@ -21,6 +21,8 @@ public class V06SettingsTests
         Assert.Equal(AttentionRepeat.UntilOpened, s.Behavior.AttentionRepeat);
         Assert.True(s.Behavior.AttentionFromNotifications);
         Assert.True(s.Behavior.ShowBadgeCounts);
+        Assert.Equal(SwitcherSettings.Default, s.Switcher);
+        Assert.False(s.Switcher.Enabled);  // Windows' own Alt+Tab until the user turns Windock's on
     }
 
     [Fact]
@@ -33,6 +35,7 @@ public class V06SettingsTests
             Status = d.Status with { ShowWifi = false, Clock24Hour = false, ShowSeconds = true, ShowBatteryPercent = true },
             Launcher = new LauncherSettings(false, "Ctrl+Space", 10, true),
             Trash = new TrashSettings(false, false),
+            Switcher = new SwitcherSettings(true, false, SwitcherCardSize.Large, true, false, false),
             HiddenApps = new[] { new HiddenApp("path:c:\\apps\\tool.exe", "Tool") },
             Behavior = d.Behavior with { Attention = AttentionStyle.Dot, AttentionRepeat = AttentionRepeat.Once, AttentionFromNotifications = false, ShowBadgeCounts = false },
         };

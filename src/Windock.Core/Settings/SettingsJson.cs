@@ -31,6 +31,7 @@ public static class SettingsJson
         var theme = obj["theme"] as JsonObject;
         var status = obj["status"] as JsonObject;
         var launcher = obj["launcher"] as JsonObject;
+        var switcher = obj["switcher"] as JsonObject;
         var trash = obj["trash"] as JsonObject;
         var ds = d.Status;
 
@@ -85,6 +86,13 @@ public static class SettingsJson
                 Hotkey: GetString(launcher, "hotkey") ?? d.Launcher.Hotkey,
                 MaxResults: Get(launcher, "maxResults", d.Launcher.MaxResults),
                 IncludeFiles: Get(launcher, "includeFiles", d.Launcher.IncludeFiles)),
+            Switcher = new SwitcherSettings(
+                Enabled: Get(switcher, "enabled", d.Switcher.Enabled),
+                GroupByApp: Get(switcher, "groupByApp", d.Switcher.GroupByApp),
+                CardSize: GetEnum(switcher, "cardSize", d.Switcher.CardSize),
+                CurrentScreenOnly: Get(switcher, "currentScreenOnly", d.Switcher.CurrentScreenOnly),
+                LivePreviews: Get(switcher, "livePreviews", d.Switcher.LivePreviews),
+                WindowsSwitcherInFullscreen: Get(switcher, "windowsSwitcherInFullscreen", d.Switcher.WindowsSwitcherInFullscreen)),
             Trash = new TrashSettings(
                 ShowRecycleBin: Get(trash, "showRecycleBin", d.Trash.ShowRecycleBin),
                 ConfirmBeforeTrash: Get(trash, "confirmBeforeTrash", d.Trash.ConfirmBeforeTrash)),
@@ -158,6 +166,15 @@ public static class SettingsJson
                 ["hotkey"] = s.Launcher.Hotkey,
                 ["maxResults"] = s.Launcher.MaxResults,
                 ["includeFiles"] = s.Launcher.IncludeFiles,
+            },
+            ["switcher"] = new JsonObject
+            {
+                ["enabled"] = s.Switcher.Enabled,
+                ["groupByApp"] = s.Switcher.GroupByApp,
+                ["cardSize"] = s.Switcher.CardSize.ToString(),
+                ["currentScreenOnly"] = s.Switcher.CurrentScreenOnly,
+                ["livePreviews"] = s.Switcher.LivePreviews,
+                ["windowsSwitcherInFullscreen"] = s.Switcher.WindowsSwitcherInFullscreen,
             },
             ["trash"] = new JsonObject
             {

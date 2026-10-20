@@ -50,6 +50,7 @@
                 <ListBoxItem Content="Perilaku" />
                 <ListBoxItem Content="Isi Dock" />
                 <ListBoxItem Content="Launcher" />
+                <ListBoxItem Content="Alt+Tab" />
                 <ListBoxItem Content="Pengaman" />
                 <ListBoxItem Content="Tentang" />
             </ListBox>

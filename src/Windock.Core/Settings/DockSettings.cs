@@ -34,6 +34,15 @@ public sealed record StatusSettings(
         ShowLanguage: true, ShowClock: true, Clock24Hour: true, ShowDate: true, ShowSeconds: false, ShowNotifications: true);
 }
 
+public enum SwitcherCardSize { Small, Medium, Large }
+
+/// Windock's Alt+Tab switcher (off = Windows' own Alt+Tab).
+public sealed record SwitcherSettings(bool Enabled, bool GroupByApp, SwitcherCardSize CardSize, bool CurrentScreenOnly, bool LivePreviews,
+    bool WindowsSwitcherInFullscreen)
+{
+    public static readonly SwitcherSettings Default = new(false, true, SwitcherCardSize.Medium, false, true, true);
+}
+
 public sealed record LauncherSettings(bool Enabled, string Hotkey, int MaxResults, bool IncludeFiles)
 {
     public static readonly LauncherSettings Default = new(true, "Alt+Space", 8, false);
@@ -75,6 +84,7 @@ public sealed record DockSettings(
     public ThemeSettings Theme { get; init; } = ThemeSettings.Default;
     public StatusSettings Status { get; init; } = StatusSettings.Default;
     public LauncherSettings Launcher { get; init; } = LauncherSettings.Default;
+    public SwitcherSettings Switcher { get; init; } = SwitcherSettings.Default;
     public TrashSettings Trash { get; init; } = TrashSettings.Default;
     public IReadOnlyList<HiddenApp> HiddenApps { get; init; } = Array.Empty<HiddenApp>();
 
@@ -90,6 +100,7 @@ public sealed record DockSettings(
         && Theme == other.Theme
         && Status == other.Status
         && Launcher == other.Launcher
+        && Switcher == other.Switcher
         && Trash == other.Trash
         && HiddenApps.SequenceEqual(other.HiddenApps);
 
@@ -105,6 +116,7 @@ public sealed record DockSettings(
         hash.Add(Theme);
         hash.Add(Status);
         hash.Add(Launcher);
+        hash.Add(Switcher);
         hash.Add(Trash);
         foreach (var app in HiddenApps) hash.Add(app);
         return hash.ToHashCode();

@@ -51,6 +51,7 @@ internal sealed class AppHost
     public RecycleBinWatcher? BinWatcher { get; private set; }
     public ShellHook? Shell { get; private set; }
     private NotificationWatcher? _notifications;
+    private Switcher.WindowSwitcher? _switcher;
     public Status.StatusArea? StatusArea { get; private set; }
     private Launcher.LauncherWindow? _launcherWindow;
 
@@ -135,6 +136,7 @@ internal sealed class AppHost
         Shell = new ShellHook(Messages);
         Shell.Flashed += hwnd => Dock.RequestAttention(hwnd);
         SyncNotificationWatcher();
+        _switcher = new Switcher.WindowSwitcher(Settings, Windows, Icons, () => _fullscreen, Log, Application.Current.Dispatcher);
         StatusArea = new Status.StatusArea(Settings, Application.Current.Dispatcher, Log);
         Dock.AttachStatus(StatusArea);
         Dock.StatusClicked += OnStatusClicked;
@@ -254,6 +256,7 @@ internal sealed class AppHost
         Try(() => Taskbar?.Restore());
         Try(() => AppBar?.Release());
         Try(() => Hotkey?.UnregisterAll());
+        Try(() => _switcher?.Dispose());
         Try(() => File.Delete(SessionMarker));
     }
 
@@ -273,6 +276,7 @@ internal sealed class AppHost
         if (e.New.Behavior.StartWithWindows != e.Old.Behavior.StartWithWindows) SyncStartup(e.New.Behavior.StartWithWindows);
         if (e.New.Theme.AccentColor != e.Old.Theme.AccentColor) ApplyAccent(e.New.Theme.AccentColor);
         if (e.Sections.HasFlag(SettingsSection.Status)) StatusArea?.ApplySettings();
+        if (e.Sections.HasFlag(SettingsSection.Switcher)) _switcher?.Sync();
         if (e.New.Behavior.AttentionFromNotifications != e.Old.Behavior.AttentionFromNotifications) SyncNotificationWatcher();
         if (e.Sections.HasFlag(SettingsSection.Launcher)) RegisterLauncherHotkey(e.New.Launcher);
         if (e.New.Theme.FollowWallpaper && !e.Old.Theme.FollowWallpaper) UpdateWallpaperColor();
