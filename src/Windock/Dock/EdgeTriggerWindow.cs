@@ -21,6 +21,8 @@ internal sealed class EdgeTriggerWindow : Window
         Place();
     }
 
+    public void RaiseToTop() => WindowEffects.RaiseTopmost(new WindowInteropHelper(this).Handle);
+
     public void Place()
     {
         Width = SystemParameters.PrimaryScreenWidth;

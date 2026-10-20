@@ -76,6 +76,7 @@ internal sealed class AutoHideController
         }
         _edge.Place();
         _edge.Show();
+        _edge.RaiseToTop();
         _log.Info($"auto-hide: {_mode()}");
         Evaluate();
     }
@@ -83,6 +84,7 @@ internal sealed class AutoHideController
     private void Reveal()
     {
         _hideTimer.Stop();
+        _dock.RaiseToTop();
         _dock.SetSlidOut(false);
     }
 
@@ -100,6 +102,7 @@ internal sealed class AutoHideController
     private void Evaluate()
     {
         if (_suspended || _mode() == DockAutoHide.Never) return;
+        _edge.RaiseToTop();  // runs on every foreground change: keeps the edge strip reachable
         if (!WantsHidden())
         {
             Reveal();

@@ -5,6 +5,14 @@ namespace Windock.Interop;
 
 internal static class WindowEffects
 {
+    /// Puts a topmost window back at the top of the z-order. Windows can leave a WS_EX_TOPMOST window below
+    /// ordinary windows (seen after sign-in with two displays); the flag alone does not keep it on top.
+    public static void RaiseTopmost(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero) return;
+        Native.SetWindowPos(hwnd, Native.HWND_TOPMOST, 0, 0, 0, 0, Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE);
+    }
+
     /// Not in Alt+Tab, never takes focus when clicked.
     public static void MakeToolNoActivate(IntPtr hwnd) => Native.AddExStyle(hwnd, Native.WS_EX_TOOLWINDOW | Native.WS_EX_NOACTIVATE);
 

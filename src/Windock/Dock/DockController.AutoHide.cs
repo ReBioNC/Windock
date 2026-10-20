@@ -34,6 +34,9 @@ internal sealed partial class DockController
         }
     }
 
+    /// The dock window back on top of everything (see WindowEffects.RaiseTopmost).
+    public void RaiseToTop() => Interop.WindowEffects.RaiseTopmost(_window.Handle);
+
     public void SetSlidOut(bool slidOut)
     {
         if (slidOut == IsSlidOut) return;
