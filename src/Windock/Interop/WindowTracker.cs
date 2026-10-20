@@ -91,11 +91,17 @@ internal sealed class WindowTracker : IWindowSource, IDisposable
 
     private void AddIfApp(IntPtr hwnd, bool tracked)
     {
-        if (tracked || !IsAppWindow(hwnd)) return;
+        if (tracked)
+        {
+            if (_windows.TryGetValue(hwnd, out var known) && IsBareFrame(known)) Change(hwnd, known);  // shown or activated: app inside now?
+            return;
+        }
+        if (!IsAppWindow(hwnd)) return;
         var info = Describe(hwnd);
         // Describe() makes COM calls that can pump messages and re-enter this hook for the same window.
         if (!_windows.TryAdd(hwnd, info)) return;
         WindowAdded?.Invoke(this, info);
+        if (IsBareFrame(info)) RecheckLater(hwnd);
     }
 
     private void Remove(IntPtr hwnd)
@@ -112,6 +118,9 @@ internal sealed class WindowTracker : IWindowSource, IDisposable
             return;
         }
         var updated = current with { Title = Native.WindowText(hwnd), IsMinimized = Native.IsIconic(hwnd) };
+        // A UWP frame can show before its app is inside it, so it was first seen as ApplicationFrameHost:
+        // look again until the real app is found.
+        if (IsBareFrame(current)) updated = Describe(hwnd);
         if (updated == current) return;
         _windows[hwnd] = updated;
         WindowChanged?.Invoke(this, updated);
@@ -158,13 +167,34 @@ internal sealed class WindowTracker : IWindowSource, IDisposable
         catch (InvalidOperationException) { }
 
         // Store/UWP apps are identified by AppUserModelID; classic apps by exe path so shortcuts match them.
-        var isPackaged = exe is not null && exe.Contains(@"\WindowsApps\", StringComparison.OrdinalIgnoreCase);
-        var aumid = isPackaged ? ShellInterop.WindowAppUserModelId(h) ?? Native.PackagedAppUserModelId(pid) : null;
+        // "Packaged" is the process's own package identity, so system apps outside WindowsApps (Settings lives in
+        // C:\Windows\ImmersiveControlPanel) count too; a classic app's window AUMID (Chrome sets one) is ignored.
+        var processAumid = Native.PackagedAppUserModelId(pid);
+        var isPackaged = processAumid is not null || (exe is not null && exe.Contains(@"\WindowsApps\", StringComparison.OrdinalIgnoreCase));
+        var aumid = isPackaged ? processAumid ?? ShellInterop.WindowAppUserModelId(h) : null;
         var id = AppId.Choose(aumid, exe, processName, h);
 
         var name = isPackaged && title.Length > 0 ? title : DisplayNameOf(exe) ?? processName ?? title;
         return new WindowInfo(h, id, name, title, exe, Native.IsIconic(h));
     }
+
+    /// A UWP frame often gets its title before its app moves in, and nothing announces the move: look again a few times.
+    private void RecheckLater(IntPtr hwnd)
+    {
+        foreach (var ms in new[] { 500, 1500, 3000, 6000 })
+        {
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(ms) };
+            timer.Tick += (_, _) =>
+            {
+                timer.Stop();
+                if (_windows.TryGetValue(hwnd, out var known) && IsBareFrame(known)) Change(hwnd, known);
+            };
+            timer.Start();
+        }
+    }
+
+    private static bool IsBareFrame(WindowInfo w) =>
+        w.ExePath is { } exe && exe.EndsWith(@"\ApplicationFrameHost.exe", StringComparison.OrdinalIgnoreCase);
 
     /// UWP windows are hosted by ApplicationFrameHost; the real app is the CoreWindow child's process.
     private static uint ProcessOf(IntPtr h)
