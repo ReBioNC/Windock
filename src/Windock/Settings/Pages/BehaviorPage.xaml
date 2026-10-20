@@ -49,6 +49,7 @@
                     <RadioButton x:Name="RepeatOnce" GroupName="AttentionRepeat" Content="Sekali" />
                 </StackPanel>
                 <CheckBox x:Name="FromNotifications" Content="Juga dari notifikasi Windows (WhatsApp, dll.)" Margin="0,10,0,0" />
+                <CheckBox x:Name="BadgeCounts" Content="Tampilkan jumlah pesan belum dibaca di titik merah" Margin="22,8,0,0" />
                 <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0"
                            Text="Saat aplikasi berkedip minta dilihat atau mengirim notifikasi (mis. pesan masuk), ikonnya di dock ditandai sampai aplikasinya dibuka. Windock hanya melihat aplikasi mana yang punya notifikasi baru, bukan isinya." />
             </StackPanel>

@@ -108,4 +108,25 @@ internal sealed partial class DockController
 
     private bool ShowsAttentionBadge(string key) =>
         _settings.Current.Behavior.Attention == AttentionStyle.Dot && _attention.Has(key);
+
+    private readonly Dictionary<string, int> _badges = new();
+
+    /// Unread counts from Windows' notification store, by AUMID (lower case).
+    public void SetBadgeCounts(IReadOnlyDictionary<string, int> counts)
+    {
+        _badges.Clear();
+        foreach (var (aumid, count) in counts)
+            if (count > 0) _badges["aumid:" + aumid] = count;
+        Invalidate();
+    }
+
+    /// What the icon's badge shows: null nothing, "" a red dot, otherwise the unread count. The count stays
+    /// while messages are unread (opening the app clears only the dot), like a phone's app badge.
+    private string? BadgeFor(string key)
+    {
+        var behavior = _settings.Current.Behavior;
+        if (behavior.Attention == AttentionStyle.Off) return null;
+        if (behavior.ShowBadgeCounts && _badges.TryGetValue(key, out var count) && NotificationChanges.BadgeText(count) is { } text) return text;
+        return ShowsAttentionBadge(key) ? "" : null;
+    }
 }

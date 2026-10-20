@@ -38,7 +38,7 @@ internal sealed class DockRenderer
 
     /// theme.PlateColor is the color actually shown (already resolved for "ikuti warna wallpaper").
     public void Render(LayoutResult layout, AppearanceSettings appearance, ThemeSettings theme, Func<string, ImageSource?> iconFor,
-        Func<string, int> windowCount, string? pressedKey, Func<string, double> liftFor, Func<string, bool> badgeFor,
+        Func<string, int> windowCount, string? pressedKey, Func<string, double> liftFor, Func<string, string?> badgeFor,
         Func<string, StatusButton?> statusFor, string? hoverKey)
     {
         Place(_activeZone, layout.ActiveZone);
@@ -64,15 +64,10 @@ internal sealed class DockRenderer
             if (liftFor(item.Key) is var lift and > 0) Canvas.SetTop(v.Element, item.Bounds.Y - lift);
             if (v.Badge is { } badge)
             {
-                var show = item.SlotProgress >= 1 && badgeFor(item.Key);
-                badge.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
-                if (show)
-                {
-                    var size = Math.Round(item.Bounds.Width * 0.28);
-                    badge.Width = badge.Height = size;
-                    Canvas.SetLeft(badge, item.Bounds.X + item.Bounds.Width - size * 0.8);
-                    Canvas.SetTop(badge, item.Bounds.Y - size * 0.2);
-                }
+                // null: nothing; "": a plain red dot; otherwise a red pill with the unread count.
+                var text = item.SlotProgress >= 1 ? badgeFor(item.Key) : null;
+                badge.Visibility = text is null ? Visibility.Collapsed : Visibility.Visible;
+                if (text is not null) PlaceBadge(badge, text, item.Bounds);
             }
 
             // Entering/leaving items fade and scale between 60% and 100% (DESIGN §4).
@@ -188,13 +183,18 @@ internal sealed class DockRenderer
             _canvas.Children.Add(dot);
             dots.Add(dot);
         }
-        Ellipse? badge = null;
+        Border? badge = null;
         if (kind == LayoutItemKind.Icon)
         {
-            badge = new Ellipse
+            badge = new Border
             {
-                Fill = new SolidColorBrush(Color.FromRgb(0xFF, 0x3B, 0x30)), Stroke = new SolidColorBrush(Color.FromArgb(0xCC, 0xFF, 0xFF, 0xFF)),
-                StrokeThickness = 1.5, IsHitTestVisible = false, Visibility = Visibility.Collapsed,
+                Background = BadgeFill, BorderBrush = BadgeRing, BorderThickness = new Thickness(1.5), IsHitTestVisible = false,
+                Visibility = Visibility.Collapsed,
+                Child = new TextBlock
+                {
+                    Foreground = Brushes.White, FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center, TextAlignment = TextAlignment.Center,
+                },
             };
             _canvas.Children.Add(badge);
             Panel.SetZIndex(badge, 5);
@@ -210,5 +210,38 @@ internal sealed class DockRenderer
         e.Height = Math.Max(0, r.Height);
     }
 
-    private sealed record Visuals(FrameworkElement Element, IReadOnlyList<Ellipse> Dots, Ellipse? Badge);
+    private static readonly Brush BadgeFill = Frozen(Color.FromRgb(0xFF, 0x3B, 0x30));
+    private static readonly Brush BadgeRing = Frozen(Color.FromArgb(0xCC, 0xFF, 0xFF, 0xFF));
+
+    /// A dot at the icon's top-right corner, or a pill sized to its count.
+    private static void PlaceBadge(Border badge, string text, RectD icon)
+    {
+        var label = (TextBlock)badge.Child;
+        if (text.Length == 0)
+        {
+            var size = Math.Round(icon.Width * 0.28);
+            label.Text = "";
+            badge.Padding = new Thickness(0);
+            badge.Width = badge.Height = size;
+            badge.MinWidth = 0;
+            badge.CornerRadius = new CornerRadius(size / 2);
+            Canvas.SetLeft(badge, icon.X + icon.Width - size * 0.8);
+            Canvas.SetTop(badge, icon.Y - size * 0.2);
+            return;
+        }
+        var height = Math.Max(14, Math.Round(icon.Width * 0.38));
+        label.Text = text;
+        label.FontSize = Math.Round(height * 0.62);
+        badge.Height = height;
+        badge.Width = double.NaN;
+        badge.MinWidth = height;
+        badge.Padding = new Thickness(height * 0.22, 0, height * 0.22, 0);
+        badge.CornerRadius = new CornerRadius(height / 2);
+        badge.Measure(new Size(double.PositiveInfinity, height));
+        var width = Math.Max(height, badge.DesiredSize.Width);
+        Canvas.SetLeft(badge, icon.X + icon.Width - width * 0.75);
+        Canvas.SetTop(badge, icon.Y - height * 0.3);
+    }
+
+    private sealed record Visuals(FrameworkElement Element, IReadOnlyList<Ellipse> Dots, Border? Badge);
 }

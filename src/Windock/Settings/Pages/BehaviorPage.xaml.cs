@@ -28,6 +28,7 @@ internal partial class BehaviorPage : UserControl
         AttentionOff.Checked += (_, _) => SetAttention(AttentionStyle.Off);
         RepeatUntilOpened.Checked += (_, _) => SetRepeat(AttentionRepeat.UntilOpened);
         RepeatOnce.Checked += (_, _) => SetRepeat(AttentionRepeat.Once);
+        PageSync.OnToggle(BadgeCounts, on => _sync.Edit(s => s with { Behavior = s.Behavior with { ShowBadgeCounts = on } }));
         PageSync.OnToggle(FromNotifications, on => _sync.Edit(s => s with { Behavior = s.Behavior with { AttentionFromNotifications = on } }));
     }
 
@@ -57,6 +58,8 @@ internal partial class BehaviorPage : UserControl
         RepeatUntilOpened.IsEnabled = RepeatOnce.IsEnabled = s.Behavior.Attention != AttentionStyle.Off;
         FromNotifications.IsChecked = s.Behavior.AttentionFromNotifications;
         FromNotifications.IsEnabled = s.Behavior.Attention != AttentionStyle.Off;
+        BadgeCounts.IsChecked = s.Behavior.ShowBadgeCounts;
+        BadgeCounts.IsEnabled = s.Behavior.Attention != AttentionStyle.Off && s.Behavior.AttentionFromNotifications;
         HiddenHint.Text = s.Behavior.TaskbarMode == TaskbarMode.Hidden
             ? $"Shortcut darurat: {s.Safety.EmergencyHotkey}. Tekan untuk mematikan Windock dan mengembalikan taskbar."
             : "";

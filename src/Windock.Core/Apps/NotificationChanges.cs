@@ -35,6 +35,9 @@ public static class NotificationChanges
         return (raise, clear);
     }
 
+    /// What a numbered badge shows: nothing for 0, the count up to 99, then "99+".
+    public static string? BadgeText(int count) => count <= 0 ? null : count > 99 ? "99+" : count.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
     /// Badge payloads look like &lt;badge value="3"/&gt;; glyph badges ("newMessage", "attention", …) count as 1, "none" as 0.
     public static int ParseBadge(string? payload)
     {

@@ -131,6 +131,9 @@ internal sealed class NotificationWatcher : IDisposable
     /// App AUMIDs whose badge went back to zero (everything read).
     public event Action<IReadOnlyList<string>>? Cleared;
 
+    /// Current unread counts (badges) per app, raised when any of them changes.
+    public event Action<IReadOnlyDictionary<string, int>>? BadgesChanged;
+
     private void Poke()
     {
         _debounce.Stop();
@@ -150,7 +153,9 @@ internal sealed class NotificationWatcher : IDisposable
             var now = await Task.Run(() => NotificationStore.Read(_log));
             if (now is null) return;
             var (raise, clear) = NotificationChanges.Compare(_last, now);
+            var badgesChanged = _last is null || now.Count != _last.Count || now.Any(p => _last.GetValueOrDefault(p.Key).Badge != p.Value.Badge);
             _last = now;
+            if (badgesChanged) BadgesChanged?.Invoke(now.ToDictionary(p => p.Key, p => p.Value.Badge));
             if (raise.Count > 0) Raised?.Invoke(raise);
             if (clear.Count > 0) Cleared?.Invoke(clear);
         }

@@ -286,11 +286,13 @@ internal sealed class AppHost
             _notifications = new NotificationWatcher(Application.Current.Dispatcher, Log);
             _notifications.Raised += apps => Dock.RequestAppAttention(apps);
             _notifications.Cleared += apps => Dock.ClearAppAttention(apps);
+            _notifications.BadgesChanged += counts => Dock.SetBadgeCounts(counts);
         }
         else if (!Settings.Current.Behavior.AttentionFromNotifications && _notifications is not null)
         {
             _notifications.Dispose();
             _notifications = null;
+            Dock?.SetBadgeCounts(new Dictionary<string, int>());
         }
     }
 

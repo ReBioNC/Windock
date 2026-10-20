@@ -67,6 +67,14 @@ public class NotificationChangesTests
     }
 
     [Theory]
+    [InlineData(0, null)]
+    [InlineData(-1, null)]
+    [InlineData(2, "2")]
+    [InlineData(99, "99")]
+    [InlineData(100, "99+")]
+    public void Badge_text(int count, string? expected) => Assert.Equal(expected, NotificationChanges.BadgeText(count));
+
+    [Theory]
     [InlineData("<badge value=\"3\"/>", 3)]
     [InlineData("<badge value='x'/>", 0)]
     [InlineData("<badge value=\"newMessage\"/>", 1)]

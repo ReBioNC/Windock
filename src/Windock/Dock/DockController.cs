@@ -145,7 +145,11 @@ internal sealed partial class DockController
         if (e.Sections.HasFlag(SettingsSection.Pins)) _model.SetPins(e.New.Pins);
         if (e.Sections.HasFlag(SettingsSection.HiddenApps)) _model.SetHiddenApps(e.New.HiddenApps.Select(h => h.AppId));
         if (e.Sections.HasFlag(SettingsSection.Trash)) _model.SetShowRecycleBin(e.New.Trash.ShowRecycleBin);
-        if (e.Sections.HasFlag(SettingsSection.Behavior)) ApplyAttentionSettings(e.Old.Behavior, e.New.Behavior);
+        if (e.Sections.HasFlag(SettingsSection.Behavior))
+        {
+            ApplyAttentionSettings(e.Old.Behavior, e.New.Behavior);
+            Invalidate();  // badge counts on or off
+        }
         if (e.Sections.HasFlag(SettingsSection.Theme))
         {
             _backdrop.SetRadius(e.New.Theme.CornerRadius);
@@ -474,7 +478,7 @@ internal sealed partial class DockController
 
         _renderer.Render(_layout, settings, EffectiveTheme(), key => _iconImages.GetValueOrDefault(key),
             key => _model.Find(key)?.Windows.Count ?? 0, _pressedKey,
-            key => _bounce.Lift(key, now) * BounceAnimator.HeightFactor * settings.IconSize, ShowsAttentionBadge,
+            key => _bounce.Lift(key, now) * BounceAnimator.HeightFactor * settings.IconSize, BadgeFor,
             StatusButtonFor, _hoverKey);
 
         ApplySlide(now);

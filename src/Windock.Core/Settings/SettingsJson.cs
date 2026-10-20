@@ -54,7 +54,8 @@ public static class SettingsJson
                 Mode: GetEnum(b, "mode", d.Behavior.Mode),
                 Attention: GetEnum(b, "attention", d.Behavior.Attention),
                 AttentionRepeat: GetEnum(b, "attentionRepeat", d.Behavior.AttentionRepeat),
-                AttentionFromNotifications: Get(b, "attentionFromNotifications", d.Behavior.AttentionFromNotifications)),
+                AttentionFromNotifications: Get(b, "attentionFromNotifications", d.Behavior.AttentionFromNotifications),
+                ShowBadgeCounts: Get(b, "showBadgeCounts", d.Behavior.ShowBadgeCounts)),
             Pins: ReadPins(obj["pins"] as JsonArray),
             Safety: new SafetySettings(GetString(safety, "emergencyHotkey") ?? d.Safety.EmergencyHotkey),
             FirstRunCompleted: Get(obj, "firstRunCompleted", d.FirstRunCompleted))
@@ -122,6 +123,7 @@ public static class SettingsJson
                 ["attention"] = s.Behavior.Attention.ToString(),
                 ["attentionRepeat"] = s.Behavior.AttentionRepeat.ToString(),
                 ["attentionFromNotifications"] = s.Behavior.AttentionFromNotifications,
+                ["showBadgeCounts"] = s.Behavior.ShowBadgeCounts,
             },
             ["pins"] = new JsonArray(s.Pins.Select(p => (JsonNode)new JsonObject { ["path"] = p.Path }).ToArray()),
             ["safety"] = new JsonObject { ["emergencyHotkey"] = s.Safety.EmergencyHotkey },

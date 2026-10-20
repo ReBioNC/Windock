@@ -20,6 +20,7 @@ public class V06SettingsTests
         Assert.Equal(AttentionStyle.Bounce, s.Behavior.Attention);
         Assert.Equal(AttentionRepeat.UntilOpened, s.Behavior.AttentionRepeat);
         Assert.True(s.Behavior.AttentionFromNotifications);
+        Assert.True(s.Behavior.ShowBadgeCounts);
     }
 
     [Fact]
@@ -33,7 +34,7 @@ public class V06SettingsTests
             Launcher = new LauncherSettings(false, "Ctrl+Space", 10, true),
             Trash = new TrashSettings(false, false),
             HiddenApps = new[] { new HiddenApp("path:c:\\apps\\tool.exe", "Tool") },
-            Behavior = d.Behavior with { Attention = AttentionStyle.Dot, AttentionRepeat = AttentionRepeat.Once, AttentionFromNotifications = false },
+            Behavior = d.Behavior with { Attention = AttentionStyle.Dot, AttentionRepeat = AttentionRepeat.Once, AttentionFromNotifications = false, ShowBadgeCounts = false },
         };
 
         Assert.Equal(original, SettingsJson.Parse(SettingsJson.Serialize(original)));

@@ -2,7 +2,7 @@
 
 Dock ala macOS untuk Windows 10, dibuat dengan C# WPF di .NET 8.
 
-> Status: **v0.6.9**. Bisa dipakai harian sebagai pengganti taskbar.
+> Status: **v0.7.0**. Bisa dipakai harian sebagai pengganti taskbar.
 
 ## Baru di v0.6
 
@@ -12,7 +12,7 @@ Semua fitur baru punya opsi sendiri di Pengaturan dan langsung diterapkan.
 - **Launcher** `Alt+Space` (halaman *Launcher*): ketik nama aplikasi, Enter untuk membuka. Bisa ikut mencari file di Desktop dan Documents; shortcut dan jumlah hasil bisa diganti
 - **Tema** (halaman *Tema*): warna latar dock (preset atau `#RRGGBB`), ikuti warna wallpaper, kebulatan sudut, garis tepi, warna titik penanda, dan warna aksen untuk menu dan Pengaturan
 - **Recycle Bin pintar**: seret file ke ikon Recycle Bin untuk membuangnya (tetap bisa dipulihkan), ikon penuh/kosong, klik kanan › *Kosongkan Recycle Bin* (dengan konfirmasi Windows)
-- **Ikon minta perhatian**: saat aplikasi berkedip atau mengirim notifikasi Windows (mis. pesan WhatsApp), ikonnya memantul atau diberi titik merah sampai dibuka
+- **Ikon minta perhatian**: saat aplikasi berkedip atau mengirim notifikasi Windows (mis. pesan WhatsApp), ikonnya memantul atau diberi titik merah sampai dibuka; aplikasi yang punya pesan belum dibaca menampilkan jumlahnya di titik merah (mis. WhatsApp "2")
 - **Sembunyikan aplikasi**: klik kanan aplikasi yang jalan › *Jangan tampilkan di dock*; daftar dan tombol *Tampilkan lagi* ada di Isi Dock
 - **Ikon memantul saat aplikasi dibuka** dan **jalan otomatis saat Windows nyala** (halaman *Perilaku*)
 
