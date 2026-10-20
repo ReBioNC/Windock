@@ -42,8 +42,8 @@
                 <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
                 <TextBlock Text="Game layar penuh" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
                 <StackPanel Grid.Column="1">
-                    <CheckBox x:Name="FullscreenFallback" Content="Pakai Alt+Tab Windows saat game layar penuh di depan" />
-                    <TextBlock Style="{StaticResource Hint}" Margin="22,4,0,0" Text="Beberapa game layar penuh tidak bisa ditimpa jendela lain, jadi Alt+Tab bawaan lebih aman di sana." />
+                    <CheckBox x:Name="FullscreenFallback" Content="Pakai Alt+Tab Windows saat game layar penuh eksklusif di depan" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="22,4,0,0" Text="Game layar penuh eksklusif (yang mengambil alih layar) tidak bisa ditimpa jendela lain, jadi di sana Alt+Tab bawaan lebih aman. Game layar penuh tanpa bingkai, seperti Growtopia, tetap memakai pengalih Windock." />
                 </StackPanel>
             </Grid>
 

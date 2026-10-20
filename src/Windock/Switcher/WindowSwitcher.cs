@@ -16,7 +16,6 @@ internal sealed class WindowSwitcher : IDisposable
     private readonly SettingsStore _settings;
     private readonly WindowTracker _windows;
     private readonly IconProvider _icons;
-    private readonly Func<bool> _fullscreenInFront;
     private readonly ILog _log;
     private readonly Dispatcher _ui;
     private readonly DispatcherTimer _showTimer;
@@ -31,12 +30,11 @@ internal sealed class WindowSwitcher : IDisposable
     private bool _open;
     private IntPtr _monitor;
 
-    public WindowSwitcher(SettingsStore settings, WindowTracker windows, IconProvider icons, Func<bool> fullscreenInFront, ILog log, Dispatcher ui)
+    public WindowSwitcher(SettingsStore settings, WindowTracker windows, IconProvider icons, ILog log, Dispatcher ui)
     {
         _settings = settings;
         _windows = windows;
         _icons = icons;
-        _fullscreenInFront = fullscreenInFront;
         _log = log;
         _ui = ui;
         _showTimer = new DispatcherTimer(DispatcherPriority.Normal, ui) { Interval = ShowDelay };
@@ -54,22 +52,17 @@ internal sealed class WindowSwitcher : IDisposable
         var on = _settings.Current.Switcher.Enabled;
         if (on && _hook is null)
         {
-            _hook = new AltTabHook(() => !(_settings.Current.Switcher.WindowsSwitcherInFullscreen && _fullscreenInFront()));
+            _hook = new AltTabHook(ShouldTakeOver);
             if (!_hook.Installed)
             {
                 _log.Error("Alt+Tab hook could not be installed; Windows' Alt+Tab stays");
                 _hook = null;
                 return;
             }
-            // The hook runs on this (UI) thread. Moving the selection and switching happen right inside it: the switch
-            // must happen while Alt is still down, or Windows refuses to hand the focus over. Rebuilding the panel waits.
-            _hook.Key += key =>
-            {
-                if (key is SwitcherKey.CloseWindow or SwitcherKey.Backspace) _ui.BeginInvoke(() => OnKey(key));
-                else OnKey(key);
-            };
-            _hook.Typed += ch => _ui.BeginInvoke(() => OnTyped(ch));
-            _hook.Released += Commit;
+            // Raised on the hook thread, in key order; the UI thread handles them in that same order.
+            _hook.Key += key => _ui.BeginInvoke(DispatcherPriority.Send, () => OnKey(key));
+            _hook.Typed += ch => _ui.BeginInvoke(DispatcherPriority.Send, () => OnTyped(ch));
+            _hook.Released += () => _ui.BeginInvoke(DispatcherPriority.Send, Commit);
             _log.Info("Windock Alt+Tab on");
         }
         else if (!on && _hook is not null)
@@ -80,6 +73,20 @@ internal sealed class WindowSwitcher : IDisposable
             _log.Info("Windock Alt+Tab off");
         }
     }
+
+    /// Called on the hook thread at each Alt+Tab. Windows keeps Alt+Tab only for exclusive fullscreen games
+    /// (Direct3D owning the screen), where no other window can show; borderless "fullscreen" games get Windock's.
+    private bool ShouldTakeOver()
+    {
+        if (!_settings.Current.Switcher.WindowsSwitcherInFullscreen) return true;
+        if (SHQueryUserNotificationState(out var state) != 0 || state != QUNS_RUNNING_D3D_FULL_SCREEN) return true;
+        _log.Info("Alt+Tab handed to Windows: exclusive fullscreen game in front");
+        return false;
+    }
+
+    private const int QUNS_RUNNING_D3D_FULL_SCREEN = 3;
+
+    [DllImport("shell32.dll")] private static extern int SHQueryUserNotificationState(out int state);
 
     private void OnKey(SwitcherKey key)
     {
@@ -152,10 +159,11 @@ internal sealed class WindowSwitcher : IDisposable
     {
         if (!_open) return;
         var target = _selected >= 0 && _selected < _shown.Count ? _shown[_selected].Handle : IntPtr.Zero;
+        _log.Info($"Alt+Tab: picked {_selected} of {_shown.Count}");
         Close();
         if (target == IntPtr.Zero) return;
         if (Native.IsIconic(target)) Native.ShowWindow(target, Native.SW_RESTORE);
-        if (!BringToFront(target)) _log.Info($"Alt+Tab could not focus 0x{target:X}");
+        if (!BringToFront(target)) _log.Info($"Alt+Tab could not focus 0x{target:X} '{Native.WindowText(target)}'");
     }
 
     /// Windows only lets the app that owns the focus give it away. Joining the focused window's input queue for

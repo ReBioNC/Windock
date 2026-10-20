@@ -136,7 +136,7 @@ internal sealed class AppHost
         Shell = new ShellHook(Messages);
         Shell.Flashed += hwnd => Dock.RequestAttention(hwnd);
         SyncNotificationWatcher();
-        _switcher = new Switcher.WindowSwitcher(Settings, Windows, Icons, () => _fullscreen, Log, Application.Current.Dispatcher);
+        _switcher = new Switcher.WindowSwitcher(Settings, Windows, Icons, Log, Application.Current.Dispatcher);
         StatusArea = new Status.StatusArea(Settings, Application.Current.Dispatcher, Log);
         Dock.AttachStatus(StatusArea);
         Dock.StatusClicked += OnStatusClicked;

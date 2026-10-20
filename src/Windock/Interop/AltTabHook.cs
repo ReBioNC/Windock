@@ -8,6 +8,9 @@ internal enum SwitcherKey { Next, Previous, Left, Right, Up, Down, Commit, Cance
 /// Low-level keyboard hook that takes Alt+Tab away from Windows while Windock's switcher is on.
 /// Installed only while that option is on; no administrator rights needed. Keys are only swallowed
 /// while Alt+Tab is in use, everything else passes through untouched.
+/// The hook lives on its own thread with its own message loop: on the UI thread a busy frame could delay it past
+/// Windows' hook timeout, and Windows would then hand that Tab to its own Alt+Tab. Events are raised on that
+/// thread; handlers must hand the work to the UI thread.
 internal sealed class AltTabHook : IDisposable
 {
     private const int WH_KEYBOARD_LL = 13;
@@ -20,18 +23,38 @@ internal sealed class AltTabHook : IDisposable
 
     private readonly Func<bool> _shouldTakeOver;
     private readonly HookProc _proc;  // kept alive while installed
+    private readonly Thread _thread;
+    private readonly ManualResetEventSlim _started = new();
+    private uint _threadId;
     private IntPtr _hook;
-    private bool _active;             // Alt+Tab is in progress: our switcher owns the keys until Alt goes up
+    private volatile bool _active;    // Alt+Tab is in progress: our switcher owns the keys until Alt goes up
 
-    /// shouldTakeOver: asked on each Alt+Tab (false = let Windows show its own, e.g. in a fullscreen game).
+    /// shouldTakeOver: asked on each Alt+Tab, on the hook thread (false = let Windows show its own).
     public AltTabHook(Func<bool> shouldTakeOver)
     {
         _shouldTakeOver = shouldTakeOver;
         _proc = OnKey;
-        _hook = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, GetModuleHandle(null), 0);
+        _thread = new Thread(Run) { IsBackground = true, Name = "Windock Alt+Tab hook", Priority = ThreadPriority.AboveNormal };
+        _thread.Start();
+        _started.Wait(TimeSpan.FromSeconds(2));
     }
 
     public bool Installed => _hook != IntPtr.Zero;
+
+    private void Run()
+    {
+        _threadId = GetCurrentThreadId();
+        _hook = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, GetModuleHandle(null), 0);
+        _started.Set();
+        if (_hook == IntPtr.Zero) return;
+        while (GetMessage(out var msg, IntPtr.Zero, 0, 0) > 0)
+        {
+            TranslateMessage(ref msg);
+            DispatchMessage(ref msg);
+        }
+        UnhookWindowsHookEx(_hook);
+        _hook = IntPtr.Zero;
+    }
 
     /// Alt+Tab (shift = backwards) or another key while the switcher is open. Raised inside the hook: handlers must be quick.
     public event Action<SwitcherKey>? Key;
@@ -107,10 +130,29 @@ internal sealed class AltTabHook : IDisposable
 
     public void Dispose()
     {
-        if (_hook == IntPtr.Zero) return;
-        UnhookWindowsHookEx(_hook);
-        _hook = IntPtr.Zero;
+        if (_threadId == 0) return;
+        PostThreadMessage(_threadId, WM_QUIT, IntPtr.Zero, IntPtr.Zero);  // the loop unhooks on its own thread
+        _thread.Join(TimeSpan.FromSeconds(1));
+        _threadId = 0;
     }
+
+    private const uint WM_QUIT = 0x0012;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MSG
+    {
+        public IntPtr hwnd;
+        public uint message;
+        public IntPtr wParam, lParam;
+        public uint time;
+        public int ptX, ptY;
+    }
+
+    [DllImport("user32.dll")] private static extern int GetMessage(out MSG msg, IntPtr hwnd, uint min, uint max);
+    [DllImport("user32.dll")] private static extern bool TranslateMessage(ref MSG msg);
+    [DllImport("user32.dll")] private static extern IntPtr DispatchMessage(ref MSG msg);
+    [DllImport("user32.dll")] private static extern bool PostThreadMessage(uint thread, uint msg, IntPtr wParam, IntPtr lParam);
+    [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
 
     private delegate IntPtr HookProc(int code, IntPtr wParam, IntPtr lParam);
 
