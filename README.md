@@ -21,6 +21,7 @@ Windock replaces the Windows taskbar with a floating, blurred dock whose icons g
 - [Safety and privacy](#safety-and-privacy)
 - [Project structure](#project-structure)
 - [Documentation](#documentation)
+- [License](#license)
 
 ## Features
 
@@ -232,3 +233,7 @@ docs/              product, design and architecture documents
 | [docs/superpowers/specs/2026-10-18-windock-v0.6-design.md](docs/superpowers/specs/2026-10-18-windock-v0.6-design.md) | v0.6 feature design |
 | [docs/spikes/](docs/spikes/) | Technical experiments (blur, hiding the taskbar) |
 | [docs/testing/v0.1-manual-checklist.md](docs/testing/v0.1-manual-checklist.md) | v0.1 manual test checklist |
+
+## License
+
+[MIT](LICENSE) © 2026 Cristian Dion
