@@ -266,7 +266,7 @@ internal sealed partial class DockController
         });
     }
 
-    /// The plate color to use while "ikuti warna wallpaper" is on.
+    /// The plate color to use while "follow the wallpaper color" is on.
     public void SetWallpaperColor(string? hex)
     {
         _wallpaperPlate = hex;
@@ -438,7 +438,7 @@ internal sealed partial class DockController
     {
         if (_hidden)
         {
-            // Hidden (fullscreen app / Mode Windows): a frame now would re-show the blur window.
+            // Hidden (fullscreen app / Windows mode): a frame now would re-show the blur window.
             CompositionTarget.Rendering -= OnRendering;
             _renderHooked = false;
             return;

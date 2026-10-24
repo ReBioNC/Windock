@@ -2,49 +2,49 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <StackPanel>
-        <TextBlock Text="Area status" Style="{StaticResource PageTitle}" />
+        <TextBlock Text="Status area" Style="{StaticResource PageTitle}" />
         <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,10"
-                   Text="Tombol-tombol di ujung kanan dock, pengganti bagian kanan taskbar Windows." />
+                   Text="Buttons at the right end of the dock that replace the right side of the Windows taskbar." />
 
-        <CheckBox x:Name="Enabled" Content="Tampilkan area status di dock" FontWeight="SemiBold" />
+        <CheckBox x:Name="Enabled" Content="Show the status area in the dock" FontWeight="SemiBold" />
 
         <StackPanel x:Name="Options" Margin="0,8,0,0">
             <Grid Style="{StaticResource Row}">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
-                <TextBlock Text="Tombol" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                <TextBlock Text="Buttons" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
                 <StackPanel Grid.Column="1">
-                    <CheckBox x:Name="Tray" Content="^ Ikon tray" Margin="0,0,0,8" />
-                    <CheckBox x:Name="Wifi" Content="Jaringan (Wi-Fi / kabel)" Margin="0,0,0,8" />
+                    <CheckBox x:Name="Tray" Content="^ Tray icons" Margin="0,0,0,8" />
+                    <CheckBox x:Name="Wifi" Content="Network (Wi-Fi / cable)" Margin="0,0,0,8" />
                     <CheckBox x:Name="Volume" Content="Volume" Margin="0,0,0,8" />
-                    <CheckBox x:Name="Battery" Content="Baterai" Margin="0,0,0,8" />
-                    <CheckBox x:Name="LanguageBox" Content="Bahasa input (EN, ID, …)" Margin="0,0,0,8" />
-                    <CheckBox x:Name="Clock" Content="Jam" Margin="0,0,0,8" />
-                    <CheckBox x:Name="Notifications" Content="Pusat notifikasi" />
+                    <CheckBox x:Name="Battery" Content="Battery" Margin="0,0,0,8" />
+                    <CheckBox x:Name="LanguageBox" Content="Input language (EN, ID, …)" Margin="0,0,0,8" />
+                    <CheckBox x:Name="Clock" Content="Clock" Margin="0,0,0,8" />
+                    <CheckBox x:Name="Notifications" Content="Notification center" />
                     <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"
-                               Text="Tray: kotak berisi semua ikon tray (yang tampil dan yang tersembunyi); klik kiri, klik kanan, atau klik dua kali seperti di taskbar. Volume: gulir mouse untuk mengatur, klik tengah untuk bisukan." />
+                               Text="Tray: a box with every tray icon (shown and hidden); left-click, right-click or double-click them as on the taskbar. Volume: scroll to change it, middle-click to mute." />
                 </StackPanel>
             </Grid>
 
             <Grid Style="{StaticResource Row}">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
-                <TextBlock Text="Jam" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                <TextBlock Text="Clock" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
                 <StackPanel Grid.Column="1">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                        <RadioButton x:Name="Clock24" GroupName="ClockFormat" Content="24 jam (13:45)" Margin="0,0,16,0" />
-                        <RadioButton x:Name="Clock12" GroupName="ClockFormat" Content="12 jam (1:45 PM)" />
+                        <RadioButton x:Name="Clock24" GroupName="ClockFormat" Content="24-hour (13:45)" Margin="0,0,16,0" />
+                        <RadioButton x:Name="Clock12" GroupName="ClockFormat" Content="12-hour (1:45 PM)" />
                     </StackPanel>
-                    <CheckBox x:Name="ShowDate" Content="Tampilkan tanggal di bawah jam" Margin="0,0,0,8" />
-                    <CheckBox x:Name="ShowSeconds" Content="Tampilkan detik" />
+                    <CheckBox x:Name="ShowDate" Content="Show the date under the time" Margin="0,0,0,8" />
+                    <CheckBox x:Name="ShowSeconds" Content="Show seconds" />
                 </StackPanel>
             </Grid>
 
             <Grid Style="{StaticResource Row}">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
-                <TextBlock Text="Baterai" Style="{StaticResource Label}" />
-                <CheckBox x:Name="BatteryPercent" Grid.Column="1" Content="Tampilkan persen di samping ikon" />
+                <TextBlock Text="Battery" Style="{StaticResource Label}" />
+                <CheckBox x:Name="BatteryPercent" Grid.Column="1" Content="Show the percentage next to the icon" />
             </Grid>
         </StackPanel>
 
-        <Button Content="Kembalikan ke default" HorizontalAlignment="Right" Margin="0,12,0,0" Click="OnReset" />
+        <Button Content="Reset to defaults" HorizontalAlignment="Right" Margin="0,12,0,0" Click="OnReset" />
     </StackPanel>
 </UserControl>

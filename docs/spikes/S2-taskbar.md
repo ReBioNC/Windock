@@ -1,32 +1,32 @@
-# Spike S2 — Menyembunyikan taskbar dan AppBar
+# Spike S2 — Hiding the taskbar and the AppBar
 
-Tanggal: 2026-10-16 · Mesin: Windows 10 22H2 (19045), 1920×1080, skala 100%, taskbar asli: bawah, tidak auto-hide (`ABM_GETSTATE = 0`)
-Kode: `spikes/S2.Taskbar` (`--scenario=N`, `--restore`, `--fullscreen`) · Probe otomatis: script PowerShell (status taskbar, work area, Notepad maximize, tombol Windows via `keybd_event`, kill paksa, screenshot)
+Date: 2026-10-16 · Machine: Windows 10 22H2 (19045), 1920×1080, 100% scaling, original taskbar: bottom, not auto-hiding (`ABM_GETSTATE = 0`)
+Code: `spikes/S2.Taskbar` (`--scenario=N`, `--restore`, `--fullscreen`) · Automated probe: PowerShell script (taskbar state, work area, maximized Notepad, Windows key via `keybd_event`, forced kill, screenshots)
 
-## Jawaban lima pertanyaan
+## Answers to the five questions
 
-| # | Pertanyaan | Hasil |
+| # | Question | Result |
 |---|---|---|
-| 1 | Hide + reserve 70, maximize: ada celah/tumpang tindih? | **Tidak.** Work area `(0,0)-(1920,1010)`; Notepad maximize berhenti di 1010 (+8 px bayangan bingkai standar) |
-| 2 | Tombol Windows: Start terbuka? Taskbar ikut muncul? | Start **terbuka normal**. Dengan urutan final (lihat bawah) taskbar tetap tersembunyi; hanya kotak "Type here to search" yang terlihat selama Start terbuka. Setelah Start ditutup tidak ada sisa |
-| 3 | Restart Explorer: `TaskbarCreated` diterima? | **Belum diuji** — restart Explorer menutup jendela File Explorer pengguna. Perilaku `TaskbarCreated` terdokumentasi; diuji pengguna di checklist akhir |
-| 4 | Kill paksa lalu `--restore`: setelan asli kembali? | **Ya.** Setelah kill: taskbar tetap tersembunyi, `state=1`, work area masih 1010 (AppBar milik proses mati belum dilepas). Setelah `--restore`: `state=0`, taskbar tampil, work area kembali 1040 |
-| 5 | `ABN_FULLSCREENAPP` saat ada jendela layar penuh? | **Ya:** `lParam=1` saat jendela layar penuh muncul, `lParam=0` saat tertutup |
+| 1 | Hide + reserve 70, then maximize: any gap or overlap? | **No.** Work area `(0,0)-(1920,1010)`; maximized Notepad stops at 1010 (+8 px of standard frame shadow) |
+| 2 | Windows key: does Start open? Does the taskbar come back with it? | Start **opens normally**. With the final sequence (below) the taskbar stays hidden; only the "Type here to search" box shows while Start is open. Nothing is left behind after Start closes |
+| 3 | Explorer restart: is `TaskbarCreated` received? | **Not tested** — restarting Explorer closes the user's File Explorer windows. `TaskbarCreated` behavior is documented; left to the user's final checklist |
+| 4 | Forced kill, then `--restore`: does the original setting come back? | **Yes.** After the kill: the taskbar stays hidden, `state=1`, work area still 1010 (the dead process's AppBar was not released yet). After `--restore`: `state=0`, taskbar visible, work area back to 1040 |
+| 5 | `ABN_FULLSCREENAPP` while a fullscreen window is up? | **Yes:** `lParam=1` when a fullscreen window appears, `lParam=0` when it closes |
 
-## Temuan
+## Findings
 
-1. **`SW_HIDE` langsung setelah `ABM_SETSTATE(ABS_AUTOHIDE)` dibatalkan Windows.** Transisi auto-hide memunculkan lagi `Shell_TrayWnd` (garis 2 px di tepi bawah, yang memunculkan taskbar saat kursor ke bawah — bentrok dengan dock). Menyembunyikan **±700 ms setelah** `ABM_SETSTATE` membuatnya tetap tersembunyi.
-2. **Saat taskbar terlihat lagi,** sembunyikan ulang jika jendela foreground bukan Start/Search (`Windows.UI.Core.CoreWindow`) dan bukan taskbar itu sendiri. Dengan aturan ini Start tetap bisa dipakai.
-3. **Badai `ABN_POSCHANGED`:** memanggil `ABM_SETPOS` di setiap `ABN_POSCHANGED` memicu ±20 notifikasi beruntun. `ABM_SETPOS` hanya dipanggil jika persegi hasil `ABM_QUERYPOS` berubah.
-4. Jendela `HwndSource` tersembunyi (`WS_POPUP`, `WS_EX_TOOLWINDOW`, tidak pernah ditampilkan) bisa menjadi pemilik AppBar dan menerima callback.
-5. Proses yang mati tanpa `ABM_REMOVE` meninggalkan ruang cadangan sampai `ABM_SETSTATE` berikutnya atau Explorer restart. Pemulihan saat start (Task 8/16) menanganinya.
+1. **`SW_HIDE` right after `ABM_SETSTATE(ABS_AUTOHIDE)` is undone by Windows.** The auto-hide transition shows `Shell_TrayWnd` again (a 2 px line at the bottom edge, which shows the taskbar when the pointer goes down — clashing with the dock). Hiding **about 700 ms after** `ABM_SETSTATE` keeps it hidden.
+2. **When the taskbar becomes visible again,** hide it again if the foreground window is not Start/Search (`Windows.UI.Core.CoreWindow`) and not the taskbar itself. With this rule Start stays usable.
+3. **`ABN_POSCHANGED` storm:** calling `ABM_SETPOS` on every `ABN_POSCHANGED` triggers about 20 notifications in a row. `ABM_SETPOS` is only called when the rectangle from `ABM_QUERYPOS` changed.
+4. A hidden `HwndSource` window (`WS_POPUP`, `WS_EX_TOOLWINDOW`, never shown) can own the AppBar and receive its callbacks.
+5. A process that dies without `ABM_REMOVE` leaves its reserved space until the next `ABM_SETSTATE` or an Explorer restart. Recovery at start (Tasks 8/16) handles it.
 
-## Urutan final (dipakai Task 15–16)
+## Final sequence (used by Tasks 15–16)
 
 1. `RecoveryStateStore.Write(original)` → `ABM_SETSTATE(original | ABS_AUTOHIDE)`.
-2. `AppBarHost` `ABM_NEW` + `ABM_QUERYPOS`/`ABM_SETPOS` (hanya jika persegi berubah).
-3. Setelah 700 ms: `ShowWindow(SW_HIDE)` untuk `Shell_TrayWnd` + semua `Shell_SecondaryTrayWnd`, lalu aktifkan "jaga tetap tersembunyi".
-4. Jaga tetap tersembunyi: saat `EVENT_OBJECT_SHOW` pada taskbar atau `EVENT_SYSTEM_FOREGROUND`, jika taskbar terlihat dan foreground bukan `Windows.UI.Core.CoreWindow`/`Shell_TrayWnd` → `SW_HIDE`.
-5. Restore: matikan "jaga", `SW_SHOW`, `ABM_SETSTATE(original)`, `ABM_REMOVE`, hapus state.
+2. `AppBarHost` `ABM_NEW` + `ABM_QUERYPOS`/`ABM_SETPOS` (only when the rectangle changed).
+3. After 700 ms: `ShowWindow(SW_HIDE)` for `Shell_TrayWnd` and every `Shell_SecondaryTrayWnd`, then turn on "keep it hidden".
+4. Keep it hidden: on `EVENT_OBJECT_SHOW` for the taskbar or `EVENT_SYSTEM_FOREGROUND`, if the taskbar is visible and the foreground is not `Windows.UI.Core.CoreWindow`/`Shell_TrayWnd` → `SW_HIDE`.
+5. Restore: turn off "keep it hidden", `SW_SHOW`, `ABM_SETSTATE(original)`, `ABM_REMOVE`, clear the state.
 
-Penundaan 700 ms dan logika "jaga tetap tersembunyi" berada di `Win32TaskbarController` (App), sehingga `TaskbarModeCoordinator` di Core tidak berubah.
+The 700 ms delay and the "keep it hidden" logic live in `Win32TaskbarController` (App), so `TaskbarModeCoordinator` in Core does not change.

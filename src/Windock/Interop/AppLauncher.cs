@@ -54,7 +54,7 @@ internal sealed class AppLauncher(ILog log, Action<string, string> notifyError)
         catch (Exception ex) when (ex is Win32Exception or FileNotFoundException or InvalidOperationException)
         {
             log.Error($"launch failed: {target}", ex);
-            notifyError("Gagal membuka", displayName);
+            notifyError("Couldn't open", displayName);
         }
     }
 

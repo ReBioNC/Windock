@@ -36,7 +36,7 @@ internal sealed class DockRenderer
         Panel.SetZIndex(_tooltip, 10);
     }
 
-    /// theme.PlateColor is the color actually shown (already resolved for "ikuti warna wallpaper").
+    /// theme.PlateColor is the color actually shown (already resolved for "follow the wallpaper color").
     public void Render(LayoutResult layout, AppearanceSettings appearance, ThemeSettings theme, Func<string, ImageSource?> iconFor,
         Func<string, int> windowCount, string? pressedKey, Func<string, double> liftFor, Func<string, string?> badgeFor,
         Func<string, StatusButton?> statusFor, string? hoverKey)

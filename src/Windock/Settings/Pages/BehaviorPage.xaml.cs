@@ -61,7 +61,7 @@ internal partial class BehaviorPage : UserControl
         BadgeCounts.IsChecked = s.Behavior.ShowBadgeCounts;
         BadgeCounts.IsEnabled = s.Behavior.Attention != AttentionStyle.Off && s.Behavior.AttentionFromNotifications;
         HiddenHint.Text = s.Behavior.TaskbarMode == TaskbarMode.Hidden
-            ? $"Shortcut darurat: {s.Safety.EmergencyHotkey}. Tekan untuk mematikan Windock dan mengembalikan taskbar."
+            ? $"Emergency shortcut: {s.Safety.EmergencyHotkey}. Press it to quit Windock and get the taskbar back."
             : "";
     }
 

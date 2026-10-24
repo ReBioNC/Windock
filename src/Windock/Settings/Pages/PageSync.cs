@@ -38,10 +38,10 @@ internal sealed class PageSync
         finally { _syncing = false; }
     }
 
-    /// "Kembalikan ke default" for appearance and behaviour; pins and first-run state are kept.
+    /// "Reset to defaults" for appearance and behaviour; pins and first-run state are kept.
     public static void ResetToDefaults(SettingsStore store)
     {
-        var answer = MessageBox.Show("Kembalikan semua tampilan dan perilaku ke pengaturan awal? Daftar pin tidak berubah.",
+        var answer = MessageBox.Show("Reset appearance and behavior to their defaults? Your pins stay as they are.",
             "Windock", MessageBoxButton.OKCancel, MessageBoxImage.Question);
         if (answer != MessageBoxResult.OK) return;
         store.Update(s => SettingsDefaults.Create() with { Pins = s.Pins, FirstRunCompleted = s.FirstRunCompleted });

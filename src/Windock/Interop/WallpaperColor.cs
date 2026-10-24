@@ -7,7 +7,7 @@ using Windock.Core.Settings;
 
 namespace Windock.Interop;
 
-/// The dock plate color for "Ikuti warna wallpaper": the wallpaper's average color, darkened.
+/// The dock plate color for "Follow the wallpaper color": the wallpaper's average color, darkened.
 internal static class WallpaperColor
 {
     private const uint SPI_GETDESKWALLPAPER = 0x0073;

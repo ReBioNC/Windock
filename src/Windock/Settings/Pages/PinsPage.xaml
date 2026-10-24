@@ -2,9 +2,9 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <StackPanel>
-        <TextBlock Text="Isi Dock" Style="{StaticResource PageTitle}" />
+        <TextBlock Text="Dock items" Style="{StaticResource PageTitle}" />
         <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,10"
-                   Text="Aplikasi yang selalu ada di dock. Seret untuk mengatur urutan." />
+                   Text="Apps that always stay in the dock. Drag to reorder." />
 
         <ListBox x:Name="List" Height="250" AllowDrop="True" SelectionMode="Single"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -22,15 +22,15 @@
         </ListBox>
 
         <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-            <Button Content="Tambah…" Click="OnAdd" Margin="0,0,8,0" />
-            <Button x:Name="RemoveButton" Content="Hapus" Click="OnRemove" Margin="0,0,8,0" />
-            <Button Content="Kembalikan pin default" Click="OnResetPins" />
+            <Button Content="Add…" Click="OnAdd" Margin="0,0,8,0" />
+            <Button x:Name="RemoveButton" Content="Remove" Click="OnRemove" Margin="0,0,8,0" />
+            <Button Content="Reset pins" Click="OnResetPins" />
         </StackPanel>
         <TextBlock x:Name="Message" Style="{StaticResource Hint}" Foreground="{StaticResource Settings.Error}" Margin="0,10,0,0" />
 
-        <TextBlock Text="Disembunyikan" Style="{StaticResource Label}" Margin="0,22,0,4" />
+        <TextBlock Text="Hidden" Style="{StaticResource Label}" Margin="0,22,0,4" />
         <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8"
-                   Text="Aplikasi yang sedang jalan tapi tidak ditampilkan di dock (klik kanan ikon &gt; Jangan tampilkan di dock)." />
+                   Text="Running apps that are not shown in the dock (right-click an icon &gt; Don't show in dock)." />
         <ListBox x:Name="HiddenList" Height="96" SelectionMode="Single" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
             <ListBox.ItemTemplate>
                 <DataTemplate>
@@ -41,18 +41,18 @@
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
-        <TextBlock x:Name="HiddenEmpty" Style="{StaticResource Hint}" Margin="0,6,0,0" Text="Belum ada aplikasi yang disembunyikan." />
-        <Button x:Name="ShowAgainButton" Content="Tampilkan lagi" Click="OnShowAgain" HorizontalAlignment="Left" Margin="0,10,0,0" />
+        <TextBlock x:Name="HiddenEmpty" Style="{StaticResource Hint}" Margin="0,6,0,0" Text="No hidden apps yet." />
+        <Button x:Name="ShowAgainButton" Content="Show again" Click="OnShowAgain" HorizontalAlignment="Left" Margin="0,10,0,0" />
 
         <TextBlock Text="Recycle Bin" Style="{StaticResource Label}" Margin="0,22,0,6" />
-        <CheckBox x:Name="ShowBin" Content="Tampilkan Recycle Bin di ujung dock" />
-        <CheckBox x:Name="ConfirmTrash" Content="Tanya dulu sebelum memindahkan file ke Recycle Bin" Margin="0,8,0,0" />
+        <CheckBox x:Name="ShowBin" Content="Show the Recycle Bin at the end of the dock" />
+        <CheckBox x:Name="ConfirmTrash" Content="Ask before moving files to the Recycle Bin" Margin="0,8,0,0" />
         <TextBlock Style="{StaticResource Hint}" Margin="22,6,0,0"
-                   Text="Seret file ke ikon Recycle Bin untuk membuangnya. File tetap bisa dipulihkan dari Recycle Bin." />
+                   Text="Drag files onto the Recycle Bin icon to throw them away. They can still be restored from the Recycle Bin." />
 
         <CheckBox x:Name="ExplorerMenu" Margin="0,22,0,0"
-                  Content="Tampilkan &quot;Pin ke Windock&quot; di menu klik kanan Explorer dan Desktop" />
+                  Content="Show &quot;Pin to Windock&quot; in the Explorer and Desktop right-click menu" />
         <TextBlock Style="{StaticResource Hint}" Margin="22,6,0,0"
-                   Text="Kamu juga bisa menyeret program atau shortcut ke dock, menyeret ikon untuk mengatur urutan, atau menyeretnya keluar dari dock untuk menghapus." />
+                   Text="You can also drag programs or shortcuts onto the dock, drag icons to reorder them, or drag them out of the dock to remove them." />
     </StackPanel>
 </UserControl>

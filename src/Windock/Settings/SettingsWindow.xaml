@@ -1,7 +1,7 @@
 <Window x:Class="Windock.Settings.SettingsWindow" x:ClassModifier="internal"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Pengaturan Windock" Width="800" Height="580" MinWidth="700" MinHeight="480"
+        Title="Windock Settings" Width="800" Height="580" MinWidth="700" MinHeight="480"
         WindowStartupLocation="CenterScreen" Background="{StaticResource Settings.Background}"
         Icon="/Assets/windock.ico">
     <DockPanel>
@@ -9,8 +9,8 @@
                 BorderThickness="0,0,0,1" Padding="20,14">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
-                    <Button x:Name="WindockModeButton" Content="Mode Windock" Padding="20,9" Margin="0,0,8,0" Click="OnWindockMode" />
-                    <Button x:Name="WindowsModeButton" Content="Mode Windows" Padding="20,9" Click="OnWindowsMode" />
+                    <Button x:Name="WindockModeButton" Content="Windock mode" Padding="20,9" Margin="0,0,8,0" Click="OnWindockMode" />
+                    <Button x:Name="WindowsModeButton" Content="Windows mode" Padding="20,9" Click="OnWindowsMode" />
                 </StackPanel>
                 <TextBlock x:Name="ModeHint" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="18,0,0,0" />
             </DockPanel>
@@ -44,21 +44,21 @@
                         </Setter>
                     </Style>
                 </ListBox.ItemContainerStyle>
-                <ListBoxItem Content="Tampilan" />
-                <ListBoxItem Content="Tema" />
-                <ListBoxItem Content="Area status" />
-                <ListBoxItem Content="Perilaku" />
-                <ListBoxItem Content="Isi Dock" />
+                <ListBoxItem Content="Appearance" />
+                <ListBoxItem Content="Theme" />
+                <ListBoxItem Content="Status area" />
+                <ListBoxItem Content="Behavior" />
+                <ListBoxItem Content="Dock items" />
                 <ListBoxItem Content="Launcher" />
                 <ListBoxItem Content="Alt+Tab" />
-                <ListBoxItem Content="Pengaman" />
-                <ListBoxItem Content="Tentang" />
+                <ListBoxItem Content="Safety" />
+                <ListBoxItem Content="About" />
             </ListBox>
 
             <DockPanel Grid.Column="1">
                 <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource Settings.Line}" BorderThickness="0,1,0,0" Padding="28,9">
                     <TextBlock x:Name="Status" Style="{StaticResource Hint}"
-                               Text="Setiap perubahan langsung diterapkan ke dock dan disimpan otomatis." />
+                               Text="Every change is applied to the dock right away and saved automatically." />
                 </Border>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <ContentControl x:Name="Page" Margin="28,24" />

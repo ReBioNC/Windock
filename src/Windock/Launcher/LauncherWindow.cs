@@ -98,7 +98,7 @@ internal sealed class LauncherWindow : Window
             _query.Focus();
             Keyboard.Focus(_query);
         };
-        _hint.Text = "Memuat daftar aplikasi…";
+        _hint.Text = "Loading apps…";
         LoadIndex(includeFiles);
     }
 
@@ -136,7 +136,7 @@ internal sealed class LauncherWindow : Window
         var query = _query.Text;
         if (!_indexReady)
         {
-            _hint.Text = "Memuat daftar aplikasi…";
+            _hint.Text = "Loading apps…";
             return;
         }
         foreach (var entry in LauncherSearch.Search(_index, query, _maxResults))
@@ -146,8 +146,8 @@ internal sealed class LauncherWindow : Window
             _icons.Request("launcher:" + entry.Target, entry.Target, IntPtr.Zero, 32, (_, image) => row.Icon = image);
         }
         if (_rows.Count > 0) _list.SelectedIndex = 0;
-        _hint.Text = string.IsNullOrWhiteSpace(query) ? $"Ketik untuk mencari di {_index.Count} aplikasi dan file."
-            : _rows.Count == 0 ? "Tidak ada yang cocok." : "Enter untuk membuka · ↑↓ pilih · Esc tutup";
+        _hint.Text = string.IsNullOrWhiteSpace(query) ? $"Type to search {_index.Count} apps and files."
+            : _rows.Count == 0 ? "No matches." : "Enter to open · ↑↓ to choose · Esc to close";
     }
 
     private void OnKey(object sender, KeyEventArgs e)
@@ -232,7 +232,7 @@ internal sealed class LauncherWindow : Window
 
         public LauncherEntry Entry { get; } = entry;
         public string Name => Entry.Name;
-        public string Detail => Entry.Kind == LauncherEntryKind.App ? "Aplikasi" : Entry.Target;
+        public string Detail => Entry.Kind == LauncherEntryKind.App ? "App" : Entry.Target;
 
         public ImageSource? Icon
         {

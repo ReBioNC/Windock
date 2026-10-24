@@ -10,17 +10,17 @@ internal partial class ThemePage : UserControl
 {
     private static readonly (string Name, string Hex)[] PlatePresets =
     {
-        ("Gelap", "#1E1E1E"), ("Grafit", "#3A3A3C"), ("Biru malam", "#1C2A44"), ("Hutan", "#1E3326"), ("Anggur", "#2D2240"), ("Terang", "#E8E8EC"),
+        ("Dark", "#1E1E1E"), ("Graphite", "#3A3A3C"), ("Midnight", "#1C2A44"), ("Forest", "#1E3326"), ("Wine", "#2D2240"), ("Light", "#E8E8EC"),
     };
 
     private static readonly (string Name, string Hex)[] DotPresets =
     {
-        ("Putih", "#FFFFFF"), ("Abu-abu", "#9A9A9A"), ("Biru", "#4C9AFF"), ("Hitam", "#202020"),
+        ("White", "#FFFFFF"), ("Gray", "#9A9A9A"), ("Blue", "#4C9AFF"), ("Black", "#202020"),
     };
 
     private static readonly (string Name, string Hex)[] AccentPresets =
     {
-        ("Biru", "#2F6FE4"), ("Ungu", "#8E5CF7"), ("Merah muda", "#E4407A"), ("Oranye", "#F08A24"), ("Hijau", "#2FA84F"), ("Merah", "#E5484D"),
+        ("Blue", "#2F6FE4"), ("Purple", "#8E5CF7"), ("Pink", "#E4407A"), ("Orange", "#F08A24"), ("Green", "#2FA84F"), ("Red", "#E5484D"),
     };
 
     private readonly SettingsContext _context;
@@ -117,7 +117,7 @@ internal partial class ThemePage : UserControl
             }
             else
             {
-                Message.Text = $"\"{box.Text}\" bukan warna. Pakai format #RRGGBB, misalnya #1E1E1E.";
+                Message.Text = $"\"{box.Text}\" is not a color. Use #RRGGBB, for example #1E1E1E.";
                 Refresh(_context.Store.Current);
             }
         }

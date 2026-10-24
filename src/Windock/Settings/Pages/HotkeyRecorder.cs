@@ -54,12 +54,12 @@ internal sealed class HotkeyRecorder
         {
             _tryRegister(old);  // keep the previous one working
             _message.Foreground = (Brush)_box.FindResource("Settings.Error");
-            _message.Text = $"Shortcut tidak valid atau sudah dipakai: {text}";
+            _message.Text = $"Not a valid shortcut, or already in use: {text}";
             _suspend(true);  // still recording
             return;
         }
         _message.Foreground = (Brush)_box.FindResource("Settings.Muted");
-        _message.Text = "Shortcut disimpan.";
+        _message.Text = "Shortcut saved.";
         _save(gesture.ToString());
         _suspend(true);  // registered for real when the box loses focus
     }

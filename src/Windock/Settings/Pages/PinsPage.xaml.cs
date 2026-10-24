@@ -74,12 +74,12 @@ internal partial class PinsPage : UserControl
 
     private void OnAdd(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog { Filter = "Aplikasi (*.exe;*.lnk)|*.exe;*.lnk", DereferenceLinks = false, Title = "Tambah aplikasi ke Dock" };
+        var dialog = new OpenFileDialog { Filter = "Apps (*.exe;*.lnk)|*.exe;*.lnk", DereferenceLinks = false, Title = "Add an app to the dock" };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         var path = dialog.FileName;
         if (_context.Store.Current.Pins.Any(p => string.Equals(p.Path, path, StringComparison.OrdinalIgnoreCase)))
         {
-            Message.Text = "Aplikasi ini sudah ada di Dock.";
+            Message.Text = "This app is already in the dock.";
             return;
         }
         Message.Text = "";
@@ -94,7 +94,7 @@ internal partial class PinsPage : UserControl
 
     private void OnResetPins(object sender, RoutedEventArgs e)
     {
-        var answer = MessageBox.Show("Ganti daftar pin dengan pin awal?", "Windock", MessageBoxButton.OKCancel, MessageBoxImage.Question);
+        var answer = MessageBox.Show("Replace your pins with the default pins?", "Windock", MessageBoxButton.OKCancel, MessageBoxImage.Question);
         if (answer == MessageBoxResult.OK) _sync.Edit(s => s with { Pins = _context.DefaultPins() });
     }
 

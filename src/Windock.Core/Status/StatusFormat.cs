@@ -38,10 +38,10 @@ public static class StatusGlyphs
     }
 }
 
-/// Texts shown in the status area (Indonesian UI).
+/// Texts shown in the status area.
 public static class StatusFormat
 {
-    public static readonly CultureInfo Indonesian = CultureInfo.GetCultureInfo("id-ID");
+    public static readonly CultureInfo Culture = CultureInfo.GetCultureInfo("en-US");
 
     public static string Clock(DateTime now, bool use24Hour, bool showSeconds)
     {
@@ -49,11 +49,11 @@ public static class StatusFormat
         return now.ToString(pattern, use24Hour ? CultureInfo.InvariantCulture : CultureInfo.GetCultureInfo("en-US"));
     }
 
-    /// "Sab, 18 Okt"
-    public static string ShortDate(DateTime now) => now.ToString("ddd, d MMM", Indonesian);
+    /// "Sun, Oct 18"
+    public static string ShortDate(DateTime now) => now.ToString("ddd, MMM d", Culture);
 
-    /// "Sabtu, 18 Oktober 2026"
-    public static string LongDate(DateTime now) => now.ToString("dddd, d MMMM yyyy", Indonesian);
+    /// "Sunday, October 18, 2026"
+    public static string LongDate(DateTime now) => now.ToString("dddd, MMMM d, yyyy", Culture);
 
     /// Time until the clock text changes next.
     public static TimeSpan UntilNextTick(DateTime now, bool showSeconds)
@@ -66,21 +66,21 @@ public static class StatusFormat
 
     public static string BatteryTooltip(int percent, bool charging, bool pluggedIn, TimeSpan? remaining)
     {
-        var text = $"Baterai {percent}%";
-        if (charging) return text + " · mengisi daya";
-        if (pluggedIn) return percent >= 100 ? "Baterai penuh · tersambung ke listrik" : text + " · tersambung ke listrik";
-        if (remaining is { } r && r > TimeSpan.Zero) return text + $" · sisa {(int)r.TotalHours} j {r.Minutes} m";
+        var text = $"Battery {percent}%";
+        if (charging) return text + " · charging";
+        if (pluggedIn) return percent >= 100 ? "Battery full · plugged in" : text + " · plugged in";
+        if (remaining is { } r && r > TimeSpan.Zero) return text + $" · {(int)r.TotalHours} h {r.Minutes} min left";
         return text;
     }
 
     public static string VolumeTooltip(double level, bool muted) =>
-        muted ? "Volume: dibisukan" : $"Volume {(int)Math.Round(level * 100)}%";
+        muted ? "Volume: muted" : $"Volume {(int)Math.Round(level * 100)}%";
 
     public static string NetworkTooltip(NetworkKind kind, string? name) => kind switch
     {
-        NetworkKind.Wifi => "Wi-Fi tersambung" + (string.IsNullOrEmpty(name) ? "" : $" ({name})"),
-        NetworkKind.Ethernet => "Kabel LAN tersambung" + (string.IsNullOrEmpty(name) ? "" : $" ({name})"),
-        _ => "Tidak ada koneksi jaringan",
+        NetworkKind.Wifi => "Wi-Fi connected" + (string.IsNullOrEmpty(name) ? "" : $" ({name})"),
+        NetworkKind.Ethernet => "Ethernet connected" + (string.IsNullOrEmpty(name) ? "" : $" ({name})"),
+        _ => "No network connection",
     };
 
     /// Two-letter code of a keyboard layout's language, e.g. 0x0409 → "EN", 0x0421 → "ID".

@@ -4,7 +4,7 @@ using Windock.Settings.Pages;
 
 namespace Windock.Settings;
 
-/// Pengaturan: every change applies immediately through SettingsStore.Update; there is no Save button (DESIGN §7).
+/// Settings window: every change applies immediately through SettingsStore.Update; there is no Save button (DESIGN §7).
 internal partial class SettingsWindow : Window
 {
     private readonly SettingsContext _context;
@@ -35,8 +35,8 @@ internal partial class SettingsWindow : Window
         WindockModeButton.Background = windock ? accent : normal;
         WindowsModeButton.Background = windock ? normal : accent;
         ModeHint.Text = windock
-            ? "Dock aktif dan menggantikan taskbar sesuai pengaturan di bawah."
-            : "Tampilan Windows asli: taskbar kembali seperti semula, dock disembunyikan. Pin dan pengaturan tetap tersimpan.";
+            ? "The dock is on and replaces the taskbar as set below."
+            : "Plain Windows: the taskbar is back as it was and the dock is hidden. Your pins and settings are kept.";
     }
 
     /// Confirms that an edit reached the dock; there is no Apply button.
@@ -44,7 +44,7 @@ internal partial class SettingsWindow : Window
     {
         ShowMode(e.New.Behavior.Mode);
         Status.Foreground = (System.Windows.Media.Brush)FindResource("Settings.Text");
-        Status.Text = $"✓ Diterapkan ke dock dan disimpan ({DateTime.Now:HH:mm:ss})";
+        Status.Text = $"✓ Applied to the dock and saved ({DateTime.Now:HH:mm:ss})";
     }
 
     protected override void OnSourceInitialized(EventArgs e)

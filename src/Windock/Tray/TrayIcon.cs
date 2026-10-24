@@ -4,7 +4,7 @@ using Forms = System.Windows.Forms;
 
 namespace Windock.Tray;
 
-/// System tray icon: left click opens Settings; right click shows Pengaturan / Jeda / Keluar (DESIGN.md §8).
+/// System tray icon: left click opens Settings; right click shows Settings / Windows mode / Quit (DESIGN.md §8).
 internal sealed class TrayIcon : IDisposable
 {
     private readonly Forms.NotifyIcon _icon;
@@ -14,12 +14,12 @@ internal sealed class TrayIcon : IDisposable
     public TrayIcon(Action openSettings, Action toggleMode, Action exit)
     {
         _glyph = (Environment.ProcessPath is { } exe ? Icon.ExtractAssociatedIcon(exe) : null) ?? CreateGlyph();
-        _pauseItem = new Forms.ToolStripMenuItem("Pakai Mode Windows", null, (_, _) => toggleMode());
+        _pauseItem = new Forms.ToolStripMenuItem("Use Windows mode", null, (_, _) => toggleMode());
         var menu = new Forms.ContextMenuStrip();
-        menu.Items.Add(new Forms.ToolStripMenuItem("Pengaturan…", null, (_, _) => openSettings()));
+        menu.Items.Add(new Forms.ToolStripMenuItem("Settings…", null, (_, _) => openSettings()));
         menu.Items.Add(_pauseItem);
         menu.Items.Add(new Forms.ToolStripSeparator());
-        menu.Items.Add(new Forms.ToolStripMenuItem("Keluar", null, (_, _) => exit()));
+        menu.Items.Add(new Forms.ToolStripMenuItem("Quit", null, (_, _) => exit()));
 
         _icon = new Forms.NotifyIcon { Icon = _glyph, Text = "Windock", ContextMenuStrip = menu, Visible = true };
         _icon.MouseClick += (_, e) =>
@@ -28,7 +28,7 @@ internal sealed class TrayIcon : IDisposable
         };
     }
 
-    public void SetMode(bool windowsMode) => _pauseItem.Text = windowsMode ? "Pakai Mode Windock" : "Pakai Mode Windows";
+    public void SetMode(bool windowsMode) => _pauseItem.Text = windowsMode ? "Use Windock mode" : "Use Windows mode";
 
     public void ShowBalloon(string title, string text) =>
         _icon.ShowBalloonTip(4000, title, text, Forms.ToolTipIcon.Info);

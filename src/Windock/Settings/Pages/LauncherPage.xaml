@@ -4,9 +4,9 @@
     <StackPanel>
         <TextBlock Text="Launcher" Style="{StaticResource PageTitle}" />
         <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,10"
-                   Text="Kotak pencarian cepat: tekan shortcut, ketik nama aplikasi, lalu Enter. Shortcut boleh pakai satu tombol modifier, misalnya Alt+Space." />
+                   Text="A quick search box: press the shortcut, type an app name, then Enter. The shortcut may use a single modifier key, such as Alt+Space." />
 
-        <CheckBox x:Name="Enabled" Content="Aktifkan launcher" FontWeight="SemiBold" />
+        <CheckBox x:Name="Enabled" Content="Turn the launcher on" FontWeight="SemiBold" />
 
         <StackPanel x:Name="Options" Margin="0,8,0,0">
             <Grid Style="{StaticResource Row}">
@@ -14,28 +14,28 @@
                 <TextBlock Text="Shortcut" Style="{StaticResource Label}" />
                 <TextBox x:Name="Recorder" Grid.Column="1" IsReadOnly="True" IsReadOnlyCaretVisible="False" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="2" Style="{StaticResource Hint}" Margin="10,0,0,0" VerticalAlignment="Center"
-                           Text="Klik kotaknya lalu tekan kombinasi baru." />
+                           Text="Click the box, then press the new combination." />
             </Grid>
             <TextBlock x:Name="RecorderMessage" Style="{StaticResource Hint}" Margin="170,-6,0,14" />
 
             <Grid Style="{StaticResource Row}">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /><ColumnDefinition Width="50" /></Grid.ColumnDefinitions>
-                <TextBlock Text="Jumlah hasil" Style="{StaticResource Label}" />
+                <TextBlock Text="Results shown" Style="{StaticResource Label}" />
                 <Slider x:Name="MaxResults" Grid.Column="1" Minimum="5" Maximum="12" IsSnapToTickEnabled="True" TickFrequency="1" />
                 <TextBlock Grid.Column="2" Style="{StaticResource Label}" HorizontalAlignment="Right" Text="{Binding Value, ElementName=MaxResults}" />
             </Grid>
 
             <Grid Style="{StaticResource Row}">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
-                <TextBlock Text="Cari juga" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                <TextBlock Text="Also search" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
                 <StackPanel Grid.Column="1">
-                    <CheckBox x:Name="IncludeFiles" Content="File dan folder di Desktop dan Documents" />
+                    <CheckBox x:Name="IncludeFiles" Content="Files and folders on the Desktop and in Documents" />
                     <TextBlock Style="{StaticResource Hint}" Margin="22,4,0,0"
-                               Text="Hanya isi langsung kedua folder itu (tidak masuk ke subfolder). Daftar dibuat saat launcher dibuka, lalu dibuang lagi." />
+                               Text="Only what is directly inside those two folders (no subfolders). The list is built when the launcher opens and dropped afterwards." />
                 </StackPanel>
             </Grid>
         </StackPanel>
 
-        <Button Content="Kembalikan ke default" HorizontalAlignment="Right" Margin="0,12,0,0" Click="OnReset" />
+        <Button Content="Reset to defaults" HorizontalAlignment="Right" Margin="0,12,0,0" Click="OnReset" />
     </StackPanel>
 </UserControl>

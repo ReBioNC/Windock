@@ -19,15 +19,15 @@ internal sealed class DockContextMenu(AppLauncher launcher, SettingsStore settin
         var menu = new ContextMenu { Placement = PlacementMode.MousePoint };
         if (item is null || item.Kind == DockItemKind.Separator)
         {
-            menu.Items.Add(Item("Pengaturan Dock…", openSettings));
-            menu.Items.Add(Item("Keluar", exit));
+            menu.Items.Add(Item("Dock settings…", openSettings));
+            menu.Items.Add(Item("Quit", exit));
             return menu;
         }
         if (item.Kind == DockItemKind.RecycleBin)
         {
-            menu.Items.Add(Item("Buka", () => launcher.Execute(ClickAction.OpenRecycleBin.Instance, item)));
+            menu.Items.Add(Item("Open", () => launcher.Execute(ClickAction.OpenRecycleBin.Instance, item)));
             menu.Items.Add(new Separator());
-            menu.Items.Add(Item("Kosongkan Recycle Bin…", emptyRecycleBin, enabled: !RecycleBin.IsEmpty()));
+            menu.Items.Add(Item("Empty Recycle Bin…", emptyRecycleBin, enabled: !RecycleBin.IsEmpty()));
             return menu;
         }
 
@@ -44,22 +44,22 @@ internal sealed class DockContextMenu(AppLauncher launcher, SettingsStore settin
         }
 
         var target = item.LaunchTarget is { } t ? AppLauncher.LaunchTargetFor(item, t) : null;
-        menu.Items.Add(Item("Buka jendela baru", () => launcher.Launch(target!, item.DisplayName), enabled: target is not null));
+        menu.Items.Add(Item("New window", () => launcher.Launch(target!, item.DisplayName), enabled: target is not null));
         menu.Items.Add(item.IsPinned
-            ? Item("Hapus dari Dock", () => Unpin(item))
-            : Item("Simpan di Dock", () => Pin(item), enabled: PinPathFor(item) is not null));
+            ? Item("Remove from dock", () => Unpin(item))
+            : Item("Keep in dock", () => Pin(item), enabled: PinPathFor(item) is not null));
 
         if (!item.IsPinned && item.AppId is { } hideId)
-            menu.Items.Add(Item("Jangan tampilkan di dock", () => Hide(hideId.Value, item.DisplayName)));
+            menu.Items.Add(Item("Don't show in dock", () => Hide(hideId.Value, item.DisplayName)));
 
         var file = item.Windows.FirstOrDefault()?.ExePath ?? item.LaunchTarget;
-        menu.Items.Add(Item("Tampilkan di Explorer", () => launcher.RevealInExplorer(file!),
+        menu.Items.Add(Item("Show in Explorer", () => launcher.RevealInExplorer(file!),
             enabled: file is not null && File.Exists(file)));
 
         if (item.IsRunning)
         {
             menu.Items.Add(new Separator());
-            menu.Items.Add(Item("Tutup semua jendela", () => launcher.CloseWindows(item.Windows.Select(w => w.Handle).ToList())));
+            menu.Items.Add(Item("Close all windows", () => launcher.CloseWindows(item.Windows.Select(w => w.Handle).ToList())));
         }
         return menu;
     }

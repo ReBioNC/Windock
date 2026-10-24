@@ -1,218 +1,218 @@
-# Windock — Arsitektur Teknis
+# Windock — Technical Architecture
 
 | | |
 |---|---|
-| Versi dokumen | 1.0 |
-| Tanggal | 2026-10-16 |
-| Status | Draft, menunggu review |
-| Dokumen terkait | [PRD.md](PRD.md), [DESIGN.md](DESIGN.md) |
+| Document version | 1.0 |
+| Date | 2026-10-16 |
+| Status | Draft, awaiting review |
+| Related documents | [PRD.md](PRD.md), [DESIGN.md](DESIGN.md) |
 
-## 1. Ringkasan
+## 1. Summary
 
-Windock adalah satu aplikasi desktop WPF di .NET 8 yang jalan sebagai user biasa. Aplikasi ini menggambar dock di jendela transparan selebar layar, mencadangkan ruang layar lewat API AppBar Windows, dan menyembunyikan taskbar Windows untuk sementara. Daftar jendela yang terbuka didapat dari event Windows (`SetWinEventHook`), bukan polling. Logika inti (model dock, tata letak, animasi, pengaturan) ada di library terpisah yang tidak bergantung pada WPF atau Win32, sehingga bisa diuji dengan unit test.
+Windock is a single WPF desktop app on .NET 8 that runs as a normal user. It draws the dock in a transparent window as wide as the screen, reserves screen space through the Windows AppBar API, and hides the Windows taskbar temporarily. The list of open windows comes from Windows events (`SetWinEventHook`), not polling. The core logic (dock model, layout, animation, settings) lives in a separate library that does not depend on WPF or Win32, so it can be unit-tested.
 
-## 2. Teknologi
+## 2. Technology
 
-| Bagian | Pilihan | Alasan |
+| Part | Choice | Reason |
 |---|---|---|
-| Bahasa dan runtime | C# 12, .NET 8 (LTS) | Sudah terpasang (SDK 8.0.400), dan pengguna terbiasa dengan C# |
-| UI | WPF | Dirender GPU lewat DirectX, mendukung jendela transparan per-piksel, ringan dibanding Electron |
-| Interop Win32 | `Microsoft.Windows.CsWin32` (source generator) | Signature P/Invoke dibuat otomatis dari metadata resmi, sehingga mengurangi bug tanda tangan fungsi |
-| Ikon tray | `System.Windows.Forms.NotifyIcon` (`UseWindowsForms`) | Bawaan .NET, tanpa dependensi tambahan |
-| Serialisasi | `System.Text.Json` | Bawaan .NET |
-| Test | xUnit | Standar dan ringan |
-| CI | GitHub Actions (`windows-latest`) | Build dan test setiap push |
+| Language and runtime | C# 12, .NET 8 (LTS) | Already installed (SDK 8.0.400), and the user knows C# |
+| UI | WPF | GPU-rendered through DirectX, supports per-pixel transparent windows, light compared to Electron |
+| Win32 interop | `Microsoft.Windows.CsWin32` (source generator) and hand-written P/Invoke | Generated signatures come from official metadata, which reduces signature bugs |
+| Tray icon | `System.Windows.Forms.NotifyIcon` (`UseWindowsForms`) | Part of .NET, no extra dependency |
+| Serialization | `System.Text.Json` | Part of .NET |
+| Tests | xUnit | Standard and light |
+| CI | GitHub Actions (`windows-latest`) | Build and test on every push |
 
-Tidak ada library UI pihak ketiga di v1.0. Semua style dibuat sendiri.
+There is no third-party UI library. Every style is hand-made.
 
-## 3. Struktur solution
+## 3. Solution layout
 
 ```
 Windock/
 ├─ Windock.sln
 ├─ src/
-│  ├─ Windock.Core/                  // tanpa WPF, tanpa Win32 — murni logika
-│  │  ├─ Apps/          AppId, DockItem, DockModel
-│  │  ├─ Layout/        DockLayoutEngine, Magnification, LayoutResult
-│  │  ├─ Animation/     BounceAnimator, Tween, Easing
-│  │  ├─ Settings/      DockSettings, SettingsStore, SettingsDefaults
-│  │  └─ Abstractions/  IWindowSource, ILauncher, IClock, ...
-│  └─ Windock/                       // aplikasi WPF
-│     ├─ App.xaml(.cs)               // titik masuk, wiring, pemulihan
-│     ├─ Interop/                    // satu-satunya tempat panggilan Win32
-│     │  ├─ NativeMethods.txt        // daftar API untuk CsWin32
-│     │  ├─ WindowTracker.cs
-│     │  ├─ IconProvider.cs
-│     │  ├─ AppBarService.cs
-│     │  ├─ TaskbarService.cs
-│     │  ├─ AppLauncher.cs
-│     │  ├─ HotkeyService.cs
-│     │  └─ WindowEffects.cs         // blur, region, extended style
-│     ├─ Dock/          DockWindow, BackdropWindow, EdgeTriggerWindow, DockRenderer
-│     ├─ Settings/      SettingsWindow + halaman-halamannya
+│  ├─ Windock.Core/                  // no WPF, no Win32 — pure logic
+│  │  ├─ Apps/          AppId, DockItem, DockModel, policies (click, auto-hide, attention, switcher, …)
+│  │  ├─ Layout/        DockLayoutEngine, DockMetrics, LayoutResult
+│  │  ├─ Animation/     DockAnimator, BounceAnimator, Tween, Easing
+│  │  ├─ Launcher/      LauncherSearch
+│  │  ├─ Status/        StatusFormat, StatusGlyphs
+│  │  ├─ Settings/      DockSettings, SettingsStore, SettingsJson, SettingsNormalizer
+│  │  └─ Abstractions/  IWindowSource, IClock, …
+│  └─ Windock/                       // the WPF app
+│     ├─ App.xaml(.cs)               // entry point
+│     ├─ Composition/                // AppHost (wiring, lifecycle, recovery), AutoHideController, …
+│     ├─ Interop/                    // the only place that calls Win32
+│     ├─ Dock/          DockWindow, BackdropWindow, EdgeTriggerWindow, DockController, DockRenderer, …
+│     ├─ Status/        StatusArea and its popups (volume, calendar, tray)
+│     ├─ Launcher/      LauncherWindow
+│     ├─ Switcher/      WindowSwitcher, SwitcherWindow (Alt+Tab)
+│     ├─ Settings/      SettingsWindow and its pages
 │     └─ Tray/          TrayIcon
 ├─ tests/
 │  └─ Windock.Core.Tests/
-├─ spikes/                           // kode percobaan Fase 0, tidak ikut dirilis
+├─ spikes/                           // phase 0 experiments, not shipped
+├─ scripts/                          // install.ps1, uninstall.ps1
 └─ docs/
 ```
 
-Aturan dependensi: `Windock` boleh bergantung pada `Windock.Core`, tapi tidak sebaliknya. Kode di luar `Interop/` tidak memanggil Win32 langsung.
+Dependency rule: `Windock` may depend on `Windock.Core`, never the other way round. Code outside `Interop/` does not call Win32 directly.
 
-## 4. Jendela dock
+## 4. Dock windows
 
-Dock terdiri dari tiga jendela milik Windock:
+The dock is made of three Windock windows:
 
-| Jendela | Ukuran | Isi | Gaya |
+| Window | Size | Content | Style |
 |---|---|---|---|
-| `DockWindow` | Selebar monitor, tinggi = tinggi plate + jarak tepi + ruang magnification (`ukuranMagnification − ukuranIkon` + 16 untuk tooltip). Default 66 + 4 + 48 = 118 | Plate (warna, opacity, garis tepi), ikon, titik penanda, tooltip | `AllowsTransparency=True`, topmost, `WS_EX_TOOLWINDOW` (tidak muncul di Alt+Tab), `WS_EX_NOACTIVATE` (klik tidak mencuri fokus) |
-| `BackdropWindow` | Tepat sebesar plate, dipindah dan di-resize tiap frame | Hanya efek blur | **Jendela Win32 mentah** (`CreateWindowEx`, `WS_POPUP`, bukan jendela WPF, karena me-resize jendela WPF tiap frame terlalu mahal). Blur via `SetWindowCompositionAttribute` (`ACCENT_ENABLE_BLURBEHIND`). Sudut dibulatkan dengan `SetWindowRgn` rounded-rect. Posisinya tepat di bawah `DockWindow` dalam z-order. Toolwindow dan noactivate. Lihat [spike S1](spikes/S1-blur-overlay.md) |
-| `EdgeTriggerWindow` | Strip 2 DIP di tepi layar | Kosong (alpha 1, tidak terlihat) | Hanya aktif saat dock auto-hide, untuk mendeteksi kursor menyentuh tepi |
+| `DockWindow` | As wide as the monitor; height = plate height + edge gap + magnification room (`magnificationSize − iconSize`, or the bounce height, + 16 for the tooltip). Default 66 + 4 + 32 + 16 = 118 | Plate (color, opacity, border), icons, indicator dots, tooltip, status area | `AllowsTransparency=True`, topmost, `WS_EX_TOOLWINDOW` (not in Alt+Tab), `WS_EX_NOACTIVATE` (clicks do not steal focus) |
+| `BackdropWindow` | Exactly the plate, moved and resized every frame | The blur only | **A raw Win32 window** (`CreateWindowEx`, `WS_POPUP`, not a WPF window, because resizing a WPF window every frame is too expensive). Blur through `SetWindowCompositionAttribute` (`ACCENT_ENABLE_BLURBEHIND`). Corners rounded with a rounded-rect `SetWindowRgn`. Placed right under `DockWindow` in the z-order. Tool window and no-activate. See [spike S1](spikes/S1-blur-overlay.md) |
+| `EdgeTriggerWindow` | A 2 DIP strip along the screen edge | Empty (alpha 1, invisible) | Only active while the dock auto-hides, to notice the pointer touching the edge. Re-raised to the top of the z-order on every foreground change, because Windows can leave a topmost window below ordinary ones |
 
-**Kenapa blur dipisah:** di Windows 10, efek blur sistem selalu mengenai seluruh persegi jendela. Kalau blur dipasang di `DockWindow` yang selebar layar, seluruh strip bawah layar ikut buram. Dengan dipisah, blur hanya ada di bentuk plate, sementara ikon yang membesar tetap bisa keluar ke atas plate di jendela transparan. Ini divalidasi di Spike S1 (§13).
+**Why the blur is separate:** on Windows 10 the system blur always covers the whole window rectangle. If the blur were on the screen-wide `DockWindow`, the whole bottom strip of the screen would be blurred. Separated, the blur only has the plate's shape, while growing icons can still leave the plate upwards in the transparent window. Validated in spike S1 (§13).
 
-**Klik tembus:** di jendela layered WPF, piksel dengan alpha 0 meneruskan klik ke jendela di belakangnya. Area di luar plate dan ikon dibiarkan alpha 0. Supaya magnification tidak bergetar saat kursor berada di celah antara ikon yang membesar, `DockWindow` menggambar "zona aktif" tak terlihat (alpha 1) yang meliputi plate dan seluruh tinggi ikon yang sedang membesar. Zona ini menyusut kembali saat magnification selesai.
+**Click-through:** in a WPF layered window, pixels with alpha 0 pass clicks to the window behind. Everything outside the plate and icons stays alpha 0. So that magnification does not jitter when the pointer is in the gap between growing icons, `DockWindow` draws an invisible "active zone" (alpha 1) covering the plate and the full height of the growing icons. The zone shrinks back when magnification ends.
 
-**Fokus:** karena `WS_EX_NOACTIVATE`, jendela aplikasi yang sedang aktif tetap aktif saat dock diklik. Dengan begitu Windock tahu jendela mana yang aktif (dibutuhkan F-06). Windock tetap boleh memanggil `SetForegroundWindow` karena prosesnya menerima input terakhir dari pengguna.
+**Focus:** because of `WS_EX_NOACTIVATE`, the active app window stays active when the dock is clicked. That is how Windock knows which window is active (needed for F-06). Windock may still call `SetForegroundWindow` because its process received the user's last input.
 
-## 5. Tata letak dan loop render
+## 5. Layout and the render loop
 
-Tata letak dihitung oleh `DockLayoutEngine` di Core sebagai fungsi murni:
+The layout is computed by `DockLayoutEngine` in Core as a pure function:
 
 ```
-LayoutResult Compute(
-    IReadOnlyList<DockItemVisualState> items,   // per item: slotProgress (0..1), bounceOffset
-    DockSettings settings,
-    double? cursorAlongAxis,                    // null jika kursor di luar dock
-    double magnifyProgress,                     // 0..1, untuk masuk/keluar halus
-    Size screenWorkArea)
-→ PlateRect, ActiveZoneRect, daftar ItemRect (posisi, ukuran, posisi titik penanda)
+LayoutResult Compute(LayoutInput input)
+   // items (key, kind: icon / separator / fixed-width status button, slot progress 0..1),
+   // icon size, magnification size and on/off, pointer position (null when outside),
+   // magnify progress (0..1, for a smooth enter/leave), screen width, window height
+→ plate rectangle, active-zone rectangle, item rectangles (position, size, indicator position)
 ```
 
-Rumus magnification ada di [DESIGN.md §3](DESIGN.md#3-magnification).
+The magnification formula is in [DESIGN.md §3](DESIGN.md#3-magnification).
 
-`DockRenderer` (WPF) menerima `LayoutResult` lalu memperbarui posisi dan ukuran elemen `Image` di sebuah `Canvas`. Posisi, ukuran, dan region `BackdropWindow` juga diperbarui dari `PlateRect` dengan satu `SetWindowPos` dan satu `SetWindowRgn`.
+`DockRenderer` (WPF) takes the `LayoutResult` and updates the position and size of elements on a `Canvas`. The position, size and region of `BackdropWindow` are updated from the plate rectangle with one `SetWindowPos` and one `SetWindowRgn`.
 
-**Loop render:** `DockRenderer` mendaftar ke `CompositionTarget.Rendering` (sekali per frame) hanya selama ada yang bergerak, yaitu salah satu kondisi berikut:
-- kursor di dalam zona aktif,
-- `magnifyProgress` sedang berubah,
-- ada item yang sedang memantul, masuk, atau keluar,
-- auto-hide sedang meluncur.
+**Render loop:** `DockRenderer` subscribes to `CompositionTarget.Rendering` (once per frame) only while something moves, that is when one of these holds:
+- the pointer is inside the active zone,
+- `magnifyProgress` is changing,
+- an item is bouncing, entering or leaving,
+- auto-hide is sliding.
 
-Saat semuanya diam, handler dilepas, sehingga tidak ada kerja per frame dan CPU kembali ke sekitar 0% (N-02). Waktu animasi memakai `IClock` (berbasis `Stopwatch`), bukan jumlah frame, sehingga kecepatan animasi sama di monitor 60 Hz dan 144 Hz.
+When everything is still, the handler is removed, so there is no per-frame work and CPU goes back to about 0% (N-02). Animation time uses `IClock` (based on `Stopwatch`), not frame counts, so animation speed is the same on 60 Hz and 144 Hz monitors.
 
-## 6. Alur data
+## 6. Data flow
 
 ```
            Win32 events                                   settings.json
  (SetWinEventHook, TaskbarCreated,                             │
-  ABN_*, WM_DISPLAYCHANGE, hotkey)                             ▼
-            │                                           SettingsStore ──(SettingsChanged)──┐
+  ABN_*, WM_DISPLAYCHANGE, hotkey,                             ▼
+  shell hook, notification store)                       SettingsStore ──(SettingsChanged)──┐
+            │                                                  │                            │
             ▼                                                  │                            │
      WindowTracker ──(WindowAdded/Removed/                     │                            │
             │         ForegroundChanged/TitleChanged)          │                            │
             ▼                                                  ▼                            ▼
-        DockModel  ◄───────────── pins dari settings ─────────┘                 AppBarService
-            │  (ItemsChanged)                                                   TaskbarService
-            ▼                                                                   DockWindow (ukuran)
-   DockWindow / DockRenderer ◄── IconProvider (ikon, async)
+        DockModel  ◄───────────── pins from settings ─────────┘                 AppBarService
+            │  (ItemsChanged)                                                   TaskbarModeCoordinator
+            ▼                                                                   DockWindow (size)
+   DockController / DockRenderer ◄── IconProvider (icons, async)
             │
-            │ klik / menu
+            │ click / menu
             ▼
-       AppLauncher ──► buka aplikasi / aktifkan / minimize / tutup
+       AppLauncher ──► start app / activate / minimize / close
             │
-            └──(LaunchStarted)──► DockModel memulai bounce item tsb
+            └──(launch)──► DockController starts that item's bounce
 ```
 
 ### 6.1 WindowTracker
 
-- **Event yang didengar:** `SetWinEventHook` dengan `WINEVENT_OUTOFCONTEXT` untuk `EVENT_OBJECT_SHOW`, `EVENT_OBJECT_HIDE`, `EVENT_OBJECT_DESTROY`, `EVENT_SYSTEM_FOREGROUND`, `EVENT_OBJECT_NAMECHANGE`, `EVENT_SYSTEM_MINIMIZESTART`, `EVENT_SYSTEM_MINIMIZEEND`, `EVENT_OBJECT_CLOAKED`, dan `EVENT_OBJECT_UNCLOAKED`.
-- **Saat start,** daftar awal diambil sekali dengan `EnumWindows`.
-- **Jendela yang dihitung sebagai "jendela aplikasi"** harus memenuhi semua aturan berikut, mendekati aturan taskbar Windows:
-  - top-level dan `IsWindowVisible`
-  - tidak punya owner, kecuali punya `WS_EX_APPWINDOW`
-  - tidak punya `WS_EX_TOOLWINDOW`, kecuali punya `WS_EX_APPWINDOW`
-  - tidak cloaked (`DwmGetWindowAttribute(DWMWA_CLOAKED) == 0`), sehingga jendela UWP tersembunyi dan virtual desktop lain tidak ikut
-  - bukan milik proses Windock sendiri
-- **Event difilter berdasarkan handle** (`idObject == OBJID_WINDOW`, `idChild == CHILDID_SELF`), supaya event dari kontrol di dalam jendela diabaikan.
+- **Events listened to:** `SetWinEventHook` with `WINEVENT_OUTOFCONTEXT` for `EVENT_OBJECT_SHOW`, `EVENT_OBJECT_HIDE`, `EVENT_OBJECT_DESTROY`, `EVENT_SYSTEM_FOREGROUND`, `EVENT_OBJECT_NAMECHANGE`, `EVENT_SYSTEM_MINIMIZESTART`, `EVENT_SYSTEM_MINIMIZEEND`, `EVENT_OBJECT_CLOAKED`, `EVENT_OBJECT_UNCLOAKED` and `EVENT_OBJECT_LOCATIONCHANGE`.
+- **At start,** the initial list is read once with `EnumWindows`.
+- **A window counts as an "app window"** when all of these hold, close to the taskbar's own rules:
+  - top-level and `IsWindowVisible`
+  - no owner, unless it has `WS_EX_APPWINDOW`
+  - no `WS_EX_TOOLWINDOW`, unless it has `WS_EX_APPWINDOW`
+  - not cloaked (`DwmGetWindowAttribute(DWMWA_CLOAKED) == 0`), so hidden UWP windows and other virtual desktops are left out
+  - not a child window, and not one of Windock's own untitled windows
+- **Events are filtered by handle** (`idObject == OBJID_WINDOW`, `idChild == CHILDID_SELF`), so events from controls inside windows are ignored.
 
-### 6.2 Identitas aplikasi (AppId)
+### 6.2 App identity (AppId)
 
-Satu ikon dock = satu `AppId`. Urutan penentuannya:
+One dock icon = one `AppId`. It is chosen in this order:
 
-1. **AppUserModelID jendela**, jika ada. Dibaca lewat `SHGetPropertyStoreForWindow` dan `PKEY_AppUserModel_ID`. Ini menangani aplikasi UWP dan aplikasi yang mengatur ID-nya sendiri.
-2. **Path exe proses**, dari `QueryFullProcessImageName` dengan akses `PROCESS_QUERY_LIMITED_INFORMATION`, dinormalisasi menjadi huruf kecil dan path penuh.
-3. **Khusus UWP:** jendela `ApplicationFrameHost.exe` diambil dari proses jendela anaknya.
+1. **Packaged apps (Store / UWP / system apps such as Settings):** the process's package identity (`GetApplicationUserModelId`), or the window's AppUserModelID. Read through `SHGetPropertyStoreForWindow` and `PKEY_AppUserModel_ID` when needed.
+2. **Classic apps:** the process exe path, from `QueryFullProcessImageName` with `PROCESS_QUERY_LIMITED_INFORMATION`, normalized to a full lower-case path. A window AUMID set by a classic app (Chrome sets one) is ignored, so shortcuts still match.
+3. **UWP frames:** an `ApplicationFrameHost.exe` window takes the process of its child `CoreWindow`. A frame shown before its app moves in is looked at again when shown, when activated, and a few times in the following seconds.
 
-**Pin** disimpan sebagai path `.exe` atau `.lnk`. Untuk `.lnk`, target dan AppUserModelID-nya di-resolve lewat `IShellLinkW` dan `IPropertyStore`, sehingga pin cocok dengan jendela yang sedang jalan.
+**Pins** are stored as `.exe`, `.lnk` or `shell:AppsFolder\<AUMID>` paths. For `.lnk`, the target and AUMID are resolved through `IShellLinkW` and `IPropertyStore`, so pins match running windows. A pinned exe that belongs to a package (an `AppxManifest.xml` in its folder) is resolved to its AUMID from the manifest, because packaged apps cannot be started by their exe.
 
 ### 6.3 DockModel
 
-`DockModel` (Core) menyimpan daftar `DockItem` dalam urutan tampil: pin, pemisah, aplikasi jalan yang tidak di-pin (urut sesuai waktu muncul), pemisah, lalu Recycle Bin. Model ini diperbarui dari event `IWindowSource` dan perubahan pin, lalu mengeluarkan event `ItemsChanged` berisi diff (ditambah, dihapus, berubah) supaya renderer bisa menganimasikan masuk dan keluar.
+`DockModel` (Core) keeps the list of `DockItem`s in display order: pins, a separator, running apps that are not pinned (in the order they appeared, minus hidden apps), a separator, then the Recycle Bin. It updates from `IWindowSource` events and pin changes, and raises `ItemsChanged` with a diff (added, removed, updated) so the renderer can animate items entering and leaving.
 
-Setiap `DockItem` menyimpan: `AppId`, `DisplayName`, `IconSource` (path), `IsPinned`, `Windows` (daftar handle, urut dari yang terakhir aktif), `IsActive`, dan `LaunchState` (Idle atau Launching, beserta waktu mulai).
+Each `DockItem` holds: `AppId`, `DisplayName`, launch target, icon path, `IsPinned`, `Windows` (handles, most recently active first) and `IsActive`.
 
 ### 6.4 AppLauncher
 
-| Aksi | Implementasi |
+| Action | Implementation |
 |---|---|
-| Buka | `Process.Start` dengan `UseShellExecute=true` untuk path atau `.lnk`. Untuk AppUserModelID: `explorer.exe shell:AppsFolder\<AUMID>` |
-| Aktifkan | `ShowWindow(SW_RESTORE)` jika minimize, lalu `SetForegroundWindow` |
+| Open | `Process.Start` with `UseShellExecute=true` for paths or `.lnk`. For an AUMID: `explorer.exe shell:AppsFolder\<AUMID>` |
+| Activate | `ShowWindow(SW_RESTORE)` when minimized, then `SetForegroundWindow` |
 | Minimize | `ShowWindow(SW_MINIMIZE)` |
-| Tutup semua | `PostMessage(WM_CLOSE)` ke setiap jendela. Tidak pernah `TerminateProcess` |
-| Tampilkan di Explorer | `explorer.exe /select,"<path>"` |
+| Close all | `PostMessage(WM_CLOSE)` to each window. Never `TerminateProcess` |
+| Show in Explorer | `explorer.exe /select,"<path>"` |
 | Recycle Bin | `explorer.exe shell:RecycleBinFolder` |
 
-Jendela milik proses Administrator mungkin menolak sebagian aksi karena UIPI. Kegagalan dicatat ke log dan diabaikan, tanpa crash.
+Windows owned by Administrator processes may refuse some actions because of UIPI. Failures are logged and ignored, without crashing.
 
 ### 6.5 IconProvider
 
-- **Sumber ikon:** `IShellItemImageFactory.GetImage` dengan `SIIGBF_ICONONLY`, pada ukuran 256 px atau ukuran terdekat. Ini bekerja untuk exe, lnk, dan item `shell:AppsFolder`.
-- **Thread:** ikon diambil di satu thread worker STA, karena API-nya COM. Hasilnya `BitmapSource` yang sudah `Freeze()` dikirim ke thread UI.
-- **Cache:** disimpan di memori dengan kunci `(AppId atau path, ukuran piksel)`. Ikon Launchpad di fase berikutnya akan memakai cache terpisah yang dibuang saat ditutup.
-- **Cadangan:** jika gagal, dipakai ikon aplikasi generik.
+- **Icon source:** `IShellItemImageFactory.GetImage` with `SIIGBF_ICONONLY`, at the needed size. This works for exes, shortcuts and `shell:AppsFolder` items. Store apps use their package's unplated logo when available.
+- **Thread:** icons are loaded on one STA worker thread, because the API is COM. The resulting frozen `BitmapSource` is sent to the UI thread.
+- **Cache:** in memory, keyed by `(AppId or path, pixel size)`.
+- **Fallback:** a generic app icon when loading fails.
 
-## 7. Taskbar dan AppBar
+## 7. Taskbar and AppBar
 
-### 7.1 Pencadangan ruang layar (AppBarService)
+### 7.1 Reserving screen space (AppBarService)
 
-Ruang layar dicadangkan oleh jendela bantu kecil tak terlihat (`AppBarHost`), bukan oleh `DockWindow`. Alasannya, sistem AppBar bisa memindahkan jendela yang terdaftar, dan pergeseran itu tidak boleh mengganggu `DockWindow`.
+Screen space is reserved by a small invisible helper window, not by `DockWindow`, because the AppBar system may move registered windows and that must not disturb the dock.
 
-- **Daftar:** `ABM_NEW` dengan callback message, lalu `ABM_QUERYPOS` dan `ABM_SETPOS` untuk sisi yang sesuai posisi dock. Tebal ruang = tinggi plate + jarak tepi (default 70). Ruang magnification tidak ikut dicadangkan.
-- **`ABN_FULLSCREENAPP`:** dock disembunyikan saat ada aplikasi layar penuh (F-14), dan muncul lagi setelah aplikasi itu keluar.
-- **`ABN_POSCHANGED`:** posisi dihitung ulang.
-- **Dock auto-hide aktif:** `ABM_REMOVE`, sehingga jendela memakai layar penuh seperti di Mac.
-- **Keluar:** selalu `ABM_REMOVE`.
+- **Register:** `ABM_NEW` with a callback message, then `ABM_QUERYPOS` and `ABM_SETPOS` for the dock's side. Thickness = plate height + edge gap (default 70). Magnification room is not reserved.
+- **`ABN_FULLSCREENAPP`:** used as a cue to check whether a fullscreen app is in front (F-14).
+- **`ABN_POSCHANGED`:** recompute the position.
+- **Dock auto-hide on:** `ABM_REMOVE`, so windows use the whole screen like on a Mac.
+- **Exit:** always `ABM_REMOVE`.
 
-### 7.2 Menyembunyikan taskbar (TaskbarService)
+### 7.2 Hiding the taskbar (TaskbarModeCoordinator, Win32TaskbarController)
 
-| Mode | Yang dilakukan |
+| Mode | What happens |
 |---|---|
-| Sembunyikan total | 1. Simpan status asli taskbar (`ABM_GETSTATE`) ke `state.json`. 2. Set taskbar ke auto-hide (`ABM_SETSTATE`, `ABS_AUTOHIDE`) supaya taskbar melepas ruang layarnya. 3. **Setelah ±700 ms** (transisi auto-hide memunculkan ulang taskbar), `ShowWindow(SW_HIDE)` pada `Shell_TrayWnd` dan semua `Shell_SecondaryTrayWnd`, lalu "jaga tetap tersembunyi" (lihat Tombol Windows di bawah) |
-| Auto-hide | Langkah 1 dan 2 saja |
-| Biarkan tampil | Tidak menyentuh taskbar. Ruang dock dicadangkan di atas taskbar |
+| Hide completely | 1. Save the taskbar's original state (`ABM_GETSTATE`) to `state.json`. 2. Set the taskbar to auto-hide (`ABM_SETSTATE`, `ABS_AUTOHIDE`) so it gives up its screen space. 3. **After about 700 ms** (the auto-hide transition shows the taskbar again), `ShowWindow(SW_HIDE)` on `Shell_TrayWnd` and every `Shell_SecondaryTrayWnd`, then "keep it hidden" (see the Windows key below) |
+| Auto-hide | Steps 1 and 2 only |
+| Leave it visible | The taskbar is not touched. The dock's space is reserved above the taskbar |
 
-**Langkah 2 adalah perubahan setelan Windows yang tersimpan** (sama seperti mencentang "Automatically hide the taskbar" di Settings). Karena itu perubahan ini dicatat dan selalu dikembalikan:
+**Step 2 changes a saved Windows setting** (the same as ticking "Automatically hide the taskbar" in Settings). So it is recorded and always undone:
 
-- **Keluar normal, Jeda, shortcut darurat, atau mengganti mode:** `ShowWindow(SW_SHOW)`, lalu `ABM_SETSTATE` ke status asli, lalu hapus penanda di `state.json`.
-- **Crash dengan exception:** handler global (§9) menjalankan pemulihan yang sama sebelum proses berakhir.
-- **Mati paksa** (Task Manager, listrik): `state.json` masih berisi penanda. Saat Windock dijalankan lagi, status asli dipulihkan dulu sebelum mode diterapkan ulang. Jika pengguna tidak menjalankan Windock lagi, cara manualnya ditulis di README: restart Explorer, lalu matikan "Automatically hide the taskbar" di Settings, Personalization, Taskbar.
-- **Explorer restart:** Windock mendengarkan pesan `TaskbarCreated` (`RegisterWindowMessage`), lalu menerapkan ulang mode taskbar dan mendaftarkan ulang AppBar.
-- **Tombol Windows:** Start Menu tetap terbuka normal ([spike S2](spikes/S2-taskbar.md)); hanya kotak search yang terlihat selama Start terbuka. "Jaga tetap tersembunyi": saat `EVENT_OBJECT_SHOW` pada taskbar atau `EVENT_SYSTEM_FOREGROUND`, jika taskbar terlihat dan foreground bukan `Windows.UI.Core.CoreWindow` (Start/Search) atau `Shell_TrayWnd`, taskbar disembunyikan lagi.
-- **AppBar:** `ABM_SETPOS` hanya dipanggil jika persegi hasil `ABM_QUERYPOS` berubah, untuk mencegah badai `ABN_POSCHANGED`.
+- **Normal exit, emergency shortcut, switching to Windows mode or changing the mode:** `ShowWindow(SW_SHOW)`, then `ABM_SETSTATE` back to the original state, then clear the marker in `state.json`.
+- **Shutdown, restart or sign-out:** on `WM_QUERYENDSESSION` the taskbar is restored before Windows ends the process; if the shutdown is cancelled, `WM_ENDSESSION(false)` applies the mode again.
+- **Crash with an exception:** a global handler (§9) runs the same restore before the process ends.
+- **Killed** (Task Manager, power loss): `state.json` still holds the marker. When Windock starts again, the original state is restored before the mode is applied again. If the user never starts Windock again, the manual way is in the README.
+- **Explorer restart:** Windock listens for the `TaskbarCreated` message (`RegisterWindowMessage`), then applies the taskbar mode and registers the AppBar again.
+- **Windows key:** the Start menu opens normally ([spike S2](spikes/S2-taskbar.md)). "Keep it hidden": on `EVENT_OBJECT_SHOW` for the taskbar or on `EVENT_SYSTEM_FOREGROUND`, if the taskbar is visible and the foreground is not `Windows.UI.Core.CoreWindow` (Start/Search), the taskbar is hidden again.
+- **AppBar:** `ABM_SETPOS` is only called when the rectangle from `ABM_QUERYPOS` changed, to avoid an `ABN_POSCHANGED` storm.
 
-## 8. Pengaturan dan state
+## 8. Settings and state
 
-Lokasi semua file: `%AppData%\Windock\`
+Every file lives in `%AppData%\Windock\`:
 
-| File | Isi |
+| File | Content |
 |---|---|
-| `settings.json` | Pengaturan pengguna (skema di bawah) |
-| `settings.json.bak` | Salinan terakhir yang valid |
-| `state.json` | Data pemulihan taskbar: `{ "taskbarModified": true, "originalAbState": 0, "pid": 1234 }` |
-| `logs/windock-YYYYMMDD.log` | Log teks, disimpan 7 hari |
+| `settings.json` | User settings (schema below) |
+| `settings.json.bak` | The last valid copy |
+| `state.json` | Taskbar recovery data: `{ "taskbarModified": true, "originalAbState": 0, "pid": 1234 }` |
+| `session.lock` | Present while Windock runs; left behind only by an unclean exit |
+| `logs/windock-YYYYMMDD.log` | Text log |
 
-Skema `settings.json` (versi 1):
+`settings.json` schema (version 1, abridged):
 
 ```json
 {
@@ -227,118 +227,132 @@ Skema `settings.json` (versi 1):
   },
   "behavior": {
     "taskbarMode": "Hidden",
-    "autoHide": false,
+    "autoHide": "Never",
     "bounceOnLaunch": true,
-    "startWithWindows": false
+    "startWithWindows": false,
+    "explorerContextMenu": true,
+    "mode": "Windock",
+    "attention": "Bounce",
+    "attentionRepeat": "UntilOpened",
+    "attentionFromNotifications": true,
+    "showBadgeCounts": true
   },
   "pins": [
     { "path": "C:\\Windows\\explorer.exe" },
     { "path": "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Google Chrome.lnk" }
   ],
   "safety": { "emergencyHotkey": "Ctrl+Alt+Shift+W" },
+  "theme": { "plateColor": "#1E1E1E", "cornerRadius": 16, "showBorder": true, "indicatorColor": "#FFFFFF", "accentColor": "#2F6FE4", "followWallpaper": false },
+  "status": { "enabled": true, "showTray": true, "showWifi": true, "showVolume": true, "showBattery": true, "showClock": true, "clock24Hour": true },
+  "launcher": { "enabled": true, "hotkey": "Alt+Space", "maxResults": 8, "includeFiles": false },
+  "switcher": { "enabled": false, "groupByApp": true, "cardSize": "Medium", "currentScreenOnly": false, "livePreviews": true, "windowsSwitcherInFullscreen": true },
+  "trash": { "showRecycleBin": true, "confirmBeforeTrash": true },
+  "hiddenApps": [],
   "firstRunCompleted": true
 }
 ```
 
-Aturan `SettingsStore`:
-- **Semua nilai di-clamp ke rentang valid saat dibaca.** Contohnya `iconSize` 32–96, dan `magnification.size` minimal sama dengan `iconSize`.
-- **Penulisan atomik:** tulis ke file `.tmp`, lalu ganti file asli. Penyimpanan di-debounce 500 ms.
-- **JSON rusak:** coba baca `.bak`. Jika gagal juga, pakai default, dan simpan file yang rusak sebagai `settings.corrupt-<waktu>.json` untuk diperiksa.
-- **`version` dipakai untuk migrasi** di versi berikutnya.
-- **Event `SettingsChanged`** membawa bagian mana yang berubah, supaya komponen hanya bereaksi pada hal yang relevan. Contohnya, mengganti opacity tidak membuat AppBar mendaftar ulang.
+`SettingsStore` rules:
+- **Every value is clamped to its valid range when read.** For example `iconSize` 32–96, and `magnification.size` at least `iconSize`.
+- **Reading is tolerant per field:** a missing or wrong field falls back to its default without losing the rest.
+- **Atomic writes:** write a `.tmp` file, then replace the real file. Saves are debounced by 500 ms.
+- **Broken JSON:** try `.bak`. If that fails too, use the defaults, and keep the broken file as `settings.corrupt-<time>.json` for inspection.
+- **`version` is for migrations** in later versions.
+- **`SettingsChanged`** says which sections changed, so components only react to what concerns them. For example, changing the opacity does not re-register the AppBar.
 
-**Jalankan saat Windows nyala:** nilai `Windock` di `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` = `"<path exe>" --startup`. Ditulis hanya saat opsi dihidupkan, dan dihapus saat opsi dimatikan.
+**Start with Windows:** the `Windock` value under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`. Written only while the option is on, removed when it is turned off.
 
-## 9. Siklus hidup aplikasi, thread, dan error
+## 9. App lifecycle, threads and errors
 
 **Start:**
-1. Mutex `Local\Windock.SingleInstance`. Jika sudah ada instance lain, kirim sinyal lewat `EventWaitHandle` bernama supaya instance itu membuka Pengaturan, lalu keluar.
-2. Pasang handler error global.
-3. Baca `state.json`, dan pulihkan taskbar jika ada sisa dari sesi sebelumnya.
-4. Baca pengaturan.
-5. Buat `WindowTracker`, `DockModel`, lalu jendela dock.
-6. Terapkan AppBar dan mode taskbar.
-7. Daftarkan shortcut darurat dan ikon tray.
-8. Jika ini pertama kali dijalankan, tawarkan opsi "Jalankan saat Windows nyala".
+1. The `Local\Windock.SingleInstance` mutex. If another instance runs, signal it through a named `EventWaitHandle` to open Settings, then exit.
+2. Install the global error handlers.
+3. Read `state.json`, and restore the taskbar if a previous session left something behind.
+4. Read the settings.
+5. Create `WindowTracker`, `DockModel`, then the dock windows.
+6. Apply the AppBar and the taskbar mode.
+7. Register the hotkeys, the tray icon, and the optional watchers (notifications, Alt+Tab hook).
 
-**Thread:** semua logika jalan di thread UI. Hook `WINEVENT_OUTOFCONTEXT` mengirim event lewat message loop thread yang memasangnya, yaitu thread UI. Satu-satunya thread tambahan adalah worker STA untuk ikon. Tidak ada `Timer` yang jalan terus.
+**Threads:** most logic runs on the UI thread. `WINEVENT_OUTOFCONTEXT` hooks deliver events through the message loop of the thread that installed them, the UI thread. Extra threads: an STA worker for icons, an STA thread that builds the launcher index while the launcher is open, the notification store reader (thread pool), and — only while the Alt+Tab option is on — a thread with its own message loop for the low-level keyboard hook, so a busy UI frame never delays it past Windows' hook timeout.
 
-**Handler error global:** `AppDomain.UnhandledException`, `Application.DispatcherUnhandledException`, dan `TaskScheduler.UnobservedTaskException`. Semuanya mencatat ke log, lalu menjalankan `RestoreAll()` (taskbar, `ABM_REMOVE`, lepas hotkey). Error di thread UI yang bisa dipulihkan, misalnya gagal menggambar satu ikon, ditandai handled supaya dock tetap jalan.
+**Global error handlers:** `AppDomain.UnhandledException`, `Application.DispatcherUnhandledException` and `TaskScheduler.UnobservedTaskException`. They log, then run `RestoreAll()` (taskbar, `ABM_REMOVE`, release hotkeys and hooks). Recoverable UI-thread errors, such as failing to draw one icon, are marked handled so the dock keeps running.
 
-| Situasi | Penanganan |
+| Situation | Handling |
 |---|---|
-| Ikon gagal diambil | Ikon generik, catat di log |
-| Aplikasi gagal dibuka | Bounce dihentikan, notifikasi balon dari ikon tray, catat di log |
-| `settings.json` rusak | Lihat §8 |
-| Explorer restart | Terapkan ulang (§7.2) |
-| Resolusi, DPI, atau monitor berubah (`WM_DISPLAYCHANGE`, `WM_DPICHANGED`) | Hitung ulang ukuran jendela dan daftarkan ulang AppBar |
-| Bangun dari sleep (`PowerModeChanged`) | Terapkan ulang mode taskbar |
-| Shortcut darurat sudah dipakai aplikasi lain | Tampilkan peringatan di Pengaturan, dan minta pengguna memilih shortcut lain |
+| An icon fails to load | Generic icon, logged |
+| An app fails to start | Bounce stops, a balloon from the tray icon, logged |
+| Broken `settings.json` | See §8 |
+| Explorer restart | Apply again (§7.2) |
+| Resolution, DPI or monitor change (`WM_DISPLAYCHANGE`, `WM_DPICHANGED`) | Recompute the window size and register the AppBar again |
+| Waking from sleep (`PowerModeChanged`) | Apply the taskbar mode again |
+| A shortcut is already used by another app | A warning in Settings, and the user picks another shortcut |
 
-**Keluar:** `RestoreAll()`, simpan pengaturan yang tertunda, lalu tutup jendela.
+**Exit:** `RestoreAll()`, save pending settings, then close the windows.
 
-## 10. Aturan keamanan (wajib di semua kode)
+## 10. Safety rules (apply to all code)
 
-1. **Manifest `requestedExecutionLevel="asInvoker"`.** Tidak pernah meminta Administrator.
-2. **Tidak ada injeksi DLL**, hook in-process, atau penulisan memori proses lain. Hook yang dipakai hanya `WINEVENT_OUTOFCONTEXT`.
-3. **Tidak ada penghapusan file** di luar `%AppData%\Windock\`. Menghapus pin hanya mengubah `settings.json`. Recycle Bin hanya dibuka, tidak pernah dikosongkan.
-4. **Registry hanya ditulis di `HKCU\...\Run` dan `HKCU\Software\Classes\{exefile,lnkfile}\shell\WindockPin`** (menu "Pin ke Windock", bisa dimatikan di Pengaturan, dihapus oleh `uninstall.ps1`). Setelan taskbar hanya diubah lewat API `ABM_SETSTATE`, selalu dicatat di `state.json` sebelum diubah, dan selalu dikembalikan.
-5. **Menutup aplikasi hanya lewat `WM_CLOSE`**, sehingga aplikasi tetap bisa menanyakan "simpan perubahan?".
-6. **Tidak ada koneksi jaringan** di v1.0.
+1. **Manifest `requestedExecutionLevel="asInvoker"`.** Never asks for Administrator.
+2. **No DLL injection and no code running inside other processes.** Hooks used: `WINEVENT_OUTOFCONTEXT` window events, a shell hook window, and — only while the matching features are in use — global low-level keyboard (`WH_KEYBOARD_LL`, Alt+Tab option) and mouse (`WH_MOUSE_LL`, only while a dock menu is open) hooks, which run in Windock's own process. To list tray icons, Windock allocates a scratch buffer in Explorer's memory for toolbar messages to fill, reads it, and frees it right away; it never writes to Explorer's own data.
+3. **No permanent deletion.** Removing a pin only changes `settings.json`. Files dropped on the Recycle Bin icon are moved to the Recycle Bin with undo (`FOF_ALLOWUNDO`, Windows asks before anything would be destroyed). Emptying the Recycle Bin only happens when the user picks it from the menu, through Windows' own confirmation.
+4. **The registry is only written under `HKCU\...\Run` and `HKCU\Software\Classes\{exefile,lnkfile}\shell\WindockPin`** (the "Pin to Windock" menu, which can be turned off in Settings and is removed by `uninstall.ps1`). The taskbar setting is only changed through `ABM_SETSTATE`, always recorded in `state.json` first, and always undone.
+5. **Apps are only closed with `WM_CLOSE`**, so they can still ask "save changes?".
+6. **No network connections.**
+7. **Read-only access to Windows' notification store** (`wpndatabase.db`): only the app id, notification type, time and badge value are read, never notification text.
 
-## 11. Strategi testing
+## 11. Testing strategy
 
-**Unit test (`Windock.Core.Tests`):**
-- `DockModel`: urutan pin, pemisah, dan aplikasi jalan; pengelompokan jendela per `AppId`; status aktif; diff `ItemsChanged`; bounce dimulai dan berhenti saat jendela muncul atau batas 10 detik.
-- `DockLayoutEngine`: skala pada jarak 0, R/2, dan ≥ R; lebar plate dengan dan tanpa magnification; ikon ditambatkan di garis bawah; posisi kiri dan kanan.
-- `BounceAnimator`, `Tween`, `Easing`: nilai di titik waktu tertentu dengan `IClock` palsu.
-- `SettingsStore`: default, clamp, JSON rusak, `.bak`, penulisan atomik (di folder sementara), dan debounce.
+**Unit tests (`Windock.Core.Tests`):**
+- `DockModel`: order of pins, separators and running apps; grouping windows by `AppId`; hidden apps; active state; the `ItemsChanged` diff.
+- `DockLayoutEngine`: scale at distance 0, R/2 and ≥ R; plate width with and without magnification; icons anchored at the bottom line; fixed-width status buttons.
+- `BounceAnimator`, `Tween`, `Easing`: values at given times with a fake `IClock`.
+- `SettingsStore` / `SettingsJson`: defaults, clamping, broken JSON, `.bak`, atomic writes (in a temporary folder), debouncing, tolerant reading.
+- Policies and helpers: click policy, auto-hide policy, attention tracker, notification changes, launcher search, switcher list, package identity, status texts, hotkey parsing.
 
-Komponen Win32 berada di balik interface (`IWindowSource`, `ILauncher`, `ITaskbarController`, `IAppBarController`, `IClock`), sehingga `DockModel` dan logika lain diuji dengan implementasi palsu.
+Win32 components sit behind interfaces (`IWindowSource`, `ITaskbarController`, `IClock`, …), so `DockModel` and other logic are tested with fakes.
 
-**Checklist uji manual** (dijalankan sebelum setiap rilis):
-- [ ] Maximize jendela: berhenti tepat di atas dock, tanpa celah atau tumpang tindih
-- [ ] Game atau video layar penuh: dock hilang, lalu muncul lagi setelah keluar
-- [ ] Restart Explorer lewat Task Manager: dock dan mode taskbar pulih sendiri
-- [ ] End task Windock lewat Task Manager, lalu jalankan lagi: taskbar dipulihkan dulu
-- [ ] Shortcut darurat: dock mati dan taskbar kembali
-- [ ] Tombol Windows: Start Menu terbuka, lalu taskbar tersembunyi lagi setelah Start ditutup
-- [ ] Skala DPI 100%, 125%, dan 150%: ikon tajam dan ukuran benar
-- [ ] Sleep lalu bangun: semua tetap benar
-- [ ] Aplikasi UWP (Settings, Calculator): tampil sebagai ikon yang benar
-- [ ] Jendela aplikasi Administrator: tampil, dan kegagalan aksi tidak membuat crash
-- [ ] Task Manager setelah 8 jam: RAM di bawah 100 MB, CPU diam sekitar 0%
+**Manual test checklist** (before each release):
+- [ ] Maximize a window: it stops right above the dock (auto-hide Never) or uses the full screen (auto-hide on)
+- [ ] Fullscreen game or video: the dock disappears, then comes back after leaving
+- [ ] Restart Explorer from Task Manager: the dock and taskbar mode recover on their own
+- [ ] End the Windock task in Task Manager, then start it again: the taskbar is restored first
+- [ ] Emergency shortcut: the dock quits and the taskbar comes back
+- [ ] Windows key: the Start menu opens, then the taskbar hides again after Start closes
+- [ ] DPI scaling 100%, 125% and 150%: sharp icons and correct sizes
+- [ ] Sleep then wake: everything still correct
+- [ ] UWP apps (Settings, Calculator): shown with the right icon, joined to their pins
+- [ ] An Administrator app's window: shown, and failed actions do not crash
+- [ ] Task Manager after 8 hours: RAM under 100 MB, idle CPU about 0%
 
-## 12. Build dan rilis
+## 12. Build and release
 
-- **Build:** `dotnet build`, dan `dotnet test` untuk Core.
-- **CI:** GitHub Actions di `windows-latest` menjalankan build dan test di setiap push dan pull request.
-- **Rilis:** `dotnet publish src/Windock -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true` menghasilkan satu exe yang butuh .NET 8 Desktop Runtime. Exe dirilis sebagai zip di GitHub Releases.
-- **Versi** memakai SemVer (`v0.1.0`, ...), dan commit memakai Conventional Commits (`feat:`, `fix:`, `docs:`, ...).
+- **Build:** `dotnet build`, and `dotnet test` for Core.
+- **CI:** GitHub Actions on `windows-latest` runs build and tests on every push and pull request.
+- **Release:** `dotnet publish src/Windock -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true` produces a single exe that needs the .NET 8 Desktop Runtime. `scripts/install.ps1` does this and installs it for the current user.
+- **Versions** use SemVer (`v0.1.0`, …), and commits use Conventional Commits (`feat:`, `fix:`, `docs:`, …).
 
-## 13. Spike Fase 0
+## 13. Phase 0 spikes
 
-Kode spike ada di `spikes/`. Kode ini hanya untuk menjawab pertanyaan teknis, bukan untuk dipakai langsung di aplikasi.
+Spike code lives in `spikes/`. It only answers technical questions and is not used in the app directly.
 
-| Spike | Pertanyaan | Lolos jika |
+| Spike | Question | Passes when |
 |---|---|---|
-| S1 — Blur dan overlay | Bisakah plate ber-blur dengan bentuk rounded-rect mengikuti lebar yang beranimasi, sementara ikon di jendela transparan di atasnya? | Region blur mengikuti plate di 60 fps tanpa tertinggal yang terlihat; klik di area transparan tembus ke jendela belakang; tidak muncul di Alt+Tab; klik tidak mencuri fokus |
-| S2 — Taskbar dan AppBar | Apakah kombinasi `ABS_AUTOHIDE` dan `SW_HIDE` menyembunyikan taskbar tanpa meninggalkan celah, dan bagaimana perilaku tombol Windows? | Jendela maximize mengisi sampai batas dock; Start Menu bisa dibuka; Explorer restart pulih; status asli taskbar kembali setelah keluar dan setelah dimatikan paksa |
+| S1 — Blur and overlay | Can a blurred plate with a rounded-rect shape follow an animated width while the icons are in a transparent window above it? | The blur region follows the plate at 60 fps without visible lag; clicks in transparent areas reach the window behind; not in Alt+Tab; clicks do not steal focus |
+| S2 — Taskbar and AppBar | Does `ABS_AUTOHIDE` plus `SW_HIDE` hide the taskbar without leaving a gap, and how does the Windows key behave? | Maximized windows fill up to the dock; the Start menu opens; an Explorer restart recovers; the taskbar's original state comes back after exiting and after being killed |
 
-Jika S1 gagal, cadangannya: tanpa blur sistem, dengan plate semi-opaque yang digambar di `DockWindow` (opsi Blur = Mati). Jika S2 menunjukkan Start Menu selalu memunculkan taskbar, perilakunya didokumentasikan dan disembunyikan ulang lewat event (§7.2).
+If S1 failed, the fallback was no system blur, with a semi-opaque plate drawn in `DockWindow` (Blur = Off). If S2 showed the Start menu always bringing the taskbar back, that is documented and the taskbar is hidden again through events (§7.2).
 
-## 14. Pemetaan kebutuhan ke komponen
+## 14. Requirements to components
 
-| Kebutuhan (PRD) | Komponen utama |
+| Requirement (PRD) | Main components |
 |---|---|
 | F-01, F-09, F-15 | DockWindow, BackdropWindow, DockLayoutEngine, DockRenderer |
 | F-02, F-03, F-07 | DockModel, WindowTracker |
-| F-04–F-06, F-08, F-12 | AppLauncher, DockWindow (menu konteks) |
-| F-10 | DockModel (LaunchState), BounceAnimator |
-| F-11 | DockWindow (drag), SettingsStore |
-| F-13, F-14 | AppBarService |
-| T-01–T-06 | TaskbarService, AppBarService |
+| F-04–F-06, F-08, F-12 | AppLauncher, DockContextMenu |
+| F-10 | BounceAnimator, DockController |
+| F-11 | DockController (drag), SettingsStore |
+| F-13, F-14 | AppBarService, FullscreenDetector |
+| T-01–T-06 | TaskbarModeCoordinator, Win32TaskbarController, AppBarService |
 | S-01–S-12 | SettingsWindow, SettingsStore |
 | A-01 | TrayIcon |
 | A-02 | HotkeyService |
-| A-03, A-04 | App (siklus hidup), TaskbarService |
+| A-03, A-04 | AppHost (lifecycle), TaskbarModeCoordinator |

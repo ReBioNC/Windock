@@ -3,7 +3,7 @@ using System.Windows.Threading;
 
 namespace Windock.Composition;
 
-/// Gives memory back to Windows after one-off work (startup, closing Pengaturan) so the idle dock stays small.
+/// Gives memory back to Windows after one-off work (startup, closing Settings) so the idle dock stays small.
 internal static class MemoryTrim
 {
     public static void After(TimeSpan delay)

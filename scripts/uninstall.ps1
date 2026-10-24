@@ -13,22 +13,22 @@ if ($running) {
 }
 
 foreach ($folder in @([Environment]::GetFolderPath("Programs"), [Environment]::GetFolderPath("Desktop"))) {
-    foreach ($name in "Windock.lnk", "Pengaturan Windock.lnk") {
+    foreach ($name in "Windock.lnk", "Windock Settings.lnk", "Pengaturan Windock.lnk") {
         $path = Join-Path $folder $name
-        if (Test-Path $path) { Remove-Item $path; Write-Host "Dihapus: $path" }
+        if (Test-Path $path) { Remove-Item $path; Write-Host "Removed: $path" }
     }
 }
 foreach ($progId in "exefile", "lnkfile") {
     $key = "HKCU:\Software\Classes\$progId\shell\WindockPin"
-    if (Test-Path $key) { Remove-Item $key -Recurse; Write-Host "Menu klik kanan dihapus: $progId" }
+    if (Test-Path $key) { Remove-Item $key -Recurse; Write-Host "Removed right-click menu: $progId" }
 }
 $run = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
 if (Get-ItemProperty $run -Name Windock -ErrorAction SilentlyContinue) {
-    Remove-ItemProperty $run -Name Windock; Write-Host "Startup Windows dihapus"
+    Remove-ItemProperty $run -Name Windock; Write-Host "Removed from Windows startup"
 }
-if (Test-Path $dest) { Remove-Item $dest -Recurse; Write-Host "Dihapus: $dest" }
+if (Test-Path $dest) { Remove-Item $dest -Recurse; Write-Host "Removed: $dest" }
 if ($RemoveSettings) {
     $data = Join-Path $env:APPDATA "Windock"
-    if (Test-Path $data) { Remove-Item $data -Recurse; Write-Host "Dihapus: $data" }
+    if (Test-Path $data) { Remove-Item $data -Recurse; Write-Host "Removed: $data" }
 }
-Write-Host "Windock sudah dihapus."
+Write-Host "Windock has been removed."

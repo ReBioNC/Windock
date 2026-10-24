@@ -2,69 +2,69 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <StackPanel>
-        <TextBlock Text="Perilaku" Style="{StaticResource PageTitle}" />
+        <TextBlock Text="Behavior" Style="{StaticResource PageTitle}" />
 
         <Grid Style="{StaticResource Row}">
             <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
-            <TextBlock Text="Taskbar Windows" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+            <TextBlock Text="Windows taskbar" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
             <StackPanel Grid.Column="1">
-                <RadioButton x:Name="Hidden" GroupName="Taskbar" Content="Sembunyikan total" Margin="0,0,0,8" />
+                <RadioButton x:Name="Hidden" GroupName="Taskbar" Content="Hide completely" Margin="0,0,0,8" />
                 <RadioButton x:Name="AutoHide" GroupName="Taskbar" Content="Auto-hide" Margin="0,0,0,8" />
-                <RadioButton x:Name="Visible" GroupName="Taskbar" Content="Biarkan tampil" Margin="0,0,0,8" />
+                <RadioButton x:Name="Visible" GroupName="Taskbar" Content="Leave it visible" Margin="0,0,0,8" />
                 <TextBlock x:Name="HiddenHint" Style="{StaticResource Hint}" Margin="0,6,0,0" />
             </StackPanel>
         </Grid>
 
         <Grid Style="{StaticResource Row}">
             <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
-            <TextBlock Text="Sembunyikan dock" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+            <TextBlock Text="Hide the dock" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
             <StackPanel Grid.Column="1">
-                <RadioButton x:Name="HideNever" GroupName="AutoHide" Content="Tidak pernah" Margin="0,0,0,8" />
-                <RadioButton x:Name="HideWhenCovered" GroupName="AutoHide" Content="Saat jendela menutupi dock (mis. di-maximize)" Margin="0,0,0,8" />
-                <RadioButton x:Name="HideAlways" GroupName="AutoHide" Content="Selalu (seperti Mac)" Margin="0,0,0,8" />
+                <RadioButton x:Name="HideNever" GroupName="AutoHide" Content="Never" Margin="0,0,0,8" />
+                <RadioButton x:Name="HideWhenCovered" GroupName="AutoHide" Content="When a window covers it (for example, maximized)" Margin="0,0,0,8" />
+                <RadioButton x:Name="HideAlways" GroupName="AutoHide" Content="Always (like a Mac)" Margin="0,0,0,8" />
                 <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
-                           Text="Saat tersembunyi, sentuhkan kursor ke tepi bawah layar untuk memunculkan dock. Jendela yang di-maximize memakai layar penuh." />
+                           Text="While hidden, touch the bottom edge of the screen to bring the dock up. Maximized windows use the whole screen." />
             </StackPanel>
         </Grid>
 
         <Grid Style="{StaticResource Row}">
             <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
-            <TextBlock Text="Animasi" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+            <TextBlock Text="Animation" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
             <StackPanel Grid.Column="1">
-                <CheckBox x:Name="Bounce" Content="Ikon memantul saat aplikasi dibuka" />
+                <CheckBox x:Name="Bounce" Content="Bounce icons while apps open" />
                 <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
-                           Text="Berhenti saat jendelanya muncul (paling lama 10 detik). Mati otomatis jika animasi Windows dimatikan." />
+                           Text="Stops when the window appears (10 seconds at most). Turned off automatically when Windows animations are off." />
             </StackPanel>
         </Grid>
 
         <Grid Style="{StaticResource Row}">
             <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
-            <TextBlock Text="Ikon minta perhatian" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+            <TextBlock Text="Icons asking for attention" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
             <StackPanel Grid.Column="1">
-                <RadioButton x:Name="AttentionBounce" GroupName="Attention" Content="Memantul" Margin="0,0,0,8" />
-                <RadioButton x:Name="AttentionDot" GroupName="Attention" Content="Titik merah" Margin="0,0,0,8" />
-                <RadioButton x:Name="AttentionOff" GroupName="Attention" Content="Mati" Margin="0,0,0,8" />
+                <RadioButton x:Name="AttentionBounce" GroupName="Attention" Content="Bounce" Margin="0,0,0,8" />
+                <RadioButton x:Name="AttentionDot" GroupName="Attention" Content="Red dot" Margin="0,0,0,8" />
+                <RadioButton x:Name="AttentionOff" GroupName="Attention" Content="Off" Margin="0,0,0,8" />
                 <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                    <RadioButton x:Name="RepeatUntilOpened" GroupName="AttentionRepeat" Content="Sampai dibuka" Margin="0,0,16,0" />
-                    <RadioButton x:Name="RepeatOnce" GroupName="AttentionRepeat" Content="Sekali" />
+                    <RadioButton x:Name="RepeatUntilOpened" GroupName="AttentionRepeat" Content="Until opened" Margin="0,0,16,0" />
+                    <RadioButton x:Name="RepeatOnce" GroupName="AttentionRepeat" Content="Once" />
                 </StackPanel>
-                <CheckBox x:Name="FromNotifications" Content="Juga dari notifikasi Windows (WhatsApp, dll.)" Margin="0,10,0,0" />
-                <CheckBox x:Name="BadgeCounts" Content="Tampilkan jumlah pesan belum dibaca di titik merah" Margin="22,8,0,0" />
+                <CheckBox x:Name="FromNotifications" Content="Also from Windows notifications (WhatsApp and others)" Margin="0,10,0,0" />
+                <CheckBox x:Name="BadgeCounts" Content="Show the unread count in the red dot" Margin="22,8,0,0" />
                 <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0"
-                           Text="Saat aplikasi berkedip minta dilihat atau mengirim notifikasi (mis. pesan masuk), ikonnya di dock ditandai sampai aplikasinya dibuka. Windock hanya melihat aplikasi mana yang punya notifikasi baru, bukan isinya." />
+                           Text="When an app flashes for attention or sends a notification (a new message, for example), its dock icon is marked until you open it. Windock only sees which app has new notifications, never their content." />
             </StackPanel>
         </Grid>
 
         <Grid Style="{StaticResource Row}">
             <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
-            <TextBlock Text="Saat Windows nyala" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+            <TextBlock Text="When Windows starts" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
             <StackPanel Grid.Column="1">
-                <CheckBox x:Name="Startup" Content="Jalankan Windock otomatis" />
+                <CheckBox x:Name="Startup" Content="Start Windock automatically" />
                 <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
-                           Text="Disimpan di daftar startup akun kamu saja (bisa dilihat di Task Manager &gt; Startup)." />
+                           Text="Stored in your account's startup list only (visible in Task Manager &gt; Startup)." />
             </StackPanel>
         </Grid>
 
-        <Button Content="Kembalikan ke default" HorizontalAlignment="Right" Margin="0,18,0,0" Click="OnReset" />
+        <Button Content="Reset to defaults" HorizontalAlignment="Right" Margin="0,18,0,0" Click="OnReset" />
     </StackPanel>
 </UserControl>

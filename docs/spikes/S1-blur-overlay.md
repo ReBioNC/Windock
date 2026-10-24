@@ -1,30 +1,30 @@
-# Spike S1 — Blur dan overlay transparan
+# Spike S1 — Blur and transparent overlay
 
-Tanggal: 2026-10-16 · Mesin: Windows 10 22H2 (19045), 1920×1080, skala 100%, layar ±200 Hz
-Kode: `spikes/S1.BlurOverlay` · Probe otomatis: script PowerShell (screenshot strip bawah, `WindowFromPoint`, klik `mouse_event`, CPU via `Get-Process`)
+Date: 2026-10-16 · Machine: Windows 10 22H2 (19045), 1920×1080, 100% scaling, about 200 Hz display
+Code: `spikes/S1.BlurOverlay` · Automated probe: PowerShell script (screenshot of the bottom strip, `WindowFromPoint`, `mouse_event` clicks, CPU via `Get-Process`)
 
-## Hasil per kriteria (ARCHITECTURE §13)
+## Results per criterion (ARCHITECTURE §13)
 
-| Kriteria | Hasil | Bukti |
+| Criterion | Result | Evidence |
 |---|---|---|
-| Klik di area transparan tembus ke jendela belakang | **Lolos** | `WindowFromPoint` 110 px di atas plate → jendela aplikasi di belakang; di plate → overlay |
-| Klik plate tidak mencuri fokus | **Lolos** | Notepad tetap foreground setelah klik di plate (2/2 percobaan). Kegagalan awal ternyata klik meleset ke taskbar/area transparan |
-| Tidak muncul di Alt+Tab | Lolos berdasarkan style | `WS_EX_TOOLWINDOW` terpasang di kedua jendela; tidak dicek lewat UI Alt+Tab |
-| CPU diam ±0% | **Lolos** | 0,000 detik CPU dalam 5 detik setelah handler `Rendering` dilepas |
-| Region blur mengikuti plate di 60 fps tanpa tertinggal | **Lolos dengan perubahan desain** (lihat bawah) | ±198 fps, 0 frame > 8 ms, max kerja per frame 2,8 ms |
-| Skala DPI 125% | **Belum diuji** | Mengubah skala tampilan adalah setelan sistem; diuji pengguna saat uji akhir |
+| Clicks in transparent areas reach the window behind | **Pass** | `WindowFromPoint` 110 px above the plate → the app window behind; on the plate → the overlay |
+| Clicking the plate does not steal focus | **Pass** | Notepad stays in the foreground after clicking the plate (2/2 tries). An early failure turned out to be a click that missed, onto the taskbar or a transparent area |
+| Not shown in Alt+Tab | Pass by style | `WS_EX_TOOLWINDOW` is set on both windows; not checked through the Alt+Tab UI |
+| Idle CPU about 0% | **Pass** | 0.000 s of CPU in the 5 s after the `Rendering` handler was removed |
+| Blur region follows the plate at 60 fps without lag | **Pass with a design change** (see below) | About 198 fps, 0 frames > 8 ms, at most 2.8 ms of work per frame |
+| 125% DPI scaling | **Not tested** | Changing display scaling is a system setting; left to the user's final test |
 
-## Temuan
+## Findings
 
-1. **Blur sistem mengabaikan `SetWindowRgn` jika jendela tidak berubah ukuran.** Backdrop selebar 640 dengan region rounded-rect tetap ter-blur penuh 640 px (region hanya memotong konten, bukan efek DWM). Berlaku untuk jendela WPF layered maupun non-layered.
-2. **Blur mengikuti ukuran jendela.** Memindah dan me-resize jendela backdrop ke persegi plate setiap frame (`SetWindowPos`) memberi blur yang pas, dan dengan region rounded-rect sudutnya ikut membulat (`ACCENT_ENABLE_BLURBEHIND = 3`).
-3. **Me-resize jendela WPF tiap frame terlalu mahal:** 676 dari 916 frame > 8 ms, puncak 245 ms, karena WPF me-layout dan me-render ulang jendela itu di setiap `WM_SIZE`.
-4. **Jendela Win32 mentah (`CreateWindowEx`, `WS_POPUP`, tanpa WPF) sebagai backdrop menyelesaikannya:** 0 frame > 8 ms, tampilan sama.
-5. **Acrylic (`ACCENT_ENABLE_ACRYLICBLURBEHIND = 4`) mengabaikan region:** sudut persegi terlihat di luar plate yang membulat. Tidak layak tampil.
-6. Working set spike WPF kosong: ±116–123 MB (Task Manager "Memory" = private working set, biasanya lebih kecil). Angka sungguhan dicek di Task 18 terhadap N-01.
+1. **The system blur ignores `SetWindowRgn` when the window does not change size.** A 640-wide backdrop with a rounded-rect region still blurs the full 640 px (the region only clips content, not the DWM effect). This holds for layered and non-layered WPF windows alike.
+2. **The blur follows the window size.** Moving and resizing the backdrop window to the plate rectangle every frame (`SetWindowPos`) gives an exact blur, and with a rounded-rect region its corners are rounded too (`ACCENT_ENABLE_BLURBEHIND = 3`).
+3. **Resizing a WPF window every frame is too expensive:** 676 of 916 frames took > 8 ms, with a 245 ms peak, because WPF lays out and renders that window again on every `WM_SIZE`.
+4. **A raw Win32 window (`CreateWindowEx`, `WS_POPUP`, no WPF) as the backdrop solves it:** 0 frames > 8 ms, same look.
+5. **Acrylic (`ACCENT_ENABLE_ACRYLICBLURBEHIND = 4`) ignores the region:** square corners show outside the rounded plate. Not good enough to ship.
+6. Working set of the empty WPF spike: about 116–123 MB (Task Manager's "Memory" is the private working set, usually smaller). The real numbers were checked in Task 18 against N-01.
 
-## Keputusan
+## Decisions
 
-- `BackdropWindow` diimplementasikan sebagai **jendela Win32 mentah** (bukan `Window` WPF), dipindah/di-resize ke persegi plate setiap frame dengan `SetWindowPos(..., hWndInsertAfter = DockWindow, SWP_NOACTIVATE)`, lalu `SetWindowRgn` rounded-rect radius 16.
-- Mode blur v0.1: **Mati** dan **Blur standar** saja. Nilai `Acrylic` di `settings.json` tetap dibaca (kompatibilitas) tetapi diperlakukan sebagai Blur standar dan tidak ditawarkan di Pengaturan.
-- Overlay (`DockWindow`): WPF `AllowsTransparency=True` + `WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE`, terbukti sesuai.
+- `BackdropWindow` is implemented as a **raw Win32 window** (not a WPF `Window`), moved and resized to the plate rectangle every frame with `SetWindowPos(..., hWndInsertAfter = DockWindow, SWP_NOACTIVATE)`, then a rounded-rect `SetWindowRgn` with radius 16.
+- Blur modes in v0.1: **Off** and **Standard blur** only. An `Acrylic` value in `settings.json` is still read (compatibility) but treated as Standard blur, and is not offered in Settings.
+- Overlay (`DockWindow`): WPF `AllowsTransparency=True` plus `WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE`, confirmed to work.

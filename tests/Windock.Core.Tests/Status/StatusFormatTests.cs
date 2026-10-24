@@ -14,10 +14,10 @@ public class StatusFormatTests
     public void Clock_formats(bool h24, bool seconds, string expected) => Assert.Equal(expected, StatusFormat.Clock(Afternoon, h24, seconds));
 
     [Fact]
-    public void Dates_are_indonesian()
+    public void Dates_are_english()
     {
-        Assert.Equal("Min, 18 Okt", StatusFormat.ShortDate(Afternoon));
-        Assert.Equal("Minggu, 18 Oktober 2026", StatusFormat.LongDate(Afternoon));
+        Assert.Equal("Sun, Oct 18", StatusFormat.ShortDate(Afternoon));
+        Assert.Equal("Sunday, October 18, 2026", StatusFormat.LongDate(Afternoon));
     }
 
     [Fact]
@@ -28,10 +28,10 @@ public class StatusFormatTests
     }
 
     [Theory]
-    [InlineData(80, true, true, null, "Baterai 80% · mengisi daya")]
-    [InlineData(100, false, true, null, "Baterai penuh · tersambung ke listrik")]
-    [InlineData(55, false, false, 130.0, "Baterai 55% · sisa 2 j 10 m")]
-    [InlineData(55, false, false, null, "Baterai 55%")]
+    [InlineData(80, true, true, null, "Battery 80% · charging")]
+    [InlineData(100, false, true, null, "Battery full · plugged in")]
+    [InlineData(55, false, false, 130.0, "Battery 55% · 2 h 10 min left")]
+    [InlineData(55, false, false, null, "Battery 55%")]
     public void Battery_tooltip(int percent, bool charging, bool plugged, double? minutes, string expected) =>
         Assert.Equal(expected, StatusFormat.BatteryTooltip(percent, charging, plugged, minutes is { } m ? TimeSpan.FromMinutes(m) : null));
 

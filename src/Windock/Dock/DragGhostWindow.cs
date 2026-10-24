@@ -33,7 +33,7 @@ internal sealed class DragGhostWindow : Window
         {
             Background = new SolidColorBrush(Color.FromArgb(0xE6, 0x2A, 0x2A, 0x2A)), CornerRadius = new CornerRadius(6),
             Padding = new Thickness(8, 2, 8, 3), Margin = new Thickness(0, 6, 0, 0), HorizontalAlignment = HorizontalAlignment.Center,
-            Child = new TextBlock { Text = "Hapus dari Dock", Foreground = Brushes.White, FontSize = 12 },
+            Child = new TextBlock { Text = "Remove from dock", Foreground = Brushes.White, FontSize = 12 },
             Visibility = Visibility.Hidden,
         };
         Content = new StackPanel { Children = { _image, _label }, RenderTransformOrigin = new Point(0.5, 0.5), RenderTransform = new ScaleTransform(1, 1) };

@@ -114,7 +114,7 @@ internal sealed class VolumePopup : DockPopup
     public VolumePopup(AudioEndpoint audio)
     {
         _audio = audio;
-        var mute = FlatButton(_speaker, "Bisukan / suarakan");
+        var mute = FlatButton(_speaker, "Mute / unmute");
         mute.Click += (_, _) => _audio.ToggleMute();
         _slider.ValueChanged += (_, e) =>
         {
@@ -145,7 +145,7 @@ internal sealed class VolumePopup : DockPopup
 /// Big time, full date and a month grid (Monday first), with month navigation.
 internal sealed class CalendarPopup : DockPopup
 {
-    private static readonly CultureInfo Id = StatusFormat.Indonesian;
+    private static readonly CultureInfo Id = StatusFormat.Culture;
     private readonly bool _use24Hour;
     private readonly TextBlock _time = new() { FontSize = 30, FontWeight = FontWeights.Light };
     private readonly TextBlock _date = new() { Opacity = 0.75, Margin = new Thickness(0, 0, 0, 10) };
@@ -160,9 +160,9 @@ internal sealed class CalendarPopup : DockPopup
         var today = DateTime.Today;
         _shown = new DateTime(today.Year, today.Month, 1);
 
-        var prev = FlatButton(Glyph("", 12), "Bulan sebelumnya");
+        var prev = FlatButton(Glyph("", 12), "Previous month");
         prev.Click += (_, _) => ShowMonth(_shown.AddMonths(-1));
-        var next = FlatButton(Glyph("", 12), "Bulan berikutnya");
+        var next = FlatButton(Glyph("", 12), "Next month");
         next.Click += (_, _) => ShowMonth(_shown.AddMonths(1));
         var header = new DockPanel { Margin = new Thickness(0, 0, 0, 6), LastChildFill = true };
         DockPanel.SetDock(next, System.Windows.Controls.Dock.Right);
@@ -198,7 +198,7 @@ internal sealed class CalendarPopup : DockPopup
         _shown = first;
         _month.Text = Id.TextInfo.ToTitleCase(first.ToString("MMMM yyyy", Id));
         _days.Children.Clear();
-        foreach (var name in new[] { "Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min" })
+        foreach (var name in new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" })
             _days.Children.Add(new TextBlock { Text = name, Opacity = 0.6, FontSize = 11, TextAlignment = TextAlignment.Center, Margin = new Thickness(0, 2, 0, 4) });
 
         var offset = ((int)first.DayOfWeek + 6) % 7;  // Monday = 0
@@ -239,7 +239,7 @@ internal sealed class TrayPopup : DockPopup
         {
             var image = new Image { Width = 20, Height = 20, Source = ToImage(icon.Icon) };
             RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
-            var button = FlatButton(image, string.IsNullOrWhiteSpace(icon.Tooltip) ? "(tanpa nama)" : icon.Tooltip);
+            var button = FlatButton(image, string.IsNullOrWhiteSpace(icon.Tooltip) ? "(no name)" : icon.Tooltip);
             button.Width = button.Height = 40;
             button.PreviewMouseLeftButtonUp += (_, _) => TrayIcons.Click(icon, TrayClick.Left);
             button.PreviewMouseRightButtonUp += (_, e) =>
@@ -252,7 +252,7 @@ internal sealed class TrayPopup : DockPopup
             grid.Children.Add(button);
         }
         if (icons.Count == 0)
-            grid.Children.Add(new TextBlock { Text = "Tidak ada ikon tray.", Opacity = 0.7, Margin = new Thickness(8) });
+            grid.Children.Add(new TextBlock { Text = "No tray icons.", Opacity = 0.7, Margin = new Thickness(8) });
         Content = grid;
     }
 

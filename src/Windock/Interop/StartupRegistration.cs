@@ -2,7 +2,7 @@ using Microsoft.Win32;
 
 namespace Windock.Interop;
 
-/// "Jalan saat Windows nyala": the Windock value under HKCU\...\Run. Per-user, removed by uninstall.ps1.
+/// "Start Windock automatically": the Windock value under HKCU\...\Run. Per-user, removed by uninstall.ps1.
 internal static class StartupRegistration
 {
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";

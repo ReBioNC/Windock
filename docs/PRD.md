@@ -2,154 +2,154 @@
 
 | | |
 |---|---|
-| Versi dokumen | 1.0 |
-| Tanggal | 2026-10-16 |
-| Status | Draft, menunggu review |
-| Lingkup | Windock v1.0 (Dock) |
-| Dokumen terkait | [DESIGN.md](DESIGN.md), [ARCHITECTURE.md](ARCHITECTURE.md) |
+| Document version | 1.0 |
+| Date | 2026-10-16 |
+| Status | Draft, awaiting review |
+| Scope | Windock v1.0 (Dock) |
+| Related documents | [DESIGN.md](DESIGN.md), [ARCHITECTURE.md](ARCHITECTURE.md) |
 
-## 1. Latar belakang
+## 1. Background
 
-Pengguna memakai Windows 10 (22H2, build 19045) dan ingin tampilan serta animasi seperti macOS. Pilihan yang ada kurang cocok:
+The user runs Windows 10 (22H2, build 19045) and wants macOS-like looks and animations. The existing options do not fit well:
 
-- **Windhawk:** sebagian besar mod-nya untuk Windows 11.
-- **Dock pihak ketiga (MyDockFinder, Nexus Dock):** berbayar atau tertutup, dan tidak bisa diatur sebebas yang diinginkan.
-- **Theme patcher:** mengubah file sistem, sehingga berisiko membuat Windows rusak.
+- **Windhawk:** most of its mods target Windows 11.
+- **Third-party docks (MyDockFinder, Nexus Dock):** paid or closed source, and not as configurable as wanted.
+- **Theme patchers:** they modify system files, which risks breaking Windows.
 
-Windock adalah aplikasi buatan sendiri yang menghadirkan pengalaman ala macOS di Windows 10 secara aman. Windock tidak mengubah file sistem dan tidak butuh akses Administrator. Semua perilakunya bisa diatur dari dalam aplikasi. Proyek ini juga menjadi portfolio di GitHub.
+Windock is a home-made app that brings a macOS-like experience to Windows 10 safely. It does not modify system files and does not need Administrator access. Every behavior can be configured from inside the app. The project also serves as a GitHub portfolio piece.
 
-## 2. Tujuan
+## 2. Goals
 
-1. Dock ala macOS yang menggantikan taskbar Windows untuk pemakaian sehari-hari.
-2. Terasa "Mac": ikon membesar saat kursor lewat, ikon memantul saat aplikasi dibuka, efek blur, sudut membulat.
-3. Ringan: tidak terasa di laptop, CPU hampir 0% saat diam.
-4. Aman: tidak bisa merusak Windows atau file pengguna, dan selalu ada jalan untuk kembali ke tampilan normal.
-5. Bisa dikustomisasi penuh: setiap perilaku dan tampilan dock diatur dari jendela Pengaturan, dan perubahan langsung terlihat.
+1. A macOS-style dock that replaces the Windows taskbar for everyday use.
+2. Feels like a Mac: icons grow under the pointer, icons bounce while an app opens, blur, rounded corners.
+3. Lightweight: unnoticeable on a laptop, CPU near 0% when idle.
+4. Safe: it cannot damage Windows or the user's files, and there is always a way back to the normal look.
+5. Fully customizable: every behavior and visual of the dock is set from the Settings window, and changes show immediately.
 
-## 3. Bukan tujuan v1.0
+## 3. Non-goals for v1.0
 
-Bagian-bagian ini sengaja ditunda ke fase berikutnya (lihat bagian 9):
+These parts are deliberately postponed to later phases (see section 9):
 
-- Menu bar di atas layar
-- Launchpad dan Spotlight
-- Animasi jendela (Scale atau Genie saat membuka atau minimize)
-- Dukungan multi-monitor. v1.0 hanya di monitor utama.
-- Pin aplikasi Microsoft Store (UWP) ke dock. Aplikasi UWP yang sedang jalan tetap tampil, tetapi pin-nya belum didukung.
-- Drag file dari Explorer ke dock, dan drag ikon keluar dock untuk menghapusnya
-- Folder atau stack di dock, serta badge notifikasi
-- Mengganti tombol jendela merah-kuning-hijau, font sistem, atau menu aplikasi lain
+- A menu bar at the top of the screen
+- Launchpad and Spotlight
+- Window animations (Scale or Genie when opening or minimizing)
+- Multi-monitor support. v1.0 uses the primary monitor only.
+- Pinning Microsoft Store (UWP) apps. Running UWP apps are still shown, but pinning them is not supported yet.
+- Dragging files from Explorer onto the dock, and dragging icons out of the dock to remove them
+- Folders or stacks in the dock, and notification badges
+- Replacing the red-yellow-green window buttons, the system font, or other apps' menus
 
-## 4. Pengguna
+## 4. Users
 
-**Pengguna utama:** pemilik proyek. Memakai laptop gaming (Ryzen 9 5900HX, RAM 16 GB, RTX 3060) dengan Windows 10, dan sering memakai Chrome, Discord, Steam, dan game layar penuh. Terbiasa dengan C#.
+**Primary user:** the project owner, on a gaming laptop (Ryzen 9 5900HX, 16 GB RAM, RTX 3060) with Windows 10, who mostly uses Chrome, Discord, Steam and fullscreen games, and is comfortable with C#.
 
-**Pengguna sekunder:** pengunjung GitHub yang ingin mencoba dock ala macOS di Windows 10.
+**Secondary users:** GitHub visitors who want to try a macOS-style dock on Windows 10.
 
-## 5. Kebutuhan fungsional
+## 5. Functional requirements
 
-Prioritas: **P0** = wajib ada di v1.0, **P1** = harus ada di v1.0 tapi boleh menyusul di akhir fase.
+Priority: **P0** = must be in v1.0, **P1** = should be in v1.0 but may land at the end of the phase.
 
 ### 5.1 Dock
 
-| ID | Kebutuhan | Prioritas |
+| ID | Requirement | Priority |
 |---|---|---|
-| F-01 | Dock tampil mengambang di tengah bawah monitor utama, dengan sudut membulat dan latar semi-transparan | P0 |
-| F-02 | Dock berisi aplikasi yang di-pin (urutan tetap) diikuti aplikasi yang sedang jalan tapi tidak di-pin, dipisah garis pemisah. Ikon Recycle Bin selalu di ujung kanan | P0 |
-| F-03 | Aplikasi yang sedang jalan ditandai titik kecil di bawah ikonnya | P0 |
-| F-04 | Klik ikon aplikasi yang belum jalan akan membuka aplikasi itu | P0 |
-| F-05 | Klik ikon aplikasi yang sedang jalan tapi tidak aktif akan memunculkan dan mengaktifkan jendela terakhirnya, termasuk me-restore jika sedang minimize | P0 |
-| F-06 | Klik ikon aplikasi yang jendelanya sedang aktif akan me-minimize jendela itu (perilaku Windows, yang lebih dikenal pengguna) | P0 |
-| F-07 | Beberapa jendela dari satu aplikasi dikelompokkan dalam satu ikon. Jika aplikasi punya lebih dari satu jendela dan salah satunya aktif, klik berpindah ke jendela berikutnya, bukan minimize | P1 |
-| F-08 | Klik kanan ikon membuka menu: Buka jendela baru, Simpan di Dock / Hapus dari Dock, Tampilkan di Explorer, Tutup semua jendela | P0 |
-| F-09 | Ikon membesar halus mengikuti posisi kursor (magnification) | P0 |
-| F-10 | Ikon memantul saat aplikasi sedang dibuka, sampai jendelanya muncul (maksimal 10 detik) | P1 |
-| F-11 | Ikon yang di-pin bisa diurutkan ulang dengan drag di dalam dock | P1 |
-| F-12 | Klik Recycle Bin membuka Recycle Bin di Explorer. Windock tidak pernah menghapus atau mengosongkan apa pun | P0 |
-| F-13 | Jendela yang di-maximize tidak menutupi dock, karena ruang layar dicadangkan | P0 |
-| F-14 | Dock otomatis tersembunyi saat ada aplikasi layar penuh (game, video) di monitor utama | P0 |
-| F-15 | Dock tetap tampil di atas jendela biasa, tapi tidak muncul di Alt+Tab | P0 |
+| F-01 | The dock floats at the bottom center of the primary monitor, with rounded corners and a semi-transparent background | P0 |
+| F-02 | The dock shows pinned apps (fixed order) followed by running apps that are not pinned, with a separator between them. The Recycle Bin icon is always at the right end | P0 |
+| F-03 | Running apps are marked with a small dot under their icon | P0 |
+| F-04 | Clicking the icon of an app that is not running starts it | P0 |
+| F-05 | Clicking the icon of a running app that is not active brings up and activates its last window, restoring it if it is minimized | P0 |
+| F-06 | Clicking the icon of an app whose window is active minimizes that window (the Windows behavior, which users know better) | P0 |
+| F-07 | Several windows of one app are grouped under one icon. If the app has more than one window and one of them is active, a click moves to the next window instead of minimizing | P1 |
+| F-08 | Right-clicking an icon opens a menu: New window, Keep in dock / Remove from dock, Show in Explorer, Close all windows | P0 |
+| F-09 | Icons grow smoothly following the pointer (magnification) | P0 |
+| F-10 | An icon bounces while its app is starting, until its window appears (10 seconds at most) | P1 |
+| F-11 | Pinned icons can be reordered by dragging inside the dock | P1 |
+| F-12 | Clicking the Recycle Bin opens it in Explorer. Windock never deletes or empties anything | P0 |
+| F-13 | Maximized windows do not cover the dock, because screen space is reserved | P0 |
+| F-14 | The dock hides automatically while a fullscreen app (game, video) is on the primary monitor | P0 |
+| F-15 | The dock stays above normal windows but does not appear in Alt+Tab | P0 |
 
-### 5.2 Taskbar Windows
+### 5.2 Windows taskbar
 
-| ID | Kebutuhan | Prioritas |
+| ID | Requirement | Priority |
 |---|---|---|
-| T-01 | Mode "Sembunyikan total" (default): taskbar Windows disembunyikan selama Windock jalan | P0 |
-| T-02 | Mode "Auto-hide": memakai auto-hide bawaan Windows | P1 |
-| T-03 | Mode "Biarkan tampil": taskbar tidak disentuh | P0 |
-| T-04 | Saat Windock keluar, baik normal maupun crash, taskbar dikembalikan ke kondisi semula | P0 |
-| T-05 | Jika Windows Explorer di-restart, Windock menerapkan ulang mode taskbar dan pencadangan ruang layar | P0 |
-| T-06 | Tombol Windows di keyboard tetap membuka Start Menu | P0 |
+| T-01 | "Hide completely" mode (default): the Windows taskbar is hidden while Windock runs | P0 |
+| T-02 | "Auto-hide" mode: uses the Windows built-in auto-hide | P1 |
+| T-03 | "Leave it visible" mode: the taskbar is not touched | P0 |
+| T-04 | When Windock exits, normally or by crashing, the taskbar is put back as it was | P0 |
+| T-05 | If Windows Explorer restarts, Windock applies the taskbar mode and the screen space reservation again | P0 |
+| T-06 | The Windows key still opens the Start menu | P0 |
 
-### 5.3 Pengaturan
+### 5.3 Settings
 
-Semua opsi ada di jendela Pengaturan dan langsung diterapkan tanpa restart. Nilai default ada di [DESIGN.md §6](DESIGN.md#6-nilai-default-pengaturan).
+Every option lives in the Settings window and applies immediately without a restart. Defaults are in [DESIGN.md §6](DESIGN.md#6-default-settings).
 
-| ID | Opsi | Prioritas |
+| ID | Option | Priority |
 |---|---|---|
-| S-01 | Posisi dock: bawah, kiri, kanan | P0 untuk bawah, P1 untuk kiri dan kanan |
-| S-02 | Ukuran ikon (slider) | P0 |
-| S-03 | Magnification: hidup/mati, dan ukuran maksimal | P0 |
-| S-04 | Transparansi latar dock, dan mode blur: mati atau blur standar | P0 |
-| S-05 | Titik penanda aplikasi jalan: hidup/mati | P0 |
-| S-06 | Mode taskbar Windows: sembunyikan total, auto-hide, biarkan tampil | P0 |
-| S-07 | Dock auto-hide (muncul saat kursor ke tepi layar) | P1 |
-| S-08 | Animasi memantul saat membuka aplikasi: hidup/mati | P1 |
-| S-09 | Jalankan saat Windows nyala | P1 |
-| S-10 | Kelola pin: tambah (pilih .exe atau .lnk), hapus, dan atur urutan | P0 |
-| S-11 | Shortcut darurat untuk mematikan dock, bisa diganti | P0 |
-| S-12 | Tombol "Kembalikan ke default" | P0 |
+| S-01 | Dock position: bottom, left, right | P0 for bottom, P1 for left and right |
+| S-02 | Icon size (slider) | P0 |
+| S-03 | Magnification: on/off, and maximum size | P0 |
+| S-04 | Dock background transparency, and blur mode: off or standard blur | P0 |
+| S-05 | Running-app indicator dots: on/off | P0 |
+| S-06 | Windows taskbar mode: hide completely, auto-hide, leave visible | P0 |
+| S-07 | Dock auto-hide (appears when the pointer touches the screen edge) | P1 |
+| S-08 | Bounce animation when opening apps: on/off | P1 |
+| S-09 | Start with Windows | P1 |
+| S-10 | Manage pins: add (choose an .exe or .lnk), remove, and reorder | P0 |
+| S-11 | Emergency shortcut that turns the dock off, changeable | P0 |
+| S-12 | A "Reset to defaults" button | P0 |
 
-### 5.4 Pengaman dan kontrol
+### 5.4 Safety and control
 
-| ID | Kebutuhan | Prioritas |
+| ID | Requirement | Priority |
 |---|---|---|
-| A-01 | Ikon system tray dengan menu: Pengaturan, Jeda dock, Keluar | P0 |
-| A-02 | Shortcut darurat global (default `Ctrl+Alt+Shift+W`) langsung mematikan Windock dan mengembalikan taskbar | P0 |
-| A-03 | Hanya satu instance Windock yang bisa jalan. Membuka Windock kedua kali akan membuka Pengaturan | P0 |
-| A-04 | Jika Windock mati paksa, misalnya lewat Task Manager, kondisi taskbar dipulihkan saat Windock dijalankan berikutnya. Ada juga cara manual yang tertulis di README | P0 |
+| A-01 | A system tray icon with a menu: Settings, Pause dock, Quit | P0 |
+| A-02 | A global emergency shortcut (default `Ctrl+Alt+Shift+W`) quits Windock at once and gives the taskbar back | P0 |
+| A-03 | Only one Windock instance can run. Starting Windock a second time opens Settings | P0 |
+| A-04 | If Windock is killed, for example from Task Manager, the taskbar state is recovered the next time Windock starts. A manual way is documented in the README too | P0 |
 
-## 6. Kebutuhan non-fungsional
+## 6. Non-functional requirements
 
-| ID | Kebutuhan | Target |
+| ID | Requirement | Target |
 |---|---|---|
-| N-01 | RAM saat diam | di bawah 100 MB (target sekitar 60 MB) |
-| N-02 | CPU saat diam | sekitar 0%, tanpa timer atau polling saat tidak ada interaksi |
-| N-03 | Kehalusan animasi | 60 fps di monitor 60 Hz, tanpa kedip |
-| N-04 | Waktu muncul setelah dijalankan | dock tampil kurang dari 2 detik |
-| N-05 | Hak akses | selalu sebagai user biasa (`asInvoker`), tidak pernah meminta Administrator |
-| N-06 | Lokasi penulisan | hanya `%AppData%\Windock\` dan `HKCU\...\Run`, yang kedua hanya jika S-09 aktif. Pengaturan auto-hide taskbar bisa ikut diubah sementara (lihat ARCHITECTURE §7) |
-| N-07 | Penghapusan file | tidak pernah menghapus file di luar `%AppData%\Windock\` |
-| N-08 | DPI | tajam di skala 100%, 125%, 150%, dan 175% (Per-Monitor DPI Aware v2) |
-| N-09 | Platform | Windows 10 22H2 (build 19045) x64. Windows 11 belum diuji di v1.0 |
+| N-01 | RAM when idle | under 100 MB (target about 60 MB) |
+| N-02 | CPU when idle | about 0%, no timers or polling while nothing happens |
+| N-03 | Animation smoothness | 60 fps on a 60 Hz monitor, no flicker |
+| N-04 | Time to appear after start | the dock shows in under 2 seconds |
+| N-05 | Privileges | always runs as a normal user (`asInvoker`), never asks for Administrator |
+| N-06 | Where it writes | only `%AppData%\Windock\` and `HKCU\...\Run`, the latter only when S-09 is on. The taskbar auto-hide setting may be changed temporarily too (see ARCHITECTURE §7) |
+| N-07 | Deleting files | never deletes files outside `%AppData%\Windock\` |
+| N-08 | DPI | sharp at 100%, 125%, 150% and 175% scaling (Per-Monitor DPI Aware v2) |
+| N-09 | Platform | Windows 10 22H2 (build 19045) x64. Windows 11 is not tested in v1.0 |
 | N-10 | Runtime | .NET 8 Desktop Runtime |
 
-## 7. Ukuran keberhasilan
+## 7. Success measures
 
-1. Pengguna memakai Windock sebagai pengganti taskbar selama 7 hari berturut-turut tanpa kembali ke taskbar.
-2. Tidak ada kejadian taskbar "hilang permanen" atau harus restart untuk pulih dalam pemakaian normal.
-3. Angka di Task Manager memenuhi N-01 dan N-02 setelah 8 jam pemakaian.
-4. Semua opsi S-01 sampai S-12 bisa diubah dan langsung terlihat tanpa restart.
+1. The user uses Windock instead of the taskbar for 7 days in a row without going back to the taskbar.
+2. No case of the taskbar "disappearing for good" or needing a restart to recover in normal use.
+3. Task Manager numbers meet N-01 and N-02 after 8 hours of use.
+4. Every option S-01 to S-12 can be changed and shows immediately without a restart.
 
-## 8. Risiko dan asumsi
+## 8. Risks and assumptions
 
-| Risiko | Dampak | Mitigasi |
+| Risk | Impact | Mitigation |
 |---|---|---|
-| Blur di Windows 10 tidak bisa dibatasi ke bentuk dock, karena blur selalu mengenai seluruh jendela | Tampilan | Jendela latar blur dipisah dari jendela ikon (ARCHITECTURE §4). Spike S1 membuktikan ini sebelum dock dibangun penuh |
-| Acrylic mengabaikan region (sudut persegi) dan bisa membuat geser jendela lambat | Tampilan | Hanya blur standar yang ditawarkan, dan blur bisa dimatikan (spike S1) |
-| Menyembunyikan taskbar meninggalkan ruang kosong di layar, atau taskbar muncul lagi saat tombol Windows ditekan | Fungsi inti | Spike S2 menguji perilaku ini di Windows 10 22H2 sebelum implementasi |
-| Windock mati paksa saat taskbar disembunyikan | Pengguna "terkunci" | Pemulihan saat Windock dijalankan lagi, restart Explorer, dan langkah manual di README |
-| Antivirus atau SmartScreen memberi peringatan karena exe tidak ditandatangani | Kepercayaan | Kode terbuka di GitHub, dan tidak ada injeksi ke proses lain |
-| Mengelompokkan jendela aplikasi UWP (ApplicationFrameHost) | Ikon salah | Kelompokkan berdasarkan AppUserModelID, dengan ikon generik sebagai cadangan |
+| Blur on Windows 10 cannot be limited to the dock's shape, because blur always covers the whole window | Looks | The blur background window is separate from the icon window (ARCHITECTURE §4). Spike S1 proves this before the dock is fully built |
+| Acrylic ignores window regions (square corners) and can make dragging windows sluggish | Looks | Only standard blur is offered, and blur can be turned off (spike S1) |
+| Hiding the taskbar leaves an empty strip on screen, or the taskbar comes back when the Windows key is pressed | Core function | Spike S2 tests this behavior on Windows 10 22H2 before implementation |
+| Windock is killed while the taskbar is hidden | User "locked out" | Recovery when Windock starts again, restarting Explorer, and manual steps in the README |
+| Antivirus or SmartScreen warns because the exe is not signed | Trust | Open source on GitHub, and no injection into other processes |
+| Grouping UWP app windows (ApplicationFrameHost) | Wrong icons | Group by AppUserModelID, with a generic icon as fallback |
 
 ## 9. Roadmap
 
-| Fase | Isi | Rilis |
+| Phase | Content | Release |
 |---|---|---|
-| 0. Spike | S1: blur dan jendela transparan yang bisa diklik tembus. S2: menyembunyikan taskbar dan pencadangan ruang layar di Windows 10 | — |
-| 1. Dock inti | F-01–F-06, F-08, F-09, F-12–F-15, T-01, T-03–T-06, S-02–S-06, S-10–S-12, A-01–A-04 | v0.1 |
-| 2. Pelengkap | F-07, F-10, F-11, T-02, S-01 (kiri dan kanan), S-07–S-09 | v1.0 |
-| 3. Menu bar | Menu bar atas: nama aplikasi aktif, jam, baterai, wifi, volume | v1.1 |
-| 4. Launchpad dan Spotlight | Grid aplikasi layar penuh dan pencarian cepat | v1.2 |
-| 5. Animasi jendela | Scale saat membuka atau minimize, lalu Genie (opsional) | v2.0 |
+| 0. Spike | S1: blur and a click-through transparent window. S2: hiding the taskbar and reserving screen space on Windows 10 | — |
+| 1. Core dock | F-01–F-06, F-08, F-09, F-12–F-15, T-01, T-03–T-06, S-02–S-06, S-10–S-12, A-01–A-04 | v0.1 |
+| 2. Completion | F-07, F-10, F-11, T-02, S-01 (left and right), S-07–S-09 | v1.0 |
+| 3. Menu bar | A top menu bar: active app name, clock, battery, Wi-Fi, volume | v1.1 |
+| 4. Launchpad and Spotlight | A fullscreen app grid and quick search | v1.2 |
+| 5. Window animations | Scale when opening or minimizing, then Genie (optional) | v2.0 |
 
-Setiap fase 3 sampai 5 akan punya PRD dan desain sendiri sebelum dikerjakan.
+Phases 3 to 5 will each get their own PRD and design before work starts.

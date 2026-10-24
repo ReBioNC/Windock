@@ -2,7 +2,7 @@ using Windock.Core.Settings;
 
 namespace Windock.Core.Apps;
 
-/// Pure edits of the pinned-app list used by drag and drop, menus and "Pin ke Windock".
+/// Pure edits of the pinned-app list used by drag and drop, menus and "Pin to Windock".
 public static class PinListEditor
 {
     private const string AppsFolderPrefix = @"shell:AppsFolder\";

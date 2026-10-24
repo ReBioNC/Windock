@@ -1,195 +1,201 @@
-# Windock — Desain UI/UX
+# Windock — UI/UX Design
 
 | | |
 |---|---|
-| Versi dokumen | 1.0 |
-| Tanggal | 2026-10-16 |
-| Status | Draft, menunggu review |
-| Dokumen terkait | [PRD.md](PRD.md), [ARCHITECTURE.md](ARCHITECTURE.md) |
+| Document version | 1.0 |
+| Date | 2026-10-16 |
+| Status | Draft, awaiting review |
+| Related documents | [PRD.md](PRD.md), [ARCHITECTURE.md](ARCHITECTURE.md) |
 
-Semua ukuran di dokumen ini dalam DIP (device-independent pixel, 1 DIP = 1 px pada skala 100%). Ukuran fisik dikalikan dengan skala DPI monitor.
+All sizes in this document are in DIP (device-independent pixels, 1 DIP = 1 px at 100% scaling). Physical sizes are multiplied by the monitor's DPI scale.
 
-## 1. Prinsip desain
+## 1. Design principles
 
-1. **Mirip macOS, bukan salinan piksel.** Ambil rasa dan gerakannya, lalu sesuaikan dengan kebiasaan Windows jika memang lebih nyaman. Contohnya F-06: klik ikon jendela aktif akan me-minimize jendela itu.
-2. **Gerak dulu, hiasan belakangan.** Magnification dan memantul harus halus di 60 fps. Blur dan bayangan boleh dikurangi jika mengganggu kehalusan.
-3. **Diam itu murah.** Tidak ada animasi atau proses yang jalan saat pengguna tidak berinteraksi dengan dock.
-4. **Semua bisa diatur, default sudah bagus.** Pengguna tidak perlu membuka Pengaturan untuk mendapat tampilan yang baik.
+1. **Like macOS, not a pixel copy.** Take its feel and motion, then follow Windows habits where they are more comfortable. Example F-06: clicking the icon of the active window minimizes that window.
+2. **Motion first, decoration later.** Magnification and bouncing must be smooth at 60 fps. Blur and shadows may be reduced if they hurt smoothness.
+3. **Idle is cheap.** No animation or work runs while the user is not interacting with the dock.
+4. **Everything is configurable, the defaults are already good.** Users should not need to open Settings to get a good look.
 
-## 2. Anatomi dock (posisi bawah)
+## 2. Dock anatomy (bottom position)
 
 ```
                     ┌───────────────────────────────────────────────┐
-                    │ [ikon] [ikon] [ikon] [ikon] │ [ikon] [ikon] │ [🗑] │   ← plate
-                    │   •                    •       •                │   ← titik penanda
+                    │ [icon] [icon] [icon] [icon] │ [icon] [icon] │ [🗑] │   ← plate
+                    │   •                    •       •                │   ← indicator dots
                     └───────────────────────────────────────────────┘
-  ─────────────────────────────── tepi bawah layar ───────────────────────────────
+  ─────────────────────────────── bottom edge of the screen ───────────────────────────────
 ```
 
-| Elemen | Spesifikasi default |
+| Element | Default specification |
 |---|---|
-| Plate (latar dock) | Tinggi = ukuran ikon + 2 × 6 (padding vertikal) + 6 (ruang titik penanda). Default 48 + 12 + 6 = **66** |
-| Jarak plate ke tepi layar | 4 |
-| Lebar plate | Mengikuti isi: jumlah ikon × (ukuran ikon + 8 jarak antarikon) + 2 × 8 padding horizontal + lebar pemisah |
-| Sudut plate | Radius 16 |
-| Warna plate | Hitam `#1E1E1E` dengan opacity 55% di atas blur. Garis tepi 1 DIP putih dengan opacity 12% |
-| Blur | Radius blur bawaan sistem (lihat ARCHITECTURE §4) |
-| Ikon | Persegi, ukuran default 48, digambar dari sumber 256 px dengan scaling kualitas tinggi |
-| Jarak antarikon | 8 |
-| Pemisah | Garis vertikal 1 DIP, tinggi 60% ikon, putih opacity 25%, jarak kiri-kanan 8 |
-| Titik penanda | Satu titik per jendela yang terbuka (maks. 3), lingkaran diameter 4 berjarak 7, putih opacity 85%, 3 DIP di bawah ikon, rata tengah |
-| Ikon Recycle Bin | Ikon sistem Recycle Bin (versi kosong atau penuh), selalu paling kanan setelah pemisah kedua |
-| Tooltip nama aplikasi | Muncul 12 DIP di atas ikon setelah kursor diam 300 ms. Plate kecil gelap radius 6, teks 12 pt |
+| Plate (dock background) | Height = icon size + 2 × 6 (vertical padding) + 6 (indicator space). Default 48 + 12 + 6 = **66** |
+| Gap between plate and screen edge | 4 |
+| Plate width | Follows the content: number of icons × (icon size + 8 spacing) + 2 × 8 horizontal padding + separator widths |
+| Plate corners | Radius 16 |
+| Plate color | Black `#1E1E1E` at 55% opacity over the blur. 1 DIP white border at 12% opacity |
+| Blur | The system's own blur radius (see ARCHITECTURE §4) |
+| Icons | Square, default size 48, drawn from a 256 px source with high-quality scaling |
+| Icon spacing | 8 |
+| Separator | 1 DIP vertical line, 60% of the icon height, white at 25% opacity, 8 spacing on each side |
+| Indicator dots | One dot per open window (max. 3), 4 diameter circles 7 apart, white at 85% opacity, 3 DIP under the icon, centered |
+| Recycle Bin icon | The system Recycle Bin icon (empty or full), always rightmost after the second separator |
+| App name tooltip | Appears 12 DIP above the icon after the pointer rests for 300 ms. A small dark plate, radius 6, 12 pt text |
 
-Posisi kiri dan kanan (Fase 2) memakai anatomi yang sama, diputar 90°: plate di tengah vertikal, titik penanda di sisi luar layar, tooltip di sisi dalam.
+The left and right positions (phase 2) use the same anatomy rotated by 90°: the plate is vertically centered, the indicator dots sit on the screen-edge side, and the tooltip on the inner side.
 
 ## 3. Magnification
 
-Ikon membesar mengikuti jarak horizontal kursor ke pusat ikon (`d`, dalam DIP).
+Icons grow by the horizontal distance from the pointer to the icon's center (`d`, in DIP).
 
 ```
-R      = 2.5 × ukuran ikon dasar          // jangkauan efek
+R      = 2.5 × base icon size             // reach of the effect
 t      = min(|d| / R, 1)
-skala  = 1 + (Smax − 1) × cos²(t × π/2)   // 1 → Smax, halus di kedua ujung
-Smax   = ukuranMagnification / ukuranIkon
+scale  = 1 + (Smax − 1) × cos²(t × π/2)   // 1 → Smax, smooth at both ends
+Smax   = magnificationSize / iconSize
 ```
 
-- **Dengan default** (ikon 48, magnification 80): Smax ≈ 1,67, dan ikon tepat di bawah kursor tampil 80 DIP.
-- **Ikon membesar ke atas**, ditambatkan di garis bawahnya, sehingga ikon "keluar" dari plate. Inilah alasan jendela dock lebih tinggi dari plate-nya (ARCHITECTURE §4).
-- **Plate melebar** mengikuti total lebar ikon yang membesar, dengan pusatnya tetap di tengah. Tinggi plate tidak berubah.
-- **Masuk dan keluar halus:** saat kursor masuk atau keluar area dock, nilai magnification digeser dari 0 ke 1 (atau sebaliknya) selama 150 ms dengan easing *ease-out cubic*. Ikon tidak boleh melompat.
-- **Tanpa magnification:** jika S-03 mati, ikon tetap di ukuran dasar dan hanya ada sorotan tipis (putih opacity 10%) di belakang ikon saat kursor di atasnya.
+- **With the defaults** (icon 48, magnification 80): Smax ≈ 1.67, and the icon right under the pointer shows at 80 DIP.
+- **Icons grow upwards**, anchored at their bottom line, so they "leave" the plate. That is why the dock window is taller than its plate (ARCHITECTURE §4).
+- **The plate widens** with the total width of the grown icons and stays centered. Its height does not change.
+- **Smooth in and out:** when the pointer enters or leaves the dock, the magnification amount moves from 0 to 1 (or back) over 150 ms with *ease-out cubic* easing. Icons must never jump.
+- **Without magnification:** when S-03 is off, icons keep their base size and only a faint highlight (white at 10% opacity) shows behind the icon under the pointer.
 
-## 4. Animasi
+## 4. Animations
 
-| Animasi | Spesifikasi |
+| Animation | Specification |
 |---|---|
-| Memantul (membuka aplikasi) | Ikon naik setinggi 0,5 × ukuran ikon selama 300 ms (*ease-out quad*), lalu turun 300 ms (*ease-in quad*), jeda 100 ms, ulang. Berhenti saat jendela pertama aplikasi muncul atau setelah 10 detik. Pantulan yang sedang berjalan diselesaikan dulu sampai mendarat, tidak berhenti di udara |
-| Ikon baru masuk dock | Lebar slot tumbuh dari 0 ke penuh dalam 200 ms, sementara ikon fade-in dari opacity 0 dan skala 0,6 |
-| Ikon keluar dock | Kebalikan animasi masuk, 200 ms |
-| Klik ikon | Ikon menggelap (brightness 70%) selama ditekan |
-| Dock auto-hide | Mode **Tidak pernah / Saat jendela menutupi dock / Selalu**. Plate dan ikon meluncur keluar layar dalam 250 ms (*ease-in cubic*) setelah kursor keluar 600 ms. Masuk kembali dalam 250 ms (*ease-out cubic*) saat kursor menyentuh 2 DIP terakhir di tepi layar (atau file diseret ke sana). Saat desktop di depan (klik wallpaper, Win+D, semua jendela di-minimize) dock tetap tampil. Selama mode bukan "Tidak pernah", ruang layar tidak dicadangkan |
-| Drag urutkan pin | Ikon yang di-drag mengikuti kursor dengan opacity 80%, dan ikon lain bergeser memberi ruang dalam 150 ms |
-| Aplikasi layar penuh | Dock langsung disembunyikan tanpa animasi, supaya tidak mengganggu game |
+| Bounce (opening an app) | The icon rises by 0.5 × icon size over 300 ms (*ease-out quad*), falls over 300 ms (*ease-in quad*), rests 100 ms, and repeats. It stops when the app's first window appears or after 10 seconds. A bounce in progress lands first instead of stopping mid-air |
+| New icon enters the dock | The slot width grows from 0 to full in 200 ms while the icon fades in from opacity 0 and scale 0.6 |
+| Icon leaves the dock | The reverse of entering, 200 ms |
+| Clicking an icon | The icon darkens (70% brightness) while pressed |
+| Dock auto-hide | Modes **Never / When a window covers it / Always**. The plate and icons slide off screen in 250 ms (*ease-in cubic*) after the pointer has left for 600 ms. They slide back in 250 ms (*ease-out cubic*) when the pointer touches the last 2 DIP at the screen edge (or a file is dragged there). While the desktop is in front (wallpaper clicked, Win+D, every window minimized) the dock stays up. In any mode other than "Never", no screen space is reserved |
+| Dragging to reorder pins | The dragged icon follows the pointer at 80% opacity, and the other icons move aside within 150 ms |
+| Fullscreen apps | The dock hides at once without animation, so games are not disturbed |
 
-Semua animasi berjalan dari satu loop render (ARCHITECTURE §5) yang aktif hanya selama ada animasi atau kursor di area dock.
+Every animation runs from one render loop (ARCHITECTURE §5) that is active only while something animates or the pointer is over the dock.
 
-## 5. Interaksi
+## 5. Interaction
 
-| Aksi | Hasil |
+| Action | Result |
 |---|---|
-| Klik kiri, aplikasi belum jalan | Buka aplikasi, dan ikon memantul (jika S-08 aktif) |
-| Klik kiri, aplikasi jalan, tidak aktif | Aktifkan jendela terakhirnya, dan restore jika minimize |
-| Klik kiri, aplikasi jalan dengan satu jendela, sedang aktif | Minimize jendela itu |
-| Klik kiri, aplikasi jalan dengan banyak jendela | Pratinjau semua jendelanya muncul di atas ikon (seperti taskbar Windows); klik kartu untuk pindah ke jendela itu |
-| Arahkan kursor ke ikon aplikasi yang jalan (0,7 dtk; tooltip nama muncul di 0,3 dtk) | Pratinjau jendela: judul, gambar live (DWM thumbnail), tombol ✕ per jendela. Pindah ke ikon lain yang jalan langsung mengganti pratinjau; keluar dari ikon dan pratinjau menutupnya setelah ±350 ms. Aplikasi yang tidak jalan menampilkan tooltip nama |
-| `Shift` + klik kiri | Buka jendela atau instance baru |
-| Klik kanan | Menu konteks (lihat di bawah) |
-| Drag ikon pin ke posisi lain | Ikon lain bergeser membuka celah; urutan pin berubah dan langsung disimpan (F-11) |
-| Drag ikon pin ke atas, keluar dari dock (> 80 DIP) | Label "Hapus dari Dock" muncul; dilepas = pin dihapus dengan animasi memudar. Aplikasi yang masih jalan tetap tampil di bagian aplikasi jalan |
-| Drag aplikasi jalan (belum di-pin) ke bagian pin | Aplikasi di-pin di posisi celah |
-| Drag program (.exe) atau shortcut (.lnk) dari Explorer/Desktop ke dock | Celah terbuka di posisi kursor; dilepas = di-pin di situ. File asli tidak dipindah |
-| Klik kanan program atau shortcut di Explorer/Desktop › **Pin ke Windock** | Di-pin di akhir daftar (opsi di Pengaturan › Isi Dock) |
-| Klik Recycle Bin | Buka Recycle Bin di Explorer |
-| Klik kanan di area plate kosong | Menu: Pengaturan Dock…, Kunci posisi pin, Keluar |
+| Left-click, app not running | Start the app, and the icon bounces (when S-08 is on) |
+| Left-click, app running, not active | Activate its last window, restoring it if minimized |
+| Left-click, app running with one window, active | Minimize that window |
+| Left-click, app running with several windows | Previews of all its windows appear above the icon (like the Windows taskbar); click a card to switch to that window |
+| Hover a running app's icon (0.7 s; the name tooltip appears at 0.3 s) | Window previews: title, live picture (DWM thumbnail), a ✕ button per window. Moving to another running icon swaps the previews at once; leaving both the icon and the previews closes them after about 350 ms. Apps that are not running show the name tooltip |
+| `Shift` + left-click | Open a new window or instance |
+| Right-click | Context menu (see below) |
+| Drag a pinned icon to another position | The other icons move aside to open a gap; the pin order changes and is saved at once (F-11) |
+| Drag a pinned icon up, out of the dock (> 80 DIP) | A "Remove from dock" label appears; releasing removes the pin with a fade. An app that is still running stays in the running-apps part |
+| Drag a running (unpinned) app into the pinned part | The app is pinned at the gap |
+| Drag a program (.exe) or shortcut (.lnk) from Explorer/Desktop onto the dock | A gap opens at the pointer; releasing pins it there. The original file is not moved |
+| Right-click a program or shortcut in Explorer/Desktop › **Pin to Windock** | Pinned at the end of the list (option in Settings › Dock items) |
+| Click the Recycle Bin | Open the Recycle Bin in Explorer |
+| Right-click an empty part of the plate | Menu: Dock settings…, Quit |
 
-**Menu konteks ikon aplikasi:**
+**App icon context menu:**
 
 ```
-  Nama Aplikasi            (judul, tidak bisa diklik)
+  App name                 (title, not clickable)
   ─────────────────
-  Jendela 1 judul…         (daftar jendela yang terbuka, maks 10)
-  Jendela 2 judul…
+  Window 1 title…          (list of open windows, max 10)
+  Window 2 title…
   ─────────────────
-  Buka jendela baru
-  Simpan di Dock  /  Hapus dari Dock
-  Tampilkan di Explorer
+  New window
+  Keep in dock  /  Remove from dock
+  Don't show in dock       (running apps that are not pinned)
+  Show in Explorer
   ─────────────────
-  Tutup semua jendela      (hanya jika jalan; mengirim perintah close biasa, bukan kill)
+  Close all windows        (only while running; sends a normal close, never a kill)
 ```
 
-Menu konteks memakai gaya gelap yang serasi dengan dock (radius 8, latar `#2A2A2A`, teks putih).
+The context menu uses a dark style that matches the dock (radius 8, background `#2A2A2A`, white text).
 
-## 6. Nilai default pengaturan
+## 6. Default settings
 
-| Opsi | Default | Rentang atau pilihan |
+| Option | Default | Range or choices |
 |---|---|---|
-| Posisi dock | Bawah | Bawah, Kiri, Kanan |
-| Ukuran ikon | 48 | 32–96 |
-| Magnification | Hidup | Hidup / Mati |
-| Ukuran magnification | 80 | ukuran ikon – 128 |
-| Opacity latar | 55% | 0–100%, minimal 30% saat Blur = Mati |
-| Blur | Blur standar | Mati, Blur standar (Acrylic tidak ditawarkan: mengabaikan sudut membulat, lihat spike S1) |
-| Titik penanda | Hidup | Hidup / Mati |
-| Mode taskbar Windows | Sembunyikan total | Sembunyikan total, Auto-hide, Biarkan tampil |
-| Dock auto-hide | Mati | Hidup / Mati |
-| Memantul saat membuka | Hidup | Hidup / Mati |
-| Jalankan saat Windows nyala | Mati, bisa dihidupkan lewat ajakan saat pertama kali dijalankan | Hidup / Mati |
-| Shortcut darurat | `Ctrl+Alt+Shift+W` | kombinasi tombol apa pun dengan minimal dua modifier |
-| Ikon minta perhatian (v0.6) | Memantul, sampai dibuka | Memantul / Titik merah / Mati; Sekali / Sampai dibuka |
-| Warna latar dock (v0.6) | `#1E1E1E` | preset atau `#RRGGBB`; atau ikuti warna wallpaper (mati) |
-| Kebulatan sudut (v0.6) | 16 | 0–30 |
-| Garis tepi (v0.6) | Hidup | Hidup / Mati |
-| Warna titik penanda (v0.6) | `#FFFFFF` | preset atau `#RRGGBB` |
-| Warna aksen (v0.6) | `#2F6FE4` | preset atau `#RRGGBB` |
-| Area status (v0.6) | Hidup, semua tombol tampil kecuali persen baterai dan detik | tiap tombol Hidup / Mati; jam 24/12 jam, tanggal, detik |
-| Launcher (v0.6) | Hidup, `Alt+Space`, 8 hasil, tanpa file | shortcut minimal satu modifier; 5–12 hasil; ikut cari file Desktop/Documents |
-| Recycle Bin (v0.6) | Tampil, tanya dulu sebelum membuang | Hidup / Mati |
-| Aplikasi disembunyikan (v0.6) | kosong | daftar di Isi Dock |
-| Pin awal | File Explorer, ditambah aplikasi yang terdeteksi dari daftar: Chrome, Edge, Discord, Steam, Spotify | — |
+| Dock position | Bottom | Bottom, Left, Right |
+| Icon size | 48 | 32–96 |
+| Magnification | On | On / Off |
+| Magnification size | 80 | icon size – 128 |
+| Background opacity | 55% | 0–100%, at least 30% when Blur = Off |
+| Blur | Standard blur | Off, Standard blur (Acrylic is not offered: it ignores the rounded corners, see spike S1) |
+| Running indicators | On | On / Off |
+| Windows taskbar mode | Hide completely | Hide completely, Auto-hide, Leave it visible |
+| Dock auto-hide | Never | Never / When a window covers it / Always |
+| Bounce while opening | On | On / Off |
+| Start with Windows | Off | On / Off |
+| Emergency shortcut | `Ctrl+Alt+Shift+W` | any key combination with at least two modifiers |
+| Icons asking for attention (v0.6) | Bounce, until opened | Bounce / Red dot / Off; Once / Until opened |
+| Also from Windows notifications (v0.6.8) | On | On / Off |
+| Unread count in the red dot (v0.7) | On | On / Off |
+| Dock color (v0.6) | `#1E1E1E` | presets or `#RRGGBB`; or follow the wallpaper color (off) |
+| Corner radius (v0.6) | 16 | 0–30 |
+| Border (v0.6) | On | On / Off |
+| Indicator color (v0.6) | `#FFFFFF` | presets or `#RRGGBB` |
+| Accent color (v0.6) | `#2F6FE4` | presets or `#RRGGBB` |
+| Status area (v0.6) | On, every button shown except battery percentage and seconds | each button On / Off; 24/12-hour clock, date, seconds |
+| Launcher (v0.6) | On, `Alt+Space`, 8 results, no files | shortcut with at least one modifier; 5–12 results; also search Desktop/Documents files |
+| Recycle Bin (v0.6) | Shown, ask before moving files | On / Off |
+| Hidden apps (v0.6) | empty | list in Dock items |
+| Alt+Tab switcher (v0.8) | Off (Windows' own Alt+Tab) | On / Off; grouped or flat; card size; live previews; current screen only; Windows Alt+Tab in exclusive fullscreen games |
+| Initial pins | File Explorer, plus detected apps from this list: Chrome, Edge, Discord, Steam, Spotify | — |
 
-## 7. Jendela Pengaturan
+## 7. Settings window
 
-Jendela biasa (bisa dipindah dan ditutup), 760 × 520, bertema gelap, dan dibuka dari ikon tray, menu dock, atau dengan menjalankan Windock lagi.
+A normal window (movable and closable), 800 × 580, dark themed, opened from the tray icon, the dock menu, or by starting Windock again.
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  Pengaturan Windock                                       [ — ✕ ]│
+│  Windock Settings                                         [ — ✕ ]│
+├──────────────────────────────────────────────────────────────────┤
+│  [ Windock mode ] [ Windows mode ]   The dock is on and ...      │
 ├────────────────┬─────────────────────────────────────────────────┤
-│  ▸ Tampilan    │  Tampilan                                       │
-│    Perilaku    │                                                 │
-│    Isi Dock    │  Posisi            ( Bawah ▾ )                  │
-│    Pengaman    │  Ukuran ikon       ──────●──────────  48        │
-│    Tentang     │  Magnification     [✓]                          │
-│                │  Ukuran maksimal   ─────────●───────  80        │
-│                │  Opacity latar     ───────●─────────  55%       │
-│                │  Blur              ( Blur standar ▾ )           │
-│                │  Titik penanda     [✓]                          │
-│                │                                                 │
-│                │                       [ Kembalikan ke default ] │
+│  ▸ Appearance  │  Appearance                                     │
+│    Theme       │                                                 │
+│    Status area │  Icon size          ──────●──────────  48       │
+│    Behavior    │  Magnification      [✓]                         │
+│    Dock items  │  Maximum size       ─────────●───────  80       │
+│    Launcher    │  Background opacity ───────●─────────  55%      │
+│    Alt+Tab     │  Blur               ( ) Off  (•) Standard blur  │
+│    Safety      │  Running indicators [✓]                         │
+│    About       │                                                 │
+│                │                             [ Reset to defaults ]│
 └────────────────┴─────────────────────────────────────────────────┘
 ```
 
-| Halaman | Isi |
+| Page | Content |
 |---|---|
-| Tampilan | S-01, S-02, S-03, S-04, S-05 |
-| Tema (v0.6) | Warna latar (preset, hex, ikuti wallpaper), kebulatan sudut, garis tepi, warna titik penanda, warna aksen |
-| Area status (v0.6) | Hidup/mati area, tiap tombol, format jam, tanggal, detik, persen baterai |
-| Perilaku | S-06, S-07, S-08, S-09, ikon minta perhatian |
-| Isi Dock | Daftar pin yang bisa di-drag untuk mengurutkan, dengan tombol Tambah (dialog pilih .exe atau .lnk) dan Hapus. S-10. Daftar aplikasi disembunyikan, opsi Recycle Bin, menu Explorer |
-| Launcher (v0.6) | Hidup/mati, shortcut, jumlah hasil, ikut cari file |
-| Pengaman | S-11 (kotak perekam shortcut), tombol "Pulihkan taskbar sekarang", tombol "Buka folder data" |
-| Tentang | Versi, link GitHub, lokasi file pengaturan dan log |
+| Appearance | S-02, S-03, S-04, S-05 |
+| Theme (v0.6) | Dock color (presets, hex, follow the wallpaper), corner radius, border, indicator color, accent color |
+| Status area (v0.6) | Area on/off, each button, clock format, date, seconds, battery percentage |
+| Behavior | S-06, S-07, S-08, S-09, icons asking for attention, notifications, unread counts |
+| Dock items | Pin list that can be dragged to reorder, with Add (choose an .exe or .lnk) and Remove buttons. S-10. Hidden apps list, Recycle Bin options, Explorer menu |
+| Launcher (v0.6) | On/off, shortcut, number of results, also search files |
+| Alt+Tab (v0.8) | Replace Alt+Tab, order, card size, previews, current screen only, fullscreen games |
+| Safety | S-11 (shortcut recorder box), "Restore the taskbar now" button, "Open data folder" button |
+| About | Version, GitHub link, settings and log file locations |
 
-Aturan perilaku:
-- **Setiap perubahan langsung diterapkan ke dock** dan disimpan 500 ms setelah perubahan terakhir. Tidak ada tombol "Simpan".
-- **Slider memperbarui dock secara live** selama digeser.
-- **"Kembalikan ke default" meminta konfirmasi dulu.** Daftar pin tidak ikut direset; ada tombol terpisah di halaman Isi Dock.
-- **Saat mode taskbar diubah ke "Sembunyikan total" untuk pertama kali,** muncul catatan singkat berisi shortcut darurat.
+Behavior rules:
+- **Every change applies to the dock immediately** and is saved 500 ms after the last change. There is no "Save" button.
+- **Sliders update the dock live** while being dragged.
+- **"Reset to defaults" asks for confirmation first.** The pin list is not reset; it has its own button on the Dock items page.
+- **The Windock mode / Windows mode buttons** switch between the dock and plain Windows without losing any pins or settings.
 
-## 8. Ikon tray
+## 8. Tray icon
 
-Ikon Windock monokrom di system tray. Klik kiri membuka Pengaturan. Klik kanan membuka menu:
+A monochrome Windock icon in the system tray. Left-click opens Settings. Right-click opens a menu:
 
 ```
-  Pengaturan…
-  Pakai Mode Windows   (atau "Pakai Mode Windock" — sama dengan tombol mode di Pengaturan)
+  Settings…
+  Use Windows mode     (or "Use Windock mode" — same as the mode buttons in Settings)
   ─────────────
-  Keluar
+  Quit
 ```
 
-## 9. Pertimbangan aksesibilitas
+## 9. Accessibility
 
-- **Teks tooltip dan menu mengikuti ukuran teks sistem.**
-- **Opacity latar minimal 30%** saat blur dimatikan, supaya ikon tetap terbaca di atas wallpaper yang terang.
-- **Saat setelan Windows "Show animations" mati,** magnification tetap jalan, tetapi animasi memantul, auto-hide, dan masuk-keluar ikon menjadi instan.
+- **Tooltip and menu text follow the system text size.**
+- **Background opacity is at least 30%** when blur is off, so icons stay readable over bright wallpapers.
+- **When the Windows "Show animations" setting is off,** magnification still works, but bouncing, auto-hide and icons entering or leaving become instant.

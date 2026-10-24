@@ -99,7 +99,7 @@ public class AppWindowFilterTests
     [Fact]
     public void Own_settings_window_counts_but_untitled_own_windows_do_not()
     {
-        Assert.True(AppWindowFilter.IsAppWindow(Normal() with { IsOwnProcess = true, ProcessName = "Windock", Title = "Pengaturan Windock" }));
+        Assert.True(AppWindowFilter.IsAppWindow(Normal() with { IsOwnProcess = true, ProcessName = "Windock", Title = "Windock Settings" }));
         Assert.False(AppWindowFilter.IsAppWindow(Normal() with { IsOwnProcess = true, ProcessName = "Windock", Title = "" }));
     }
 }

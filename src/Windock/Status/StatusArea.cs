@@ -102,7 +102,7 @@ internal sealed class StatusArea : IDisposable
         if (s.Enabled)
         {
             var now = DateTime.Now;
-            if (s.ShowTray) list.Add(new StatusButton(Tray, StatusGlyphs.ChevronUp, null, null, "Ikon tray"));
+            if (s.ShowTray) list.Add(new StatusButton(Tray, StatusGlyphs.ChevronUp, null, null, "Tray icons"));
             if (s.ShowWifi)
                 list.Add(new StatusButton(Network, StatusGlyphs.Network(_network.Kind), null, null, StatusFormat.NetworkTooltip(_network.Kind, _network.Name)));
             if (s.ShowVolume && Audio.Available)
@@ -111,11 +111,11 @@ internal sealed class StatusArea : IDisposable
                 list.Add(new StatusButton(Battery, StatusGlyphs.BatteryLevel(b.Percent, b.Charging), s.ShowBatteryPercent ? $"{b.Percent}%" : null, null,
                     StatusFormat.BatteryTooltip(b.Percent, b.Charging, b.PluggedIn, b.Remaining)));
             if (s.ShowLanguage)
-                list.Add(new StatusButton(Language, null, StatusFormat.LanguageCode(_languageId), null, "Bahasa input (klik untuk ganti, Win+Spasi)"));
+                list.Add(new StatusButton(Language, null, StatusFormat.LanguageCode(_languageId), null, "Input language (click to switch, Win+Space)"));
             if (s.ShowClock)
                 list.Add(new StatusButton(Clock, null, StatusFormat.Clock(now, s.Clock24Hour, s.ShowSeconds), s.ShowDate ? StatusFormat.ShortDate(now) : null,
                     StatusFormat.LongDate(now)));
-            if (s.ShowNotifications) list.Add(new StatusButton(Notifications, StatusGlyphs.Notifications, null, null, "Pusat notifikasi"));
+            if (s.ShowNotifications) list.Add(new StatusButton(Notifications, StatusGlyphs.Notifications, null, null, "Notification center"));
         }
         if (list.SequenceEqual(Buttons)) return;
         Buttons = list;

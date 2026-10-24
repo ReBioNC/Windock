@@ -23,7 +23,7 @@ internal sealed class AppHost
     /// Present while Windock runs; left behind only by an unclean exit.
     private static readonly string SessionMarker = Path.Combine(DataDirectory, "session.lock");
 
-    /// Mode Windows: dock hidden, taskbar and screen space back to stock Windows; every setting is kept.
+    /// Windows mode: dock hidden, taskbar and screen space back to stock Windows; every setting is kept.
     private bool InWindowsMode => Settings.Current.Behavior.Mode == DockMode.Windows;
     private bool _fullscreen;
     private bool _exiting;
@@ -101,7 +101,7 @@ internal sealed class AppHost
         Dock = new DockController(Model, new StopwatchClock(), Settings, Icons, new DockWindow(), Backdrop, Log);
         Launcher = new AppLauncher(Log, (title, text) => Tray?.ShowBalloon(title, text));
         var menus = new DockContextMenu(Launcher, Settings, PinResolver, OpenSettings, Exit, EmptyRecycleBin);
-        // Live foreground: the tracker skips our own windows, so its value is stale while Pengaturan is active.
+        // Live foreground: the tracker skips our own windows, so its value is stale while Settings is active.
         Dock.ItemClicked += (item, shift) =>
         {
             var foreground = Native.GetForegroundWindow();
@@ -220,7 +220,7 @@ internal sealed class AppHost
 
     private void ToggleMode() => SetMode(InWindowsMode ? DockMode.Windock : DockMode.Windows);
 
-    /// Puts the screen in the current mode. Mode Windows restores the taskbar exactly as the user had it.
+    /// Puts the screen in the current mode. Windows mode restores the taskbar exactly as the user had it.
     private void ApplyMode()
     {
         if (InWindowsMode)
@@ -394,7 +394,7 @@ internal sealed class AppHost
         }
     }
 
-    /// Accent color of menus, highlights and Pengaturan (dynamic resources, so open windows update too).
+    /// Accent color of menus, highlights and Settings (dynamic resources, so open windows update too).
     private static void ApplyAccent(string hex)
     {
         if (!ThemeColor.TryParse(hex, out var c)) return;
@@ -425,7 +425,7 @@ internal sealed class AppHost
     {
         if (Hotkey is not null && HotkeyGesture.TryParse(text, out var gesture) && Hotkey.TryRegister(HotkeyService.EmergencyId, gesture)) return true;
         Log.Error($"emergency hotkey '{text}' could not be registered");
-        if (notify) Tray?.ShowBalloon("Shortcut darurat tidak aktif", "Shortcut dipakai aplikasi lain atau tidak valid. Ganti di Pengaturan.");
+        if (notify) Tray?.ShowBalloon("Emergency shortcut is off", "The shortcut is used by another app or is not valid. Change it in Settings.");
         return false;
     }
 
@@ -440,7 +440,7 @@ internal sealed class AppHost
         }
         if (HotkeyGesture.TryParse(launcher.Hotkey, out var gesture, minModifiers: 1) && Hotkey.TryRegister(HotkeyService.LauncherId, gesture)) return true;
         Log.Error($"launcher hotkey '{launcher.Hotkey}' could not be registered");
-        if (notify) Tray?.ShowBalloon("Shortcut launcher tidak aktif", $"{launcher.Hotkey} dipakai aplikasi lain atau tidak valid. Ganti di Pengaturan > Launcher.");
+        if (notify) Tray?.ShowBalloon("Launcher shortcut is off", $"{launcher.Hotkey} is used by another app or is not valid. Change it in Settings > Launcher.");
         return false;
     }
 
@@ -468,12 +468,12 @@ internal sealed class AppHost
         _launcherWindow.Activate();
     }
 
-    /// Pins a program or shortcut (Explorer "Pin ke Windock", drag and drop). index = gap among pins; null = last.
+    /// Pins a program or shortcut (Explorer "Pin to Windock", drag and drop). index = gap among pins; null = last.
     public void PinPath(string path, int? index = null)
     {
         if (!PinListEditor.CanPin(path))
         {
-            Tray?.ShowBalloon("Tidak bisa di-pin", "Hanya program (.exe) dan shortcut (.lnk) yang bisa ditaruh di dock.");
+            Tray?.ShowBalloon("Can't pin this", "Only programs (.exe) and shortcuts (.lnk) can go in the dock.");
             return;
         }
         Log.Info($"pin {path} at {index?.ToString() ?? "end"}");
@@ -518,8 +518,8 @@ internal sealed class AppHost
         if (paths.Count == 0) return;
         if (Settings.Current.Trash.ConfirmBeforeTrash)
         {
-            var what = paths.Count == 1 ? $"\"{Path.GetFileName(paths[0].TrimEnd('\\'))}\"" : $"{paths.Count} item";
-            var answer = MessageBox.Show($"Pindahkan {what} ke Recycle Bin?\n\nBisa dipulihkan lagi dari Recycle Bin.", "Windock",
+            var what = paths.Count == 1 ? $"\"{Path.GetFileName(paths[0].TrimEnd('\\'))}\"" : $"{paths.Count} items";
+            var answer = MessageBox.Show($"Move {what} to the Recycle Bin?\n\nYou can restore it from the Recycle Bin.", "Windock",
                 MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.OK);
             if (answer != MessageBoxResult.OK) return;
         }

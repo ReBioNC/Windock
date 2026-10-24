@@ -90,7 +90,7 @@ internal sealed class WindowPreviewPopup : Window
             {
                 Content = "✕", Width = 24, Height = 22, Padding = new Thickness(0), Margin = new Thickness(6, 0, 0, 0),
                 Foreground = Brushes.White, Background = Brushes.Transparent, BorderThickness = new Thickness(0), Cursor = Cursors.Hand,
-                ToolTip = "Tutup jendela",
+                ToolTip = "Close window",
             };
             var hwnd = window.Handle;
             close.Click += (_, e) => { e.Handled = true; CloseRequested?.Invoke(hwnd); };

@@ -53,7 +53,7 @@ internal sealed class AutoHideController
         };
     }
 
-    /// Fullscreen apps and Mode Windows hide the whole dock; auto-hide stands aside meanwhile.
+    /// Fullscreen apps and Windows mode hide the whole dock; auto-hide stands aside meanwhile.
     public void SetSuspended(bool suspended)
     {
         _suspended = suspended;

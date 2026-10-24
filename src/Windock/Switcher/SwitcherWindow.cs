@@ -70,14 +70,14 @@ internal sealed class SwitcherWindow : Window
 
     public void Show(IReadOnlyList<SwitcherEntry> items, IReadOnlyDictionary<nint, WindowFacts> facts, int selected, string query)
     {
-        _search.Text = query.Length == 0 ? "Ketik untuk mencari" : query;
+        _search.Text = query.Length == 0 ? "Type to search" : query;
         _search.Foreground = query.Length == 0 ? Muted : Brushes.White;
         ClearThumbnails();
         _cards.Clear();
         _body.Children.Clear();
         if (items.Count == 0)
         {
-            _body.Children.Add(new TextBlock { Text = "Tidak ada jendela yang cocok.", Foreground = Muted, Margin = new Thickness(4, 6, 4, 6) });
+            _body.Children.Add(new TextBlock { Text = "No matching windows.", Foreground = Muted, Margin = new Thickness(4, 6, 4, 6) });
         }
         else
         {
@@ -129,7 +129,7 @@ internal sealed class SwitcherWindow : Window
         header.Children.Add(AppIcon(entry, info, 16));
         header.Children.Add(new TextBlock
         {
-            Text = count > 1 ? $"{entry.AppName} · {count} jendela" : entry.AppName, Foreground = Muted, FontSize = 12,
+            Text = count > 1 ? $"{entry.AppName} · {count} windows" : entry.AppName, Foreground = Muted, FontSize = 12,
             VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0),
         });
         return header;
