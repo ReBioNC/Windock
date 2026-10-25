@@ -31,6 +31,22 @@ internal partial class IslandPage : UserControl
         Black.Checked += (_, _) => Edit(s => s with { UseDockColor = false });
         DockColor.Checked += (_, _) => Edit(s => s with { UseDockColor = true });
         EventSeconds.ValueChanged += (_, e) => Edit(s => s with { EventSeconds = (int)Math.Round(e.NewValue) });
+        PageSync.OnToggle(DevicesPanel, on => Edit(s => s with { DevicesPanel = on }));
+        PageSync.OnToggle(WeatherPanel, on => Edit(s => s with { WeatherPanel = on }));
+        Celsius.Checked += (_, _) => Edit(s => s with { Unit = TemperatureUnit.Celsius });
+        Fahrenheit.Checked += (_, _) => Edit(s => s with { Unit = TemperatureUnit.Fahrenheit });
+        // The city is saved when typing is done (Enter or leaving the box), not on every key: each save looks it up.
+        City.LostFocus += (_, _) => SaveCity();
+        City.KeyDown += (_, e) =>
+        {
+            if (e.Key == System.Windows.Input.Key.Enter) SaveCity();
+        };
+    }
+
+    private void SaveCity()
+    {
+        var text = City.Text.Trim();
+        Edit(s => s.City == text ? s : s with { City = text });
     }
 
     private void Edit(Func<IslandSettings, IslandSettings> change) => _sync.Edit(s => s with { Island = change(s.Island) });
@@ -57,7 +73,20 @@ internal partial class IslandPage : UserControl
         Large.IsChecked = s.Size == IslandSize.Large;
         Black.IsChecked = !s.UseDockColor;
         DockColor.IsChecked = s.UseDockColor;
+        DevicesPanel.IsChecked = s.DevicesPanel;
+        WeatherPanel.IsChecked = s.WeatherPanel;
+        WeatherOptions.IsEnabled = s.WeatherPanel;
+        if (!City.IsKeyboardFocused) City.Text = s.City;
+        Celsius.IsChecked = s.Unit == TemperatureUnit.Celsius;
+        Fahrenheit.IsChecked = s.Unit == TemperatureUnit.Fahrenheit;
+        PlaceHint.Text = s.City.Length == 0
+            ? "Type your city, e.g. Jakarta, and press Enter. Only the city name and its coordinates are sent to open-meteo.com."
+            : s.Place is { } place && string.Equals(place.Query, s.City, StringComparison.OrdinalIgnoreCase)
+                ? $"Showing the weather for {place.Name}."
+                : "The city is looked up the next time the island opens.";
     }
 
-    private void OnReset(object sender, RoutedEventArgs e) => _sync.Edit(s => s with { Island = IslandSettings.Default });
+    // The city is personal data the user typed, not a look: a reset keeps it.
+    private void OnReset(object sender, RoutedEventArgs e) =>
+        _sync.Edit(s => s with { Island = IslandSettings.Default with { City = s.Island.City, Place = s.Island.Place } });
 }

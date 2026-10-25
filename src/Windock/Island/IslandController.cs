@@ -42,6 +42,12 @@ internal sealed class IslandController : IDisposable
     private BrightnessWatcher? _brightness;
     private DeviceWatcher? _devices;
     private IDisposable? _burstTimer, _hoverTimer;
+    private readonly WeatherService _weather;
+    private IReadOnlyList<DeviceEntry>? _deviceList;
+    private bool _devicesReading, _devicesDirty = true;
+    /// City text the geocoder did not find (so it is not asked again until the setting changes).
+    private string? _cityNotFound;
+    private bool _cityLookup, _wasExpanded;
     private PowerReading? _power;
     private (double Level, bool Muted)? _volume;
     private bool _suppressed, _edgeHover, _pillHover, _evaluationQueued;
@@ -60,6 +66,8 @@ internal sealed class IslandController : IDisposable
         _ui = ui;
         _scheduler = new DispatcherDelayScheduler(ui);
         _model = new IslandModel(_scheduler, () => TimeSpan.FromSeconds(_settings.Current.Island.EventSeconds));
+        _weather = new WeatherService(log);
+        _weather.Changed += Render;
         _model.Changed += OnModelChanged;
         _clockTimer = new DispatcherTimer(DispatcherPriority.Background, ui);
         _clockTimer.Tick += (_, _) => OnClockTick();
@@ -101,6 +109,7 @@ internal sealed class IslandController : IDisposable
             _window.PlayPauseClicked += () => _media?.TogglePlayPause();
             _window.NextClicked += () => _media?.Next();
             _window.PreviousClicked += () => _media?.Previous();
+            _window.PageTurnRequested += delta => _model.TurnPage(delta, Panels().Count);
             if (!_suppressed) _window.Show();
             _log.Info("dynamic island on");
         }
@@ -250,6 +259,7 @@ internal sealed class IslandController : IDisposable
     private void OnDeviceChanged(DeviceKind kind, bool arrived, string? name)
     {
         _log.Info($"device {kind} {(arrived ? "arrived" : "removed")} '{name}'");
+        _devicesDirty = true;
         _burst.Add(kind, arrived, name);
         _burstTimer ??= _scheduler.Schedule(DeviceBurst.BurstWindow, () =>
         {
@@ -297,8 +307,82 @@ internal sealed class IslandController : IDisposable
 
     private void OnModelChanged()
     {
+        if (_model.Expanded && !_wasExpanded) LoadPanels();
+        _wasExpanded = _model.Expanded;
         Render();
         QueueEvaluate();
+    }
+
+    private IReadOnlyList<IslandPanel> Panels()
+    {
+        var s = _settings.Current.Island;
+        var list = new List<IslandPanel> { IslandPanel.Home };
+        if (s.DevicesPanel) list.Add(IslandPanel.Devices);
+        if (s.WeatherPanel) list.Add(IslandPanel.Weather);
+        return list;
+    }
+
+    /// The card opened: fetch what its other pages show, so sliding to them finds the data ready.
+    private void LoadPanels()
+    {
+        var s = _settings.Current.Island;
+        if (s.DevicesPanel) ReadDevices();
+        if (s.WeatherPanel) RefreshWeather(s);
+    }
+
+    private async void ReadDevices()
+    {
+        if (_devicesReading || (!_devicesDirty && _deviceList is not null)) return;
+        _devicesReading = true;
+        try
+        {
+            _deviceList = await DeviceInventory.ReadAsync(_log);
+            // Without the device watcher (device pop-ups off) arrivals go unseen: read again each time the card opens.
+            _devicesDirty = _devices is null;
+        }
+        finally
+        {
+            _devicesReading = false;
+        }
+        Render();
+    }
+
+    private async void RefreshWeather(IslandSettings s)
+    {
+        if (s.City.Length == 0) return;
+        if (s.Place is { } place && string.Equals(place.Query, s.City, StringComparison.OrdinalIgnoreCase))
+        {
+            _weather.RefreshIfStale(place, s.Unit);
+            return;
+        }
+        if (_cityLookup || string.Equals(_cityNotFound, s.City, StringComparison.OrdinalIgnoreCase)) return;
+        _cityLookup = true;
+        Render();
+        var found = await _weather.FindAsync(s.City);
+        _cityLookup = false;
+        if (found is null)
+        {
+            _cityNotFound = s.City;
+            Render();
+            return;
+        }
+        // Saving the place triggers Apply, which renders; the forecast follows on the next open or right here.
+        _settings.Update(x => x with { Island = x.Island with { Place = found } });
+        _weather.RefreshIfStale(found, _settings.Current.Island.Unit);
+    }
+
+    private WeatherView WeatherState(IslandSettings s)
+    {
+        if (s.City.Length == 0) return new WeatherView(null, null, "Type your city in Settings › Dynamic Island to see the weather here.", false);
+        var placeOk = s.Place is { } p && string.Equals(p.Query, s.City, StringComparison.OrdinalIgnoreCase);
+        if (!placeOk)
+        {
+            if (string.Equals(_cityNotFound, s.City, StringComparison.OrdinalIgnoreCase))
+                return new WeatherView(null, null, $"Couldn't find “{s.City}”. Check the city name in Settings, or your internet connection.", false);
+            return new WeatherView(null, null, null, false);
+        }
+        if (_weather.Report is { } r) return new WeatherView(r, s.Place!.Name, null, _weather.Failed);
+        return new WeatherView(null, null, _weather.Failed ? "Weather is unavailable right now. Check your internet connection." : null, false);
     }
 
     private void OnClockTick()
@@ -336,7 +420,8 @@ internal sealed class IslandController : IDisposable
             StatusFormat.LongDate(now),
             battery is { } bt ? StatusFormat.BatteryTooltip(bt.Percent, bt.Charging, bt.PluggedIn, bt.Remaining) : null,
             _model.MediaActive ? _model.Media : null, _model.MediaActive ? _media?.Cover : null,
-            _model.CurrentEvent);
+            _model.CurrentEvent,
+            Panels(), _model.Page, _deviceList, WeatherState(settings.Island));
         _window.Render(view);
 
         var progress = view is { Mode: IslandMode.Media, Expanded: true } && _media is not null;

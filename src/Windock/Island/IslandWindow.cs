@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -17,21 +18,34 @@ internal sealed record IslandView(
     string? Clock, string? Date, string? BatteryGlyph, string? BatteryPercent,
     string BigClock, string LongDate, string? BatteryLine,
     MediaState? Media, ImageSource? Cover,
-    IslandEvent? Event);
+    IslandEvent? Event,
+    IReadOnlyList<IslandPanel> Panels, int Page, IReadOnlyList<DeviceEntry>? Devices, WeatherView Weather);
+
+/// Pages of the open card, in order. Home is the clock card, or the media card while something plays.
+internal enum IslandPanel { Home, Devices, Weather }
+
+/// The Weather panel: a report, or a message instead (no city yet, city not found, loading, offline).
+internal sealed record WeatherView(WeatherReport? Report, string? Place, string? Message, bool Stale);
 
 /// The Dynamic Island: a transparent, click-through, topmost tool window at the top centre of the primary
 /// screen holding one pill. The pill's size springs between states (DESIGN: Dynamic Island). A 2 px strip at the
 /// top edge above it brings it back when slid out of view, and keeps it there while the pointer rests on the edge.
 internal sealed class IslandWindow : Window
 {
-    public const double CompactHeight = 34, ExpandedWidth = 340, TopMargin = 6;
-    private const double CanvasWidth = 440, CanvasHeight = 200, EdgeStripWidth = 320;
+    public const double CompactHeight = 34, ExpandedWidth = 408, TopMargin = 6;
+    /// The compact pill is this much wider than its content (the user asked for 20 % wider than v0.10.0).
+    private const double CompactWidthFactor = 1.2;
+    private const double CanvasWidth = 520, CanvasHeight = 230, EdgeStripWidth = 384;
+    /// Invisible click areas at the open card's left and right edges that turn the page.
+    private const double PageZoneWidth = 40, PagePadding = 20;
     private static readonly Duration SpringDuration = TimeSpan.FromMilliseconds(420);
     private static readonly Duration SlideDuration = TimeSpan.FromMilliseconds(250);
     private static readonly Brush Secondary = Frozen(Color.FromRgb(0xA8, 0xA8, 0xA8));
     private static readonly Brush Track = Frozen(Color.FromArgb(0x55, 0xFF, 0xFF, 0xFF));
     private static readonly Brush Bars = Frozen(Color.FromRgb(0x5D, 0xCA, 0xA5));
     private static readonly FontFamily Icons = new("Segoe MDL2 Assets");
+    private static readonly FontFamily Symbols = new("Segoe UI Symbol");
+    private static readonly Brush Dot = Frozen(Color.FromArgb(0x60, 0xFF, 0xFF, 0xFF));
 
     private readonly Grid _root = new();
     private readonly Border _pill = new() { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, ClipToBounds = true };
@@ -47,6 +61,8 @@ internal sealed class IslandWindow : Window
     private Border? _progressFill;
     private TextBlock? _progressText, _durationText;
     private IslandView? _view;
+    private TranslateTransform? _pager;
+    private StackPanel? _dots;
     private bool _shown = true;
 
     public IslandWindow()
@@ -70,6 +86,12 @@ internal sealed class IslandWindow : Window
         _pill.SizeChanged += (_, _) => _pill.CornerRadius = new CornerRadius(Math.Min(_pill.ActualHeight / 2, 28));
         _pill.MouseEnter += (_, _) => PointerEntered?.Invoke();
         _pill.MouseLeave += (_, _) => PointerLeft?.Invoke();
+        _pill.MouseWheel += (_, e) =>
+        {
+            if (_view is not { Expanded: true } || _view.Panels.Count < 2) return;
+            e.Handled = true;
+            PageTurnRequested?.Invoke(e.Delta > 0 ? -1 : 1);
+        };
         _edgeStrip.MouseEnter += (_, _) => EdgeEntered?.Invoke();
         _edgeStrip.MouseLeave += (_, _) => EdgeLeft?.Invoke();
         IsVisibleChanged += (_, _) => UpdateBars();  // hidden for a fullscreen app: the bars stop too
@@ -83,6 +105,8 @@ internal sealed class IslandWindow : Window
 
     public event Action? PointerEntered, PointerLeft, EdgeEntered, EdgeLeft;
     public event Action? CoverClicked, PlayPauseClicked, NextClicked, PreviousClicked;
+    /// -1 previous page, +1 next page.
+    public event Action<int>? PageTurnRequested;
 
     public IntPtr Handle => new WindowInteropHelper(this).Handle;
 
@@ -94,7 +118,7 @@ internal sealed class IslandWindow : Window
         get
         {
             var dpi = PresentationSource.FromVisual(this)?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
-            var half = 150 * _scale.ScaleX * dpi;
+            var half = 180 * _scale.ScaleX * dpi;
             var centre = (Left + Width / 2) * dpi;
             return ((int)(centre - half), (int)(Top * dpi), (int)(centre + half), (int)((Top + (TopMargin + CompactHeight + 6) * _scale.ScaleY) * dpi));
         }
@@ -140,13 +164,19 @@ internal sealed class IslandWindow : Window
     {
         var old = _view;
         _view = view;
-        if (old is not null && SameLayout(old, view)) return;  // e.g. only the media position moved: UpdateProgress handles it
+        if (old is not null && SameLayout(old, view))
+        {
+            if (old.Page != view.Page) ShowPage(view.Page, animate: true);
+            return;  // e.g. only the media position moved: UpdateProgress handles it
+        }
         var content = view.Expanded ? BuildExpanded(view) : BuildCompact(view);
-        var maxWidth = view.Expanded ? ExpandedWidth : 400;
+        var maxWidth = view.Expanded ? ExpandedWidth : 480;
         _content.Content = content;  // measured in place, so it inherits the window's font
         content.Measure(new Size(maxWidth, double.PositiveInfinity));
-        var width = view.Expanded ? ExpandedWidth : Math.Clamp(content.DesiredSize.Width, MinCompactWidth(view), maxWidth);
+        var width = view.Expanded ? ExpandedWidth
+            : Math.Clamp(content.DesiredSize.Width * CompactWidthFactor, MinCompactWidth(view) * CompactWidthFactor, maxWidth);
         var height = view.Expanded ? Math.Max(96, content.DesiredSize.Height) : CompactHeight;
+        if (view.Expanded) ShowPage(view.Page, animate: old is { Expanded: true } && old.Page != view.Page);
 
         var changedShape = old is null || old.Mode != view.Mode || old.Expanded != view.Expanded || old.Event != view.Event;
         if (changedShape)
@@ -172,7 +202,8 @@ internal sealed class IslandWindow : Window
     private static bool SameLayout(IslandView a, IslandView b) =>
         a.Mode == b.Mode && a.Expanded == b.Expanded && a.Media == b.Media && ReferenceEquals(a.Cover, b.Cover) && a.Event == b.Event
         && a.Clock == b.Clock && a.Date == b.Date && a.BatteryGlyph == b.BatteryGlyph && a.BatteryPercent == b.BatteryPercent
-        && a.BigClock == b.BigClock && a.LongDate == b.LongDate && a.BatteryLine == b.BatteryLine;
+        && a.BigClock == b.BigClock && a.LongDate == b.LongDate && a.BatteryLine == b.BatteryLine
+        && a.Panels.SequenceEqual(b.Panels) && ReferenceEquals(a.Devices, b.Devices) && a.Weather == b.Weather;
 
     private static double MinCompactWidth(IslandView v) => v.Mode switch
     {
@@ -263,8 +294,164 @@ internal sealed class IslandWindow : Window
 
     // ---- expanded ----
 
-    private FrameworkElement BuildExpanded(IslandView v) =>
+    private FrameworkElement BuildExpanded(IslandView v)
+    {
+        _pager = null;
+        _dots = null;
+        if (v.Panels.Count < 2) return HomePage(v);
+
+        // Pages side by side in a strip that slides; all as tall as the tallest so the card does not jump.
+        var strip = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left };
+        foreach (var panel in v.Panels)
+        {
+            var page = panel switch
+            {
+                IslandPanel.Devices => DevicesPage(v.Devices),
+                IslandPanel.Weather => WeatherPage(v.Weather),
+                _ => HomePage(v),
+            };
+            strip.Children.Add(new Border { Width = ExpandedWidth, Padding = new Thickness(PagePadding, 0, PagePadding, 0), Child = page });
+        }
+        _pager = new TranslateTransform();
+        strip.RenderTransform = _pager;
+        // A negative right margin arranges the strip at its full width (an element arranged narrower than it wants
+        // is clipped to that width, which would cut off every page but the first); the grid clips to one page.
+        strip.Margin = new Thickness(0, 0, -(v.Panels.Count - 1) * ExpandedWidth, 14);  // 14: room for the dots
+
+        var root = new Grid { ClipToBounds = true, Width = ExpandedWidth };
+        root.Children.Add(strip);
+        root.Children.Add(PageZone(HorizontalAlignment.Left, -1));
+        root.Children.Add(PageZone(HorizontalAlignment.Right, 1));
+        _dots = new StackPanel
+        {
+            Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Bottom,
+            Margin = new Thickness(0, 0, 0, 9),
+        };
+        for (var i = 0; i < v.Panels.Count; i++)
+            _dots.Children.Add(new Border { Height = 6, Width = 6, CornerRadius = new CornerRadius(3), Margin = new Thickness(3, 0, 3, 0), Background = Dot });
+        root.Children.Add(_dots);
+        return root;
+    }
+
+    private FrameworkElement HomePage(IslandView v) =>
         v.Mode == IslandMode.Media && v.Media is { } m ? MediaCard(m, v.Cover) : IdleCard(v);
+
+    /// Transparent, so it takes clicks without being seen (the user wanted no arrows).
+    private Border PageZone(HorizontalAlignment side, int delta)
+    {
+        var zone = new Border { Width = PageZoneWidth, HorizontalAlignment = side, Background = Brushes.Transparent, Margin = new Thickness(0, 0, 0, 20) };
+        zone.MouseLeftButtonUp += (_, e) => { e.Handled = true; PageTurnRequested?.Invoke(delta); };
+        return zone;
+    }
+
+    private void ShowPage(int page, bool animate)
+    {
+        if (_pager is null || _dots is null) return;
+        page = Math.Clamp(page, 0, _dots.Children.Count - 1);
+        var to = -page * ExpandedWidth;
+        if (animate)
+        {
+            _pager.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(320))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+            });
+        }
+        else
+        {
+            _pager.BeginAnimation(TranslateTransform.XProperty, null);
+            _pager.X = to;
+        }
+        for (var i = 0; i < _dots.Children.Count; i++)
+        {
+            var dot = (Border)_dots.Children[i];
+            dot.Background = i == page ? Brushes.White : Dot;
+            dot.BeginAnimation(WidthProperty, new DoubleAnimation(i == page ? 14 : 6, TimeSpan.FromMilliseconds(200)));
+        }
+    }
+
+    // ---- devices and weather pages ----
+
+    private const int MaxDeviceRows = 6;
+
+    private static FrameworkElement DevicesPage(IReadOnlyList<DeviceEntry>? devices)
+    {
+        var panel = new StackPanel { Margin = new Thickness(16, 14, 16, 8) };
+        panel.Children.Add(Text("Devices", 12, brush: Secondary));
+        if (devices is null)
+        {
+            panel.Children.Add(new Border { Margin = new Thickness(0, 10, 0, 0), Child = Text("Looking for devices…", 13, brush: Secondary) });
+            return panel;
+        }
+        foreach (var d in devices.Take(MaxDeviceRows))
+        {
+            var row = new DockPanel { Margin = new Thickness(0, 5, 0, 0) };
+            var icon = Glyph(DeviceBurst.Glyph(d.Kind), 15);
+            icon.Width = 26;
+            DockPanel.SetDock(icon, System.Windows.Controls.Dock.Left);
+            row.Children.Add(icon);
+            var extra = string.Join(" · ", new[] { d.Battery is { } b ? $"{b}%" : null, d.Note }.Where(x => x is not null));
+            if (extra.Length > 0)
+            {
+                var right = Text(extra, 12, brush: Secondary);
+                right.Margin = new Thickness(10, 0, 0, 0);
+                DockPanel.SetDock(right, System.Windows.Controls.Dock.Right);
+                row.Children.Add(right);
+            }
+            row.Children.Add(Text(d.Name ?? d.Kind.ToString(), 13));
+            panel.Children.Add(row);
+        }
+        if (devices.Count > MaxDeviceRows)
+            panel.Children.Add(new Border { Margin = new Thickness(26, 4, 0, 0), Child = Text($"+{devices.Count - MaxDeviceRows} more", 12, brush: Secondary) });
+        if (devices.Count == 0) panel.Children.Add(new Border { Margin = new Thickness(0, 10, 0, 0), Child = Text("No devices found", 13, brush: Secondary) });
+        return panel;
+    }
+
+    private static FrameworkElement WeatherPage(WeatherView w)
+    {
+        var panel = new StackPanel { Margin = new Thickness(16, 14, 16, 8) };
+        if (w.Report is not { } r)
+        {
+            panel.Children.Add(Text("Weather", 12, brush: Secondary));
+            var message = Text(w.Message ?? "Loading weather…", 13, brush: Secondary);
+            message.TextWrapping = TextWrapping.Wrap;
+            panel.Children.Add(new Border { Margin = new Thickness(0, 10, 0, 0), Child = message });
+            return panel;
+        }
+        var (condition, glyph) = WeatherCodes.Describe(r.Code, r.IsDay);
+        var top = new DockPanel();
+        var icon = new TextBlock { Text = glyph, FontFamily = Symbols, FontSize = 30, Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
+        DockPanel.SetDock(icon, System.Windows.Controls.Dock.Left);
+        top.Children.Add(icon);
+        var range = new TextBlock
+        {
+            Text = $"H {WeatherCodes.Temperature(r.High)}\nL {WeatherCodes.Temperature(r.Low)}", FontSize = 12, Foreground = Secondary,
+            TextAlignment = TextAlignment.Right, VerticalAlignment = VerticalAlignment.Center,
+        };
+        DockPanel.SetDock(range, System.Windows.Controls.Dock.Right);
+        top.Children.Add(range);
+        var now = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        now.Children.Add(Text(WeatherCodes.Temperature(r.Temperature), 28, FontWeights.Light));
+        now.Children.Add(Text(string.Join(" · ", new[] { w.Place, condition }.Where(x => !string.IsNullOrWhiteSpace(x))), 12, brush: Secondary));
+        top.Children.Add(now);
+        panel.Children.Add(top);
+
+        var hours = new UniformGrid { Rows = 1, Margin = new Thickness(0, 10, 0, 0) };
+        foreach (var h in r.Hours)
+        {
+            var cell = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
+            cell.Children.Add(new TextBlock { Text = h.Time.ToString("HH"), FontSize = 11, Foreground = Secondary, HorizontalAlignment = HorizontalAlignment.Center });
+            cell.Children.Add(new TextBlock
+            {
+                Text = WeatherCodes.Describe(h.Code, h.IsDay).Glyph, FontFamily = Symbols, FontSize = 14, Foreground = Brushes.White,
+                HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 2, 0, 2),
+            });
+            cell.Children.Add(new TextBlock { Text = WeatherCodes.Temperature(h.Temperature), FontSize = 12, Foreground = Brushes.White, HorizontalAlignment = HorizontalAlignment.Center });
+            hours.Children.Add(cell);
+        }
+        panel.Children.Add(hours);
+        if (w.Stale) panel.Children.Add(new Border { Margin = new Thickness(0, 4, 0, 0), Child = Text($"Offline · updated {r.FetchedAt:HH:mm}", 11, brush: Secondary) });
+        return panel;
+    }
 
     private FrameworkElement IdleCard(IslandView v)
     {
@@ -283,7 +470,7 @@ internal sealed class IslandWindow : Window
         return panel;
     }
 
-    private const double ProgressWidth = 196;
+    private const double ProgressWidth = 260;
 
     private FrameworkElement MediaCard(MediaState m, ImageSource? cover)
     {

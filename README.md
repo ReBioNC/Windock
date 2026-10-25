@@ -51,6 +51,7 @@ Windock replaces the Windows taskbar with a floating, blurred dock whose icons g
 - Short pop-ups for **volume**, **brightness** (laptop screen), **charger plugged in / out and low battery**, and **keyboard, mouse or monitor connected / disconnected**.
 - Slides up out of the way when a window covers it (e.g. a maximized browser) and comes back for pop-ups or when you touch the top edge above it. Can also stay on top always.
 - The clock, date and battery shown in the island leave the dock, so they are never shown twice.
+- More panels in the open island: click its left or right side (or scroll) to slide to **Devices** (keyboards, mice, displays, the current audio output and Bluetooth devices, with battery when reported) and **Weather** for your city (Open-Meteo, no account; only the city name and its coordinates are sent).
 
 **Launcher** (`Alt+Space`)
 - Type an app name and press Enter to open it. It can also search files on the Desktop and in Documents.
@@ -153,7 +154,7 @@ Every option applies to the dock at once and is saved automatically. There is no
 | **Appearance** | Icon size, magnification and its maximum size, background opacity, blur, running indicators |
 | **Theme** | Dock color (presets, hex, follow the wallpaper), corner radius, border, indicator color, accent color |
 | **Status area** | Area on/off, each button, 24/12-hour clock, date, seconds, battery percentage |
-| **Dynamic Island** | On/off, hide when covered or always show, clock / date / battery in the island, now playing, each kind of pop-up, pop-up duration, open on hover, size, color |
+| **Dynamic Island** | On/off, hide when covered or always show, clock / date / battery in the island, now playing, each kind of pop-up, pop-up duration, open on hover, size, color, Devices and Weather panels, weather city, °C/°F |
 | **Behavior** | Windows taskbar mode (hide completely, auto-hide, leave visible), dock auto-hide, bounce while opening, start with Windows, icons asking for attention (bounce / red dot / off, once / until opened), Windows notifications, unread counts |
 | **Dock items** | Pin list (drag to reorder, add an `.exe` or `.lnk`, remove, restore defaults), hidden apps, Recycle Bin options, the Explorer **Pin to Windock** menu |
 | **Launcher** | On/off, shortcut, number of results, also search files |

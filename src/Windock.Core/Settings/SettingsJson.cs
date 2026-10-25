@@ -113,7 +113,12 @@ public static class SettingsJson
                 ExpandOnHover: Get(island, "expandOnHover", di.ExpandOnHover),
                 EventSeconds: Get(island, "eventSeconds", di.EventSeconds),
                 Size: GetEnum(island, "size", di.Size),
-                UseDockColor: Get(island, "useDockColor", di.UseDockColor)),
+                UseDockColor: Get(island, "useDockColor", di.UseDockColor),
+                DevicesPanel: Get(island, "devicesPanel", di.DevicesPanel),
+                WeatherPanel: Get(island, "weatherPanel", di.WeatherPanel),
+                City: GetString(island, "city") ?? di.City,
+                Unit: GetEnum(island, "unit", di.Unit),
+                Place: ReadPlace(island?["place"] as JsonObject)),
         };
 
         return SettingsNormalizer.Normalize(settings);
@@ -214,6 +219,13 @@ public static class SettingsJson
                 ["eventSeconds"] = s.Island.EventSeconds,
                 ["size"] = s.Island.Size.ToString(),
                 ["useDockColor"] = s.Island.UseDockColor,
+                ["devicesPanel"] = s.Island.DevicesPanel,
+                ["weatherPanel"] = s.Island.WeatherPanel,
+                ["city"] = s.Island.City,
+                ["unit"] = s.Island.Unit.ToString(),
+                ["place"] = s.Island.Place is { } place
+                    ? new JsonObject { ["query"] = place.Query, ["name"] = place.Name, ["latitude"] = place.Latitude, ["longitude"] = place.Longitude }
+                    : null,
             },
             ["hiddenApps"] = new JsonArray(s.HiddenApps.Select(h => (JsonNode)new JsonObject { ["appId"] = h.AppId, ["name"] = h.Name }).ToArray()),
         };
@@ -225,6 +237,14 @@ public static class SettingsJson
         behavior?["autoHide"] is JsonValue v && v.TryGetValue(out bool flag)
             ? flag ? DockAutoHide.Always : DockAutoHide.Never
             : GetEnum(behavior, "autoHide", fallback);
+
+    private static WeatherPlace? ReadPlace(JsonObject? place)
+    {
+        if (GetString(place, "query") is not { } query || GetString(place, "name") is not { } name) return null;
+        var lat = Get(place, "latitude", double.NaN);
+        var lon = Get(place, "longitude", double.NaN);
+        return double.IsFinite(lat) && double.IsFinite(lon) ? new WeatherPlace(query, name, lat, lon) : null;
+    }
 
     private static IReadOnlyList<HiddenApp> ReadHiddenApps(JsonArray? array)
     {

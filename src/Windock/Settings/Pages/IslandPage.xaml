@@ -44,6 +44,30 @@
 
             <Grid Style="{StaticResource Row}">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                <TextBlock Text="More panels" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                <StackPanel Grid.Column="1">
+                    <CheckBox x:Name="DevicesPanel" Content="Devices (keyboards, mice, displays, audio, Bluetooth)" Margin="0,0,0,8" />
+                    <CheckBox x:Name="WeatherPanel" Content="Weather (from Open-Meteo, needs internet)" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"
+                               Text="With the island open, click its left or right side (or scroll) to slide to the next panel. The dots at the bottom show where you are. Bluetooth devices show their battery when they report it." />
+                </StackPanel>
+            </Grid>
+
+            <Grid x:Name="WeatherOptions" Style="{StaticResource Row}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                <TextBlock Text="Weather city" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,4,0,0" />
+                <StackPanel Grid.Column="1">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBox x:Name="City" Width="220" />
+                        <RadioButton x:Name="Celsius" GroupName="Unit" Content="&#x00B0;C" Margin="16,0,12,0" VerticalAlignment="Center" />
+                        <RadioButton x:Name="Fahrenheit" GroupName="Unit" Content="&#x00B0;F" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock x:Name="PlaceHint" Style="{StaticResource Hint}" Margin="0,6,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+            </Grid>
+
+            <Grid Style="{StaticResource Row}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
                 <TextBlock Text="Pop-ups" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
                 <StackPanel Grid.Column="1">
                     <CheckBox x:Name="Volume" Content="Volume changes" Margin="0,0,0,8" />

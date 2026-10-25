@@ -39,12 +39,20 @@ public enum IslandVisibility { AutoHide, Always }
 
 public enum IslandSize { Small, Medium, Large }
 
+public enum TemperatureUnit { Celsius, Fahrenheit }
+
+/// The weather panel's city as found by the geocoder. Query is the text it was found from: when the City
+/// setting no longer matches it, the city is looked up again.
+public sealed record WeatherPlace(string Query, string Name, double Latitude, double Longitude);
+
 /// The Dynamic Island at the top centre of the screen. ShowClock/ShowDate/ShowBattery move those items
 /// out of the dock's status area (see IslandOwnership).
 public sealed record IslandSettings(
     bool Enabled, IslandVisibility Visibility, bool ShowClock, bool ShowDate, bool ShowBattery,
     bool Media, bool VolumeEvents, bool BrightnessEvents, bool BatteryEvents, bool DeviceEvents,
-    bool ExpandOnHover, int EventSeconds, IslandSize Size, bool UseDockColor)
+    bool ExpandOnHover, int EventSeconds, IslandSize Size, bool UseDockColor,
+    bool DevicesPanel = true, bool WeatherPanel = true, string City = "", TemperatureUnit Unit = TemperatureUnit.Celsius,
+    WeatherPlace? Place = null)
 {
     public static readonly IslandSettings Default = new(
         Enabled: true, Visibility: IslandVisibility.AutoHide, ShowClock: true, ShowDate: true, ShowBattery: true,

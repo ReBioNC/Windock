@@ -34,7 +34,7 @@ public static class BatteryEvents
     }
 }
 
-public enum DeviceKind { Keyboard, Mouse, Display }
+public enum DeviceKind { Keyboard, Mouse, Display, Audio, Bluetooth }
 
 /// One physical device announces several interfaces at once: a USB receiver is a keyboard and a mouse, many mice
 /// also expose a keyboard collection. Arrivals (or removals) within a short burst become one event: the mouse if
@@ -67,6 +67,8 @@ public sealed class DeviceBurst
     {
         DeviceKind.Keyboard => IslandGlyphs.Keyboard,
         DeviceKind.Mouse => IslandGlyphs.Mouse,
+        DeviceKind.Audio => IslandGlyphs.Speaker,
+        DeviceKind.Bluetooth => IslandGlyphs.Bluetooth,
         _ => IslandGlyphs.Display,
     };
 
@@ -107,4 +109,6 @@ public static class IslandGlyphs
     public const string Previous = "";
     public const string Next = "";
     public const string Music = "";
+    public const string Speaker = "";
+    public const string Bluetooth = "";
 }

@@ -34,7 +34,11 @@ public static class SettingsNormalizer
             CornerRadius = Math.Clamp(t.CornerRadius, MinCornerRadius, MaxCornerRadius),
         };
         var launcher = s.Launcher with { MaxResults = Math.Clamp(s.Launcher.MaxResults, MinLauncherResults, MaxLauncherResults) };
-        var island = s.Island with { EventSeconds = Math.Clamp(s.Island.EventSeconds, MinIslandEventSeconds, MaxIslandEventSeconds) };
+        var island = s.Island with
+        {
+            EventSeconds = Math.Clamp(s.Island.EventSeconds, MinIslandEventSeconds, MaxIslandEventSeconds),
+            City = (s.Island.City ?? "").Trim(),
+        };
 
         if (appearance == a && theme == t && launcher == s.Launcher && island == s.Island) return s;
         return s with { Appearance = appearance, Theme = theme, Launcher = launcher, Island = island };

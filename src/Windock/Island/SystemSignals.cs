@@ -142,7 +142,11 @@ internal static class DeviceNames
     private static readonly DEVPROPKEY FriendlyName = new(new Guid("a45c254e-df1c-4efd-8020-67d146a850e0"), 14);
     private static readonly DEVPROPKEY BusReportedDescription = new(new Guid("540b947e-8b40-45bc-a8a2-6a0b894cbda2"), 4);
     private static readonly string[] Generic =
-        { "hid", "usb input device", "usb composite device", "generic", "compliant", "root hub", "receiver", "pnp monitor", "keyboard device" };
+        {
+            "hid", "usb input device", "usb composite device", "generic", "compliant", "root hub", "receiver", "pnp monitor", "keyboard device",
+            // Walking up from a built-in (PS/2) keyboard reaches the chipset: never a product name.
+            "bridge", "controller", "pci", "acpi", "bus", "enumerator", "system",
+        };
 
     public static string? Find(string interfacePath)
     {

@@ -35,6 +35,9 @@ public sealed class IslandModel(IDelayScheduler scheduler, Func<TimeSpan> eventD
     public bool Expanded { get; private set; }
     public bool PointerOver { get; private set; }
 
+    /// The open card's page (0 = home or media); back to 0 each time the card closes.
+    public int Page { get; private set; }
+
     public bool MediaActive => Media is not null && (Media.Playing || !_pausedExpired);
 
     public IslandMode Mode => CurrentEvent is not null ? IslandMode.Event : MediaActive ? IslandMode.Media : IslandMode.Idle;
@@ -62,7 +65,11 @@ public sealed class IslandModel(IDelayScheduler scheduler, Func<TimeSpan> eventD
             {
                 _pausedTimer = null;
                 _pausedExpired = true;
-                if (Expanded && Mode == IslandMode.Idle && !PointerOver) Expanded = false;
+                if (Expanded && Mode == IslandMode.Idle && !PointerOver)
+                {
+                    Expanded = false;
+                    Page = 0;
+                }
                 Changed?.Invoke();
             });
         }
@@ -114,11 +121,20 @@ public sealed class IslandModel(IDelayScheduler scheduler, Func<TimeSpan> eventD
         });
     }
 
+    /// Click on a side of the open card, or the mouse wheel: the next/previous page, wrapping around.
+    public void TurnPage(int delta, int pageCount)
+    {
+        if (!Expanded || pageCount < 2 || delta == 0) return;
+        Page = ((Page + delta) % pageCount + pageCount) % pageCount;
+        Changed?.Invoke();
+    }
+
     /// Settings turned expanding off, or the island was hidden.
     public void Collapse()
     {
         if (!Expanded) return;
         Expanded = false;
+        Page = 0;
         Changed?.Invoke();
         if (CurrentEvent is null && _queue.Count > 0) Next();
     }
