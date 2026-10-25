@@ -64,6 +64,7 @@ internal sealed class Win32TaskbarController : ITaskbarController
 
     public void HideTaskbarWindows()
     {
+        MakeTransparent();
         _hideTimer.Stop();
         _hideTimer.Start();
     }
@@ -74,7 +75,25 @@ internal sealed class Win32TaskbarController : ITaskbarController
         _keepHidden = false;
         if (_hideTimer.Dispatcher.CheckAccess()) _hideTimer.Stop();
         else _hideTimer.Dispatcher.BeginInvoke(_hideTimer.Stop);
-        foreach (var h in TaskbarWindows()) Native.ShowWindow(h, Native.SW_SHOW);
+        foreach (var h in TaskbarWindows())
+        {
+            var ex = Native.ExStyle(h);
+            if ((ex & Native.WS_EX_LAYERED) != 0) Native.SetWindowLongPtr(h, Native.GWL_EXSTYLE, new IntPtr(ex & ~Native.WS_EX_LAYERED));
+            Native.ShowWindow(h, Native.SW_SHOW);
+        }
+    }
+
+    /// Explorer re-shows the auto-hidden taskbar on its own (dozens of times while Task Manager starts), and
+    /// each time its 2 px strip flashed at the screen edge until HideNow caught up. Fully transparent, those
+    /// re-shows are invisible. Windows never makes the taskbar layered itself, so ShowTaskbarWindows simply
+    /// clears the style, also after a killed session; a restarted Explorer starts opaque anyway.
+    private static void MakeTransparent()
+    {
+        foreach (var h in TaskbarWindows())
+        {
+            Native.SetWindowLongPtr(h, Native.GWL_EXSTYLE, new IntPtr(Native.ExStyle(h) | Native.WS_EX_LAYERED));
+            Native.SetLayeredWindowAttributes(h, 0, 0, Native.LWA_ALPHA);
+        }
     }
 
     private void OnWindowEvent(uint evt, IntPtr hwnd)

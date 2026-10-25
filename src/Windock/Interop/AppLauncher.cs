@@ -61,7 +61,7 @@ internal sealed class AppLauncher(ILog log, Action<string, string> notifyError)
     /// Asks each window to close normally (it may still ask to save).
     public void CloseWindows(IEnumerable<IntPtr> hwnds)
     {
-        foreach (var h in hwnds) Native.PostMessage(h, Native.WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
+        foreach (var h in hwnds) Native.Close(h);
     }
 
     public void RevealInExplorer(string path) => Start("explorer.exe", $"/select,\"{path}\"");

@@ -193,7 +193,7 @@ internal sealed class WindowSwitcher : IDisposable
     {
         if (_selected < 0 || _selected >= _shown.Count) return;
         var entry = _shown[_selected];
-        Native.PostMessage(entry.Handle, Native.WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
+        Native.Close(entry.Handle);
         _all.Remove(entry);
         _mru.Remove(entry);
         _shown = SwitcherList.Filter(_all, _query);
