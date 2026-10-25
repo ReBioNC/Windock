@@ -20,6 +20,7 @@
                     <CheckBox x:Name="LanguageBox" Content="Input language (EN, ID, …)" Margin="0,0,0,8" />
                     <CheckBox x:Name="Clock" Content="Clock" Margin="0,0,0,8" />
                     <CheckBox x:Name="Notifications" Content="Notification center" />
+                    <TextBlock x:Name="IslandHint" Style="{StaticResource Hint}" Margin="0,8,0,0" />
                     <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"
                                Text="Tray: a box with every tray icon (shown and hidden); left-click, right-click or double-click them as on the taskbar. Volume: scroll to change it, middle-click to mute." />
                 </StackPanel>

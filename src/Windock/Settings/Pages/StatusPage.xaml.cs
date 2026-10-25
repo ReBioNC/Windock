@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using Windock.Core.Island;
 using Windock.Core.Settings;
 
 namespace Windock.Settings.Pages;
@@ -47,9 +48,26 @@ internal partial class StatusPage : UserControl
         ShowDate.IsChecked = s.ShowDate;
         ShowSeconds.IsChecked = s.ShowSeconds;
         BatteryPercent.IsChecked = s.ShowBatteryPercent;
-        Clock24.IsEnabled = Clock12.IsEnabled = ShowDate.IsEnabled = ShowSeconds.IsEnabled = s.ShowClock;
-        BatteryPercent.IsEnabled = s.ShowBattery;
+        // Items the Dynamic Island shows are not in the dock, so their dock toggles go away.
+        var islandClock = IslandOwnership.IslandShowsClock(settings);
+        var islandDate = IslandOwnership.IslandShowsDate(settings);
+        var islandBattery = IslandOwnership.IslandShowsBattery(settings);
+        Clock.Visibility = islandClock ? Visibility.Collapsed : Visibility.Visible;
+        ShowDate.Visibility = islandDate ? Visibility.Collapsed : Visibility.Visible;
+        Battery.Visibility = islandBattery ? Visibility.Collapsed : Visibility.Visible;
+        var moved = new[] { (islandClock, "clock"), (islandDate, "date"), (islandBattery, "battery") }.Where(m => m.Item1).Select(m => m.Item2).ToList();
+        IslandHint.Visibility = moved.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        IslandHint.Text = moved.Count > 0
+            ? $"The {Join(moved)} {(moved.Count == 1 ? "is" : "are")} shown in the Dynamic Island. Change that on the Dynamic Island page."
+            : "";
+        var clockShown = islandClock || s.ShowClock;
+        Clock24.IsEnabled = Clock12.IsEnabled = ShowSeconds.IsEnabled = clockShown;
+        ShowDate.IsEnabled = s.ShowClock;
+        BatteryPercent.IsEnabled = islandBattery || s.ShowBattery;
     }
+
+    private static string Join(IReadOnlyList<string> items) =>
+        items.Count == 1 ? items[0] : string.Join(", ", items.Take(items.Count - 1)) + " and " + items[^1];
 
     private void OnReset(object sender, RoutedEventArgs e) => _sync.Edit(s => s with { Status = StatusSettings.Default });
 }

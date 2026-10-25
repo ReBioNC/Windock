@@ -119,7 +119,7 @@ internal sealed class AutoHideController
     }
 
     /// The desktop (or nothing) has focus: clicking the wallpaper, Win+D, or the last window minimized.
-    private static bool DesktopInFront()
+    internal static bool DesktopInFront()
     {
         var hwnd = Native.GetForegroundWindow();
         return hwnd == IntPtr.Zero || Native.ClassName(hwnd) is "Progman" or "WorkerW" or "Shell_TrayWnd" or "Shell_SecondaryTrayWnd";

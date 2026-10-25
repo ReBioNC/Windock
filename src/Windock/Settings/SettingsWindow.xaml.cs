@@ -63,11 +63,12 @@ internal partial class SettingsWindow : Window
                 0 => new AppearancePage(_context),
                 1 => new ThemePage(_context),
                 2 => new StatusPage(_context),
-                3 => new BehaviorPage(_context),
-                4 => new PinsPage(_context),
-                5 => new LauncherPage(_context),
-                6 => new SwitcherPage(_context),
-                7 => new SafetyPage(_context),
+                3 => new IslandPage(_context),
+                4 => new BehaviorPage(_context),
+                5 => new PinsPage(_context),
+                6 => new LauncherPage(_context),
+                7 => new SwitcherPage(_context),
+                8 => new SafetyPage(_context),
                 _ => new AboutPage(_context),
             };
             _pages[index] = page;

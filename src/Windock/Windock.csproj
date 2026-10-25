@@ -2,14 +2,16 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <!-- Windows 10 1809+: the media session API (Dynamic Island) needs the WinRT projection. -->
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\windock.ico</ApplicationIcon>
     <!-- WPF takes DPI awareness from the manifest; the WinForms analyzer (NotifyIcon only) objects. -->
     <NoWarn>$(NoWarn);WFAC010</NoWarn>
-    <Version>0.9.0</Version>
+    <Version>0.10.0</Version>
     <!-- Smaller idle footprint (measured: 55 MB -> 40 MB private working set). -->
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
     <TieredPGO>false</TieredPGO>

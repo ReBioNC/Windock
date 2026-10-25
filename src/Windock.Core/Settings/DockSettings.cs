@@ -34,6 +34,24 @@ public sealed record StatusSettings(
         ShowLanguage: true, ShowClock: true, Clock24Hour: true, ShowDate: true, ShowSeconds: false, ShowNotifications: true);
 }
 
+/// When the Dynamic Island slides out of view: while the window in front overlaps it, or never.
+public enum IslandVisibility { AutoHide, Always }
+
+public enum IslandSize { Small, Medium, Large }
+
+/// The Dynamic Island at the top centre of the screen. ShowClock/ShowDate/ShowBattery move those items
+/// out of the dock's status area (see IslandOwnership).
+public sealed record IslandSettings(
+    bool Enabled, IslandVisibility Visibility, bool ShowClock, bool ShowDate, bool ShowBattery,
+    bool Media, bool VolumeEvents, bool BrightnessEvents, bool BatteryEvents, bool DeviceEvents,
+    bool ExpandOnHover, int EventSeconds, IslandSize Size, bool UseDockColor)
+{
+    public static readonly IslandSettings Default = new(
+        Enabled: true, Visibility: IslandVisibility.AutoHide, ShowClock: true, ShowDate: true, ShowBattery: true,
+        Media: true, VolumeEvents: true, BrightnessEvents: true, BatteryEvents: true, DeviceEvents: true,
+        ExpandOnHover: true, EventSeconds: 2, Size: IslandSize.Medium, UseDockColor: false);
+}
+
 public enum SwitcherCardSize { Small, Medium, Large }
 
 /// Windock's Alt+Tab switcher (off = Windows' own Alt+Tab).
@@ -86,6 +104,7 @@ public sealed record DockSettings(
     public LauncherSettings Launcher { get; init; } = LauncherSettings.Default;
     public SwitcherSettings Switcher { get; init; } = SwitcherSettings.Default;
     public TrashSettings Trash { get; init; } = TrashSettings.Default;
+    public IslandSettings Island { get; init; } = IslandSettings.Default;
     public IReadOnlyList<HiddenApp> HiddenApps { get; init; } = Array.Empty<HiddenApp>();
 
     // Lists compare by content, not by reference.
@@ -102,6 +121,7 @@ public sealed record DockSettings(
         && Launcher == other.Launcher
         && Switcher == other.Switcher
         && Trash == other.Trash
+        && Island == other.Island
         && HiddenApps.SequenceEqual(other.HiddenApps);
 
     public override int GetHashCode()
@@ -118,6 +138,7 @@ public sealed record DockSettings(
         hash.Add(Launcher);
         hash.Add(Switcher);
         hash.Add(Trash);
+        hash.Add(Island);
         foreach (var app in HiddenApps) hash.Add(app);
         return hash.ToHashCode();
     }

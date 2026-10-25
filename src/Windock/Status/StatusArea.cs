@@ -1,6 +1,7 @@
 using System.Net.NetworkInformation;
 using System.Windows.Threading;
 using Microsoft.Win32;
+using Windock.Core.Island;
 using Windock.Core.Logging;
 using Windock.Core.Settings;
 using Windock.Core.Status;
@@ -90,14 +91,15 @@ internal sealed class StatusArea : IDisposable
         var s = _settings.Current.Status;
         _clockTimer.Stop();
         if (!s.Enabled) return;
-        var seconds = s.ShowClock && s.ShowSeconds;
+        var seconds = IslandOwnership.DockShowsClock(_settings.Current) && s.ShowSeconds;
         _clockTimer.Interval = StatusFormat.UntilNextTick(DateTime.Now, seconds) + TimeSpan.FromMilliseconds(seconds ? 20 : 200);
         _clockTimer.Start();
     }
 
     private void Rebuild()
     {
-        var s = _settings.Current.Status;
+        var settings = _settings.Current;
+        var s = settings.Status;
         var list = new List<StatusButton>();
         if (s.Enabled)
         {
@@ -107,13 +109,13 @@ internal sealed class StatusArea : IDisposable
                 list.Add(new StatusButton(Network, StatusGlyphs.Network(_network.Kind), null, null, StatusFormat.NetworkTooltip(_network.Kind, _network.Name)));
             if (s.ShowVolume && Audio.Available)
                 list.Add(new StatusButton(Volume, StatusGlyphs.Volume(Audio.Level, Audio.Muted), null, null, StatusFormat.VolumeTooltip(Audio.Level, Audio.Muted)));
-            if (s.ShowBattery && _battery is { } b)
+            if (IslandOwnership.DockShowsBattery(settings) && _battery is { } b)
                 list.Add(new StatusButton(Battery, StatusGlyphs.BatteryLevel(b.Percent, b.Charging), s.ShowBatteryPercent ? $"{b.Percent}%" : null, null,
                     StatusFormat.BatteryTooltip(b.Percent, b.Charging, b.PluggedIn, b.Remaining)));
             if (s.ShowLanguage)
                 list.Add(new StatusButton(Language, null, StatusFormat.LanguageCode(_languageId), null, "Input language (click to switch, Win+Space)"));
-            if (s.ShowClock)
-                list.Add(new StatusButton(Clock, null, StatusFormat.Clock(now, s.Clock24Hour, s.ShowSeconds), s.ShowDate ? StatusFormat.ShortDate(now) : null,
+            if (IslandOwnership.DockShowsClock(settings))
+                list.Add(new StatusButton(Clock, null, StatusFormat.Clock(now, s.Clock24Hour, s.ShowSeconds), IslandOwnership.DockShowsDate(settings) ? StatusFormat.ShortDate(now) : null,
                     StatusFormat.LongDate(now)));
             if (s.ShowNotifications) list.Add(new StatusButton(Notifications, StatusGlyphs.Notifications, null, null, "Notification center"));
         }

@@ -53,6 +53,7 @@ internal sealed class AppHost
     private NotificationWatcher? _notifications;
     private Switcher.WindowSwitcher? _switcher;
     public Status.StatusArea? StatusArea { get; private set; }
+    private Island.IslandController? _island;
     private Launcher.LauncherWindow? _launcherWindow;
 
     public void Start(string[] args)
@@ -152,6 +153,7 @@ internal sealed class AppHost
         // The shell also reports the desktop itself as "fullscreen"; treat its signal only as a cue to check.
         AppBar.FullscreenChanged += _ => CheckFullscreen();
         Windows.ForegroundChanged += (_, _) => CheckFullscreen();
+        _island = new Island.IslandController(Settings, StatusArea, Windows, Messages, Launcher, Log, Application.Current.Dispatcher, InWindowsMode);
         ApplyMode();
 
         Hotkey = new HotkeyService(Messages);
@@ -275,7 +277,9 @@ internal sealed class AppHost
         if (e.New.Behavior.ExplorerContextMenu != e.Old.Behavior.ExplorerContextMenu) SyncExplorerMenu(e.New.Behavior.ExplorerContextMenu);
         if (e.New.Behavior.StartWithWindows != e.Old.Behavior.StartWithWindows) SyncStartup(e.New.Behavior.StartWithWindows);
         if (e.New.Theme.AccentColor != e.Old.Theme.AccentColor) ApplyAccent(e.New.Theme.AccentColor);
-        if (e.Sections.HasFlag(SettingsSection.Status)) StatusArea?.ApplySettings();
+        if (e.Sections.HasFlag(SettingsSection.Status) || e.Sections.HasFlag(SettingsSection.Island)) StatusArea?.ApplySettings();
+        if (e.Sections.HasFlag(SettingsSection.Status) || e.Sections.HasFlag(SettingsSection.Island)
+            || e.New.Theme.PlateColor != e.Old.Theme.PlateColor) _island?.Apply();
         if (e.Sections.HasFlag(SettingsSection.Switcher)) _switcher?.Sync();
         if (e.New.Behavior.AttentionFromNotifications != e.Old.Behavior.AttentionFromNotifications) SyncNotificationWatcher();
         if (e.Sections.HasFlag(SettingsSection.Launcher)) RegisterLauncherHotkey(e.New.Launcher);
@@ -596,6 +600,7 @@ internal sealed class AppHost
     {
         Dock?.SetHidden(InWindowsMode || _fullscreen);
         AutoHide?.SetSuspended(InWindowsMode || _fullscreen);
+        _island?.SetSuppressed(InWindowsMode || _fullscreen);
     }
 
     private void OnSystemMessage(int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -628,6 +633,7 @@ internal sealed class AppHost
         {
             Log.Info($"display change 0x{msg:X}");
             Dock?.Relayout();
+            _island?.Relayout();
             ReserveSpace();
         }
         else if (msg == _taskbarCreatedMessage && _taskbarCreatedMessage != 0)

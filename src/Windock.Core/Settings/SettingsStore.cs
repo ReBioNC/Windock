@@ -4,7 +4,7 @@ using Windock.Core.Logging;
 namespace Windock.Core.Settings;
 
 [Flags]
-public enum SettingsSection { None = 0, Appearance = 1, Behavior = 2, Pins = 4, Safety = 8, Theme = 16, Status = 32, Launcher = 64, Trash = 128, HiddenApps = 256, Switcher = 512 }
+public enum SettingsSection { None = 0, Appearance = 1, Behavior = 2, Pins = 4, Safety = 8, Theme = 16, Status = 32, Launcher = 64, Trash = 128, HiddenApps = 256, Switcher = 512, Island = 1024 }
 
 public sealed class SettingsChangedEventArgs(DockSettings old, DockSettings @new, SettingsSection sections) : EventArgs
 {
@@ -105,6 +105,7 @@ public sealed class SettingsStore(string directory, IDelayScheduler scheduler, I
         if (a.Launcher != b.Launcher) s |= SettingsSection.Launcher;
         if (a.Trash != b.Trash) s |= SettingsSection.Trash;
         if (a.Switcher != b.Switcher) s |= SettingsSection.Switcher;
+        if (a.Island != b.Island) s |= SettingsSection.Island;
         if (!a.HiddenApps.SequenceEqual(b.HiddenApps)) s |= SettingsSection.HiddenApps;
         return s;
     }

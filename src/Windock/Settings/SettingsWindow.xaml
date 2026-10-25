@@ -47,6 +47,7 @@
                 <ListBoxItem Content="Appearance" />
                 <ListBoxItem Content="Theme" />
                 <ListBoxItem Content="Status area" />
+                <ListBoxItem Content="Dynamic Island" />
                 <ListBoxItem Content="Behavior" />
                 <ListBoxItem Content="Dock items" />
                 <ListBoxItem Content="Launcher" />

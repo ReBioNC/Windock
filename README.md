@@ -45,6 +45,13 @@ Windock replaces the Windows taskbar with a floating, blurred dock whose icons g
 - **Wi-Fi / network**, **volume** (scroll to change, middle-click to mute, click for a slider), **battery**, **input language**, **clock** with a calendar, and **notifications**.
 - Every button can be turned off. The clock can be 24 or 12 hours, with the date and seconds.
 
+**Dynamic Island** (top center of the screen)
+- A black pill with the clock, the date and the battery. Point at it and it springs open with the full date and battery time.
+- **Now playing** from Spotify, browsers and media players: cover art and moving bars; open it for the title, progress, and previous / play-pause / next. Click the cover to bring the player to the front.
+- Short pop-ups for **volume**, **brightness** (laptop screen), **charger plugged in / out and low battery**, and **keyboard, mouse or monitor connected / disconnected**.
+- Slides up out of the way when a window covers it (e.g. a maximized browser) and comes back for pop-ups or when you touch the top edge above it. Can also stay on top always.
+- The clock, date and battery shown in the island leave the dock, so they are never shown twice.
+
 **Launcher** (`Alt+Space`)
 - Type an app name and press Enter to open it. It can also search files on the Desktop and in Documents.
 
@@ -146,6 +153,7 @@ Every option applies to the dock at once and is saved automatically. There is no
 | **Appearance** | Icon size, magnification and its maximum size, background opacity, blur, running indicators |
 | **Theme** | Dock color (presets, hex, follow the wallpaper), corner radius, border, indicator color, accent color |
 | **Status area** | Area on/off, each button, 24/12-hour clock, date, seconds, battery percentage |
+| **Dynamic Island** | On/off, hide when covered or always show, clock / date / battery in the island, now playing, each kind of pop-up, pop-up duration, open on hover, size, color |
 | **Behavior** | Windows taskbar mode (hide completely, auto-hide, leave visible), dock auto-hide, bounce while opening, start with Windows, icons asking for attention (bounce / red dot / off, once / until opened), Windows notifications, unread counts |
 | **Dock items** | Pin list (drag to reorder, add an `.exe` or `.lnk`, remove, restore defaults), hidden apps, Recycle Bin options, the Explorer **Pin to Windock** menu |
 | **Launcher** | On/off, shortcut, number of results, also search files |

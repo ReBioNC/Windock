@@ -33,7 +33,9 @@ public static class SettingsJson
         var launcher = obj["launcher"] as JsonObject;
         var switcher = obj["switcher"] as JsonObject;
         var trash = obj["trash"] as JsonObject;
+        var island = obj["island"] as JsonObject;
         var ds = d.Status;
+        var di = d.Island;
 
         var settings = new DockSettings(
             Version: Get(obj, "version", d.Version),
@@ -97,6 +99,21 @@ public static class SettingsJson
                 ShowRecycleBin: Get(trash, "showRecycleBin", d.Trash.ShowRecycleBin),
                 ConfirmBeforeTrash: Get(trash, "confirmBeforeTrash", d.Trash.ConfirmBeforeTrash)),
             HiddenApps = ReadHiddenApps(obj["hiddenApps"] as JsonArray),
+            Island = new IslandSettings(
+                Enabled: Get(island, "enabled", di.Enabled),
+                Visibility: GetEnum(island, "visibility", di.Visibility),
+                ShowClock: Get(island, "showClock", di.ShowClock),
+                ShowDate: Get(island, "showDate", di.ShowDate),
+                ShowBattery: Get(island, "showBattery", di.ShowBattery),
+                Media: Get(island, "media", di.Media),
+                VolumeEvents: Get(island, "volumeEvents", di.VolumeEvents),
+                BrightnessEvents: Get(island, "brightnessEvents", di.BrightnessEvents),
+                BatteryEvents: Get(island, "batteryEvents", di.BatteryEvents),
+                DeviceEvents: Get(island, "deviceEvents", di.DeviceEvents),
+                ExpandOnHover: Get(island, "expandOnHover", di.ExpandOnHover),
+                EventSeconds: Get(island, "eventSeconds", di.EventSeconds),
+                Size: GetEnum(island, "size", di.Size),
+                UseDockColor: Get(island, "useDockColor", di.UseDockColor)),
         };
 
         return SettingsNormalizer.Normalize(settings);
@@ -180,6 +197,23 @@ public static class SettingsJson
             {
                 ["showRecycleBin"] = s.Trash.ShowRecycleBin,
                 ["confirmBeforeTrash"] = s.Trash.ConfirmBeforeTrash,
+            },
+            ["island"] = new JsonObject
+            {
+                ["enabled"] = s.Island.Enabled,
+                ["visibility"] = s.Island.Visibility.ToString(),
+                ["showClock"] = s.Island.ShowClock,
+                ["showDate"] = s.Island.ShowDate,
+                ["showBattery"] = s.Island.ShowBattery,
+                ["media"] = s.Island.Media,
+                ["volumeEvents"] = s.Island.VolumeEvents,
+                ["brightnessEvents"] = s.Island.BrightnessEvents,
+                ["batteryEvents"] = s.Island.BatteryEvents,
+                ["deviceEvents"] = s.Island.DeviceEvents,
+                ["expandOnHover"] = s.Island.ExpandOnHover,
+                ["eventSeconds"] = s.Island.EventSeconds,
+                ["size"] = s.Island.Size.ToString(),
+                ["useDockColor"] = s.Island.UseDockColor,
             },
             ["hiddenApps"] = new JsonArray(s.HiddenApps.Select(h => (JsonNode)new JsonObject { ["appId"] = h.AppId, ["name"] = h.Name }).ToArray()),
         };

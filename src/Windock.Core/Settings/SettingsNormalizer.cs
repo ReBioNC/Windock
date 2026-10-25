@@ -9,6 +9,7 @@ public static class SettingsNormalizer
     public const double MinOpacityWithoutBlur = 0.30;
     public const int MinCornerRadius = 0, MaxCornerRadius = 30;
     public const int MinLauncherResults = 5, MaxLauncherResults = 12;
+    public const int MinIslandEventSeconds = 1, MaxIslandEventSeconds = 5;
 
     public static DockSettings Normalize(DockSettings s)
     {
@@ -33,8 +34,9 @@ public static class SettingsNormalizer
             CornerRadius = Math.Clamp(t.CornerRadius, MinCornerRadius, MaxCornerRadius),
         };
         var launcher = s.Launcher with { MaxResults = Math.Clamp(s.Launcher.MaxResults, MinLauncherResults, MaxLauncherResults) };
+        var island = s.Island with { EventSeconds = Math.Clamp(s.Island.EventSeconds, MinIslandEventSeconds, MaxIslandEventSeconds) };
 
-        if (appearance == a && theme == t && launcher == s.Launcher) return s;
-        return s with { Appearance = appearance, Theme = theme, Launcher = launcher };
+        if (appearance == a && theme == t && launcher == s.Launcher && island == s.Island) return s;
+        return s with { Appearance = appearance, Theme = theme, Launcher = launcher, Island = island };
     }
 }
