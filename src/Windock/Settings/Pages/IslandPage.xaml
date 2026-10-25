@@ -38,7 +38,7 @@
                 <TextBlock Text="Activity" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
                 <StackPanel Grid.Column="1">
                     <CheckBox x:Name="Media" Content="Now playing (Spotify, browsers, media players)" />
-                    <TextBlock Style="{StaticResource Hint}" Margin="22,4,0,0" Text="Cover art and moving bars; open it for the title, progress and play/pause, previous and next." />
+                    <TextBlock Style="{StaticResource Hint}" Margin="22,4,0,0" Text="Cover art and moving bars in the pill, and a Music page in the open island (slide right from the clock) with the title, progress and play/pause, previous and next." />
                 </StackPanel>
             </Grid>
 

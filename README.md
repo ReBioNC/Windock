@@ -47,11 +47,11 @@ Windock replaces the Windows taskbar with a floating, blurred dock whose icons g
 
 **Dynamic Island** (top center of the screen)
 - A black pill with the clock, the date and the battery. Point at it and it springs open with the full date and battery time.
-- **Now playing** from Spotify, browsers and media players: cover art and moving bars; open it for the title, progress, and previous / play-pause / next. Click the cover to bring the player to the front.
+- **Now playing** from Spotify, browsers and media players: cover art and moving bars in the pill; the Music page has the title, progress, and previous / play-pause / next. Click the cover to bring the player to the front.
 - Short pop-ups for **volume**, **brightness** (laptop screen), **charger plugged in / out and low battery**, and **keyboard, mouse or monitor connected / disconnected**.
 - Slides up out of the way when a window covers it (e.g. a maximized browser) and comes back for pop-ups or when you touch the top edge above it. Can also stay on top always.
 - The clock, date and battery shown in the island leave the dock, so they are never shown twice.
-- More panels in the open island: click its left or right side (or scroll) to slide to **Devices** (keyboards, mice, displays, the current audio output and Bluetooth devices, with battery when reported) and **Weather** for your city (Open-Meteo, no account; only the city name and its coordinates are sent).
+- More panels in the open island: click its left or right side (or scroll) to slide to **Music** (the player controls, so the clock stays the main page), **Devices** (keyboards, mice, displays, the current audio output and Bluetooth devices, with battery when reported) and **Weather** for your city (Open-Meteo, no account; only the city name and its coordinates are sent).
 
 **Launcher** (`Alt+Space`)
 - Type an app name and press Enter to open it. It can also search files on the Desktop and in Documents.

@@ -120,7 +120,7 @@ public static class DeviceList
 
     public static IReadOnlyList<DeviceEntry> Build(IEnumerable<DeviceEntry> raw)
     {
-        var all = raw.Select(e => e.Kind == DeviceKind.Audio && e.Name is { } n ? e with { Name = AudioPrefix.Replace(n, "") } : e).ToList();
+        var all = raw.Select(e => e.Kind == DeviceKind.Audio && e.Name is { } n ? e with { Name = AudioName(n) } : e).ToList();
         var keyboards = Names(all, DeviceKind.Keyboard);
         var mice = Names(all, DeviceKind.Mouse);
         all.RemoveAll(e => e.Name is { } n && keyboards.Contains(n) && mice.Contains(n)
@@ -149,6 +149,16 @@ public static class DeviceList
     }
 
     private static readonly System.Text.RegularExpressions.Regex AudioPrefix = new(@"^\d+\s*-\s*");
+    /// The driver part Windows appends: "(AMD High Definition Audio Device)", "(Realtek(R) Audio)".
+    private static readonly System.Text.RegularExpressions.Regex AudioDriver =
+        new(@"\s*\((?:[^()]|\([^()]*\))*audio(?:[^()]|\([^()]*\))*\)\s*$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    private static string AudioName(string name)
+    {
+        var bare = AudioPrefix.Replace(name, "");
+        var trimmed = AudioDriver.Replace(bare, "");
+        return trimmed.Length > 0 ? trimmed : bare;
+    }
 
     private static HashSet<string> Names(IEnumerable<DeviceEntry> all, DeviceKind kind) =>
         all.Where(e => e.Kind == kind && !string.IsNullOrWhiteSpace(e.Name)).Select(e => e.Name!.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);

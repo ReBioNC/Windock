@@ -317,6 +317,7 @@ internal sealed class IslandController : IDisposable
     {
         var s = _settings.Current.Island;
         var list = new List<IslandPanel> { IslandPanel.Home };
+        if (s.Media) list.Add(IslandPanel.Music);
         if (s.DevicesPanel) list.Add(IslandPanel.Devices);
         if (s.WeatherPanel) list.Add(IslandPanel.Weather);
         return list;
@@ -419,12 +420,14 @@ internal sealed class IslandController : IDisposable
             StatusFormat.Clock(now, status.Clock24Hour, false),
             StatusFormat.LongDate(now),
             battery is { } bt ? StatusFormat.BatteryTooltip(bt.Percent, bt.Charging, bt.PluggedIn, bt.Remaining) : null,
-            _model.MediaActive ? _model.Media : null, _model.MediaActive ? _media?.Cover : null,
+            _model.Media, _model.Media is null ? null : _media?.Cover,
             _model.CurrentEvent,
             Panels(), _model.Page, _deviceList, WeatherState(settings.Island));
         _window.Render(view);
 
-        var progress = view is { Mode: IslandMode.Media, Expanded: true } && _media is not null;
+        // The progress bar moves only while the Music page is the one showing.
+        var progress = view.Expanded && _media is not null && view.Media is not null
+                       && view.Page < view.Panels.Count && view.Panels[view.Page] == IslandPanel.Music;
         if (progress) UpdateProgress();
         if (progress && view.Media?.Playing == true) _progressTimer.Start();
         else _progressTimer.Stop();

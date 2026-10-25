@@ -13,6 +13,7 @@ internal static class FullscreenDetector
         Native.GetWindowThreadProcessId(hwnd, out var pid);
         var m = info.rcMonitor;
         return FullscreenRule.IsFullscreenApp((r.Left, r.Top, r.Right, r.Bottom), (m.Left, m.Top, m.Right, m.Bottom),
-            Native.IsZoomed(hwnd), Native.IsWindowVisible(hwnd), Native.ClassName(hwnd), pid == Environment.ProcessId);
+            Native.IsZoomed(hwnd), Native.IsWindowVisible(hwnd), Native.ClassName(hwnd), pid == Environment.ProcessId,
+            (Native.ExStyle(hwnd) & Native.WS_EX_LAYERED) != 0);
     }
 }

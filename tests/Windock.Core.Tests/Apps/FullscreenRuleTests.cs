@@ -34,4 +34,8 @@ public class FullscreenRuleTests
         Assert.False(Check((0, 0, 1920, 1080), own: true));
         Assert.False(Check((0, 0, 1920, 1080), visible: false));
     }
+
+    [Fact]
+    public void A_see_through_screen_capture_overlay_is_not_fullscreen() =>
+        Assert.False(FullscreenRule.IsFullscreenApp((0, 0, 1920, 1080), Monitor, false, true, "WinUIDesktopWin32WindowClass", false, isLayered: true));
 }

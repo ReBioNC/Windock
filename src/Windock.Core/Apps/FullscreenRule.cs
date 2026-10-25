@@ -10,10 +10,12 @@ public static class FullscreenRule
 
     /// Rectangles in screen pixels. A maximized window is never fullscreen: when the dock auto-hides
     /// the work area is the whole monitor, so maximized windows cover it too (v0.5.0 bug).
+    /// A layered (see-through) window is never fullscreen either: screen-capture overlays (Snip & Sketch,
+    /// Win+Shift+S tools) cover the monitor that way, and the dock must stay in the screenshot.
     public static bool IsFullscreenApp((int Left, int Top, int Right, int Bottom) window, (int Left, int Top, int Right, int Bottom) monitor,
-        bool isMaximized, bool isVisible, string className, bool isOwnProcess)
+        bool isMaximized, bool isVisible, string className, bool isOwnProcess, bool isLayered = false)
     {
-        if (!isVisible || isMaximized || isOwnProcess || ShellClasses.Contains(className)) return false;
+        if (!isVisible || isMaximized || isOwnProcess || isLayered || ShellClasses.Contains(className)) return false;
         return window.Left <= monitor.Left && window.Top <= monitor.Top && window.Right >= monitor.Right && window.Bottom >= monitor.Bottom;
     }
 }

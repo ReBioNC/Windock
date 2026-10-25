@@ -142,7 +142,7 @@ public class IslandPanelsTests
     }
 
     [Fact]
-    public void Only_the_current_audio_output_is_listed_without_its_number()
+    public void Only_the_current_audio_output_is_listed_without_its_number_or_driver()
     {
         var list = DeviceList.Build(new[]
         {
@@ -151,7 +151,7 @@ public class IslandPanelsTests
             new DeviceEntry(DeviceKind.Audio, "AI Noise-cancelling Output (ASUS Utility)"),
         });
 
-        Assert.Equal("Mi Monitor (AMD High Definition Audio Device)", Assert.Single(list).Name);
+        Assert.Equal("Mi Monitor", Assert.Single(list).Name);
     }
 
     [Fact]
