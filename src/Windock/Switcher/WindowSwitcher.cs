@@ -162,7 +162,7 @@ internal sealed class WindowSwitcher : IDisposable
         _log.Info($"Alt+Tab: picked {_selected} of {_shown.Count}");
         Close();
         if (target == IntPtr.Zero) return;
-        if (Native.IsIconic(target)) Native.ShowWindow(target, Native.SW_RESTORE);
+        Native.Restore(target);
         if (!BringToFront(target)) _log.Info($"Alt+Tab could not focus 0x{target:X} '{Native.WindowText(target)}'");
     }
 

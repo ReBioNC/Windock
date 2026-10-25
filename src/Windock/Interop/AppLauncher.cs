@@ -22,7 +22,7 @@ internal sealed class AppLauncher(ILog log, Action<string, string> notifyError)
                 Activate(activate.Hwnd);
                 break;
             case ClickAction.Minimize minimize:
-                Native.ShowWindow(minimize.Hwnd, Native.SW_MINIMIZE);
+                Native.Minimize(minimize.Hwnd);
                 break;
             case ClickAction.OpenRecycleBin:
                 Start("explorer.exe", "shell:RecycleBinFolder");
@@ -32,7 +32,7 @@ internal sealed class AppLauncher(ILog log, Action<string, string> notifyError)
 
     public void Activate(IntPtr hwnd)
     {
-        if (Native.IsIconic(hwnd)) Native.ShowWindow(hwnd, Native.SW_RESTORE);
+        Native.Restore(hwnd);
         if (!Native.SetForegroundWindow(hwnd)) log.Info($"SetForegroundWindow refused for 0x{hwnd:X}");
     }
 

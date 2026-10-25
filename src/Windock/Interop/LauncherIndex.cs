@@ -27,6 +27,7 @@ internal static class LauncherIndex
                 AddApps(list);
                 log($"launcher index: {list.Count} apps in shell:AppsFolder");
                 AddStartMenuShortcuts(list, log);
+                AddSelf(list);
                 if (includeFiles) AddFiles(list);
                 done.SetResult(list);
             }
@@ -102,6 +103,15 @@ internal static class LauncherIndex
             }
             log($"launcher index: {list.Count - before} shortcuts in {folder}");
         }
+    }
+
+    /// Windock itself, even when its Start Menu shortcuts were missed or never made (run from source).
+    /// Starting it again opens Settings; search drops the duplicate when a shortcut has the same name.
+    private static void AddSelf(List<LauncherEntry> list)
+    {
+        if (Environment.ProcessPath is not { } exe) return;
+        list.Add(new LauncherEntry("Windock", exe, LauncherEntryKind.App));
+        list.Add(new LauncherEntry("Windock Settings", exe, LauncherEntryKind.App));
     }
 
     private static void AddFiles(List<LauncherEntry> list)

@@ -15,6 +15,7 @@ internal static class Native
 
     // ShowWindow
     public const int SW_HIDE = 0, SW_SHOWNOACTIVATE = 4, SW_SHOW = 5, SW_MINIMIZE = 6, SW_RESTORE = 9;
+    public const int WM_SYSCOMMAND = 0x0112, SC_MINIMIZE = 0xF020, SC_RESTORE = 0xF120;
 
     // SetWindowPos
     public const uint SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOZORDER = 0x0004, SWP_NOACTIVATE = 0x0010, SWP_SHOWWINDOW = 0x0040, SWP_HIDEWINDOW = 0x0080;
@@ -179,6 +180,21 @@ internal static class Native
     }
 
     public static long ExStyle(IntPtr hWnd) => GetWindowLongPtr(hWnd, GWL_EXSTYLE).ToInt64();
+
+    /// Some windows (Task Manager) ignore ShowWindow from another process; the minimize/restore command the
+    /// taskbar sends works for them. ShowWindow goes first because it also works on hung windows.
+    public static void Minimize(IntPtr hWnd)
+    {
+        ShowWindow(hWnd, SW_MINIMIZE);
+        if (!IsIconic(hWnd)) PostMessage(hWnd, WM_SYSCOMMAND, (IntPtr)SC_MINIMIZE, IntPtr.Zero);
+    }
+
+    public static void Restore(IntPtr hWnd)
+    {
+        if (!IsIconic(hWnd)) return;
+        ShowWindow(hWnd, SW_RESTORE);
+        if (IsIconic(hWnd)) PostMessage(hWnd, WM_SYSCOMMAND, (IntPtr)SC_RESTORE, IntPtr.Zero);
+    }
 
     public static void AddExStyle(IntPtr hWnd, long bits) => SetWindowLongPtr(hWnd, GWL_EXSTYLE, new IntPtr(ExStyle(hWnd) | bits));
 
