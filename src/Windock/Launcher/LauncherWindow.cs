@@ -148,14 +148,14 @@ internal sealed class LauncherWindow : Window
         _placeholder.VerticalAlignment = VerticalAlignment.Center;
 
         var row = new DockPanel { Margin = new Thickness(16, 12, 12, 12) };
-        var glyph = new TextBlock { Text = "", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 16, Foreground = Brushes.White, Opacity = 0.7, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
+        var glyph = new TextBlock { Text = "", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 16, Foreground = Brushes.White, Opacity = 0.7, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
         DockPanel.SetDock(glyph, System.Windows.Controls.Dock.Left);
         row.Children.Add(glyph);
         if (IsGrid)
         {
             var gear = new Button
             {
-                Content = new TextBlock { Text = "", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14, Foreground = Brushes.White },
+                Content = new TextBlock { Text = "", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 14, Foreground = Brushes.White },
                 ToolTip = "Launcher settings", Background = Brushes.Transparent, BorderThickness = new Thickness(0), Padding = new Thickness(8, 4, 8, 4),
                 Cursor = Cursors.Hand, Focusable = false, Opacity = 0.7,
             };
