@@ -25,6 +25,12 @@ internal partial class IslandPage : UserControl
         PageSync.OnToggle(ExpandOnHover, on => Edit(s => s with { ExpandOnHover = on }));
         PageSync.OnToggle(Mascot, on => Edit(s => s with { Mascot = on }));
         PageSync.OnToggle(Lyrics, on => Edit(s => s with { Lyrics = on }));
+        PageSync.OnToggle(FocusPanel, on => Edit(s => s with { FocusPanel = on }));
+        PageSync.OnToggle(FocusSound, on => Edit(s => s with { FocusSound = on }));
+        FocusMinutes.ValueChanged += (_, e) => Edit(s => s with { FocusMinutes = (int)Math.Round(e.NewValue) });
+        ShortBreak.ValueChanged += (_, e) => Edit(s => s with { ShortBreakMinutes = (int)Math.Round(e.NewValue) });
+        LongBreak.ValueChanged += (_, e) => Edit(s => s with { LongBreakMinutes = (int)Math.Round(e.NewValue) });
+        FocusSessions.ValueChanged += (_, e) => Edit(s => s with { FocusSessions = (int)Math.Round(e.NewValue) });
         AutoHide.Checked += (_, _) => Edit(s => s with { Visibility = IslandVisibility.AutoHide });
         Always.Checked += (_, _) => Edit(s => s with { Visibility = IslandVisibility.Always });
         Small.Checked += (_, _) => Edit(s => s with { Size = IslandSize.Small });
@@ -72,6 +78,13 @@ internal partial class IslandPage : UserControl
         Mascot.IsChecked = s.Mascot;
         Lyrics.IsChecked = s.Lyrics;
         Lyrics.IsEnabled = s.Media;
+        FocusPanel.IsChecked = s.FocusPanel;
+        FocusOptions.IsEnabled = s.FocusPanel;
+        FocusMinutes.Value = s.FocusMinutes;
+        ShortBreak.Value = s.ShortBreakMinutes;
+        LongBreak.Value = s.LongBreakMinutes;
+        FocusSessions.Value = s.FocusSessions;
+        FocusSound.IsChecked = s.FocusSound;
         EventSeconds.Value = s.EventSeconds;
         Small.IsChecked = s.Size == IslandSize.Small;
         Medium.IsChecked = s.Size == IslandSize.Medium;

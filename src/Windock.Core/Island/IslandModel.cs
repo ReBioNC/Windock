@@ -2,7 +2,7 @@ using Windock.Core.Abstractions;
 
 namespace Windock.Core.Island;
 
-public enum IslandEventKind { Volume, Brightness, Battery, Device }
+public enum IslandEventKind { Volume, Brightness, Battery, Device, Focus }
 
 /// A short pop-up in the island. Level (0..1) draws a bar (volume, brightness); Detail is right-aligned text.
 public sealed record IslandEvent(IslandEventKind Kind, string Glyph, string Text, double? Level = null, string? Detail = null)

@@ -17,6 +17,9 @@ internal sealed partial class IslandWindow
     private const double ProgressWidth = 420, ProgressWidthWithLyrics = 170;
     private const string LyricsGlyph = "\uE8F2";
     private static readonly Brush LyricDim = Frozen(Color.FromRgb(0x5A, 0x5A, 0x5A));
+    private static readonly Brush Lavender = Frozen(Color.FromRgb(0xAF, 0xA9, 0xEC));
+    private static readonly Brush FocusButton = Frozen(Color.FromRgb(0x3C, 0x34, 0x89));
+    private const double RingSize = 72, RingStroke = 6;
     private const int MaxDeviceRows = 6;
     private static readonly Brush Secondary = Frozen(Color.FromRgb(0xA8, 0xA8, 0xA8));
     private static readonly Brush Track = Frozen(Color.FromArgb(0x55, 0xFF, 0xFF, 0xFF));
@@ -35,6 +38,8 @@ internal sealed partial class IslandWindow
     private IReadOnlyList<LyricLine>? _lyricLines;
     private readonly TextBlock[] _lyricBlocks = new TextBlock[4];
     private int _lyricIndex = int.MinValue;
+    private TextBlock? _focusCompactText, _focusPageText;
+    private Path? _focusArc;
 
     // ---- compact ----
 
@@ -44,6 +49,7 @@ internal sealed partial class IslandWindow
         return v.Mode switch
         {
             IslandMode.Event when v.Event is { } e => EventRow(e),
+            _ when v.Focus is { Running: true } focus => FocusRow(focus, v.Mood),
             IslandMode.Media when v.Media is { } m => MediaRow(m, v.Cover, v.Mood),
             _ => IdleRow(v),
         };
@@ -112,7 +118,99 @@ internal sealed partial class IslandWindow
         return row;
     }
 
+    /// A running focus timer takes the pill: stopwatch and countdown (lavender while focusing, green on a break).
+    private FrameworkElement FocusRow(FocusView focus, WadoMood? mood)
+    {
+        var row = Row();
+        row.Children.Add(Glyph("\uE916", 15, focus.Phase == FocusPhase.Focus ? Lavender : Accent));
+        _focusCompactText = Text("", 13, FontWeights.SemiBold);
+        row.Children.Add(Spaced(_focusCompactText, row, 10));
+        if (mood is { } wado) row.Children.Add(Spaced(new WadoMascot(wado, 24), row, 12));
+        return row;
+    }
+
     // ---- pages ----
+
+    private FrameworkElement FocusPage(FocusView focus)
+    {
+        var panel = new DockPanel { Margin = new Thickness(14, 4, 14, 6) };
+        var ring = new Grid { Width = RingSize, Height = RingSize, Margin = new Thickness(0, 0, 18, 0), VerticalAlignment = VerticalAlignment.Center };
+        ring.Children.Add(new Ellipse { Stroke = TabSelected, StrokeThickness = RingStroke });
+        _focusArc = new Path
+        {
+            Stroke = focus.Phase == FocusPhase.Focus ? Lavender : Accent, StrokeThickness = RingStroke,
+            StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round,
+        };
+        ring.Children.Add(_focusArc);
+        ring.Children.Add(new TextBlock
+        {
+            Text = "\uE916", FontFamily = Icons, FontSize = 20, Foreground = focus.Phase == FocusPhase.Focus ? Lavender : Accent,
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+        });
+        DockPanel.SetDock(ring, System.Windows.Controls.Dock.Left);
+        panel.Children.Add(ring);
+
+        var column = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        var title = focus.Phase switch
+        {
+            FocusPhase.ShortBreak => "Short break",
+            FocusPhase.LongBreak => "Long break",
+            _ => $"Focus session {focus.Session} of {focus.Sessions}",
+        };
+        column.Children.Add(Text(title, 12, brush: Secondary));
+        _focusPageText = Text("", 30, FontWeights.Light);
+        column.Children.Add(_focusPageText);
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 0) };
+        buttons.Children.Add(PillButton(focus.Running ? "\uE769  Pause" : "\uE768  Start", FocusButton, () => FocusStartPause?.Invoke()));
+        buttons.Children.Add(PillButton("\uE72C  Reset", Tile, () => FocusReset?.Invoke()));
+        buttons.Children.Add(PillButton(focus.Phase == FocusPhase.Focus ? $"\uE7F6  {focus.NextBreakMinutes} min break" : "\uE893  Skip break", Tile, () => FocusBreak?.Invoke()));
+        column.Children.Add(buttons);
+        panel.Children.Add(column);
+        return panel;
+    }
+
+    /// A rounded text button; text may start with a Segoe MDL2 glyph.
+    private static Border PillButton(string text, Brush background, Action click)
+    {
+        var label = new TextBlock { FontSize = 12, Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center };
+        var glyphEnd = text.IndexOf("  ", StringComparison.Ordinal);
+        if (glyphEnd > 0)
+        {
+            label.Inlines.Add(new System.Windows.Documents.Run(text[..glyphEnd]) { FontFamily = Icons, FontSize = 11 });
+            label.Inlines.Add(new System.Windows.Documents.Run(text[glyphEnd..]));
+        }
+        else label.Text = text;
+        var button = new Border
+        {
+            Child = label, Background = background, CornerRadius = new CornerRadius(13), Padding = new Thickness(12, 5, 12, 5),
+            Margin = new Thickness(0, 0, 8, 0), Cursor = Cursors.Hand,
+        };
+        button.MouseEnter += (_, _) => button.Opacity = 0.85;
+        button.MouseLeave += (_, _) => button.Opacity = 1;
+        button.MouseLeftButtonUp += (_, e) => { e.Handled = true; click(); };
+        return button;
+    }
+
+    /// The countdown in the pill and on the Focus page, and the ring (called each second while running).
+    public void UpdateFocus(TimeSpan remaining, double progress)
+    {
+        var text = remaining.TotalHours >= 1 ? remaining.ToString(@"h\:mm\:ss") : $"{(int)remaining.TotalMinutes:00}:{remaining.Seconds:00}";
+        if (_focusCompactText is not null) _focusCompactText.Text = text;
+        if (_focusPageText is not null) _focusPageText.Text = text;
+        if (_focusArc is not null) _focusArc.Data = RingArc(progress);
+    }
+
+    private static Geometry? RingArc(double progress)
+    {
+        const double r = (RingSize - RingStroke) / 2, c = RingSize / 2;
+        if (progress <= 0.001) return null;
+        if (progress >= 0.999) return new EllipseGeometry(new Point(c, c), r, r);
+        var angle = progress * 2 * Math.PI;
+        var end = new Point(c + r * Math.Sin(angle), c - r * Math.Cos(angle));
+        var figure = new PathFigure { StartPoint = new Point(c, c - r), IsClosed = false };
+        figure.Segments.Add(new ArcSegment(end, new Size(r, r), 0, progress > 0.5, SweepDirection.Clockwise, true));
+        return new PathGeometry(new[] { figure });
+    }
 
     private static FrameworkElement IdleCard(IslandView v)
     {
@@ -365,6 +463,8 @@ internal sealed partial class IslandWindow
         _progressText = _durationText = null;
         _lyricLines = null;
         Array.Clear(_lyricBlocks);
+        _focusCompactText = _focusPageText = null;
+        _focusArc = null;
     }
 
     private static Border ControlButton(string glyph, double size, Action click)

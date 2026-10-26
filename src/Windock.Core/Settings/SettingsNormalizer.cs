@@ -44,6 +44,10 @@ public static class SettingsNormalizer
         {
             EventSeconds = Math.Clamp(s.Island.EventSeconds, MinIslandEventSeconds, MaxIslandEventSeconds),
             City = (s.Island.City ?? "").Trim(),
+            FocusMinutes = Math.Clamp(s.Island.FocusMinutes, 5, 90),
+            ShortBreakMinutes = Math.Clamp(s.Island.ShortBreakMinutes, 1, 30),
+            LongBreakMinutes = Math.Clamp(s.Island.LongBreakMinutes, 5, 60),
+            FocusSessions = Math.Clamp(s.Island.FocusSessions, 2, 8),
         };
 
         if (appearance == a && theme == t && launcher == s.Launcher && island == s.Island) return s;

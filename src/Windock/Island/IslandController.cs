@@ -44,6 +44,8 @@ internal sealed class IslandController : IDisposable
     private IDisposable? _burstTimer, _hoverTimer;
     private readonly WeatherService _weather;
     private readonly LyricsService _lyrics;
+    private readonly FocusTimer _focus;
+    private readonly DispatcherTimer _focusTick;
     private IReadOnlyList<DeviceEntry>? _deviceList;
     private bool _devicesReading, _devicesDirty = true;
     /// City text the geocoder did not find (so it is not asked again until the setting changes).
@@ -74,6 +76,13 @@ internal sealed class IslandController : IDisposable
         _weather.Changed += Render;
         _lyrics = new LyricsService(log);
         _lyrics.Changed += Render;
+        _focus = new FocusTimer(() =>
+        {
+            var s = _settings.Current.Island;
+            return new FocusDurations(s.FocusMinutes, s.ShortBreakMinutes, s.LongBreakMinutes, s.FocusSessions);
+        });
+        _focusTick = new DispatcherTimer(DispatcherPriority.Background, ui) { Interval = TimeSpan.FromSeconds(1) };
+        _focusTick.Tick += (_, _) => OnFocusTick();
         _model.Changed += OnModelChanged;
         _clockTimer = new DispatcherTimer(DispatcherPriority.Background, ui);
         _clockTimer.Tick += (_, _) => OnClockTick();
@@ -117,6 +126,22 @@ internal sealed class IslandController : IDisposable
             _window.PreviousClicked += () => _media?.Previous();
             _window.PageTurnRequested += delta => _model.TurnPage(delta, Panels().Count);
             _window.TabClicked += page => _model.GoToPage(page, Panels().Count);
+            _window.FocusStartPause += () =>
+            {
+                if (_focus.Running) _focus.Pause(DateTime.Now);
+                else _focus.Start(DateTime.Now);
+                SyncFocusTick();
+            };
+            _window.FocusReset += () =>
+            {
+                _focus.Reset();
+                SyncFocusTick();
+            };
+            _window.FocusBreak += () =>
+            {
+                _focus.BreakOrSkip(DateTime.Now);
+                SyncFocusTick();
+            };
             _window.LyricsToggled += () => _settings.Update(x => x with { Island = x.Island with { Lyrics = !x.Island.Lyrics } });
             if (!_suppressed) _window.Show();
             _log.Info("dynamic island on");
@@ -127,6 +152,9 @@ internal sealed class IslandController : IDisposable
             : System.Windows.Media.Colors.Black;
         _window.SetAppearance(scale, color);
         if (!s.ExpandOnHover) _model.Collapse();
+        _focus.DurationsChanged();
+        if (!s.FocusPanel && _focus.Running) _focus.Reset();
+        SyncFocusTick();
 
         SyncSources(s);
         ScheduleClock();
@@ -218,6 +246,7 @@ internal sealed class IslandController : IDisposable
         IslandEventKind.Volume => s.VolumeEvents,
         IslandEventKind.Brightness => s.BrightnessEvents,
         IslandEventKind.Battery => s.BatteryEvents,
+        IslandEventKind.Focus => true,
         _ => s.DeviceEvents,
     };
 
@@ -339,6 +368,7 @@ internal sealed class IslandController : IDisposable
         if (s.Media) list.Add(IslandPanel.Music);
         if (s.DevicesPanel) list.Add(IslandPanel.Devices);
         if (s.WeatherPanel) list.Add(IslandPanel.Weather);
+        if (s.FocusPanel) list.Add(IslandPanel.Focus);
         return list;
     }
 
@@ -443,9 +473,16 @@ internal sealed class IslandController : IDisposable
             _model.CurrentEvent,
             Panels(), _model.Page, _deviceList, WeatherState(settings.Island),
             battery?.Charging == true,
-            settings.Island.Mascot ? WadoRules.Mood(_model.Media?.Playing == true, focusRunning: false, DateTime.Now < _happyUntil, now) : null,
-            LyricsState(settings.Island));
+            settings.Island.Mascot
+                ? WadoRules.Mood(_model.Media?.Playing == true, _focus.Running && _focus.Phase == FocusPhase.Focus, DateTime.Now < _happyUntil, now)
+                : null,
+            LyricsState(settings.Island),
+            settings.Island.FocusPanel
+                ? new FocusView(_focus.Phase, _focus.Session, _focus.Sessions, _focus.Running,
+                    _focus.NextBreak == FocusPhase.LongBreak ? settings.Island.LongBreakMinutes : settings.Island.ShortBreakMinutes)
+                : null);
         _window.Render(view);
+        _window.UpdateFocus(_focus.Remaining(now), _focus.Progress(now));
 
         // The progress bar moves only while the Music page is the one showing; with lyrics it checks 4x a second.
         var progress = view.Expanded && _media is not null && view.Media is not null
@@ -454,6 +491,31 @@ internal sealed class IslandController : IDisposable
         if (progress) UpdateProgress();
         if (progress && view.Media?.Playing == true) _progressTimer.Start();
         else _progressTimer.Stop();
+    }
+
+    private void SyncFocusTick()
+    {
+        if (_focus.Running && _window is not null) _focusTick.Start();
+        else _focusTick.Stop();
+        Render();
+    }
+
+    private void OnFocusTick()
+    {
+        var now = DateTime.Now;
+        if (_focus.Tick(now) is { } ended)
+        {
+            var s = _settings.Current.Island;
+            var next = _focus.Phase == FocusPhase.LongBreak ? s.LongBreakMinutes : s.ShortBreakMinutes;
+            Show(ended == FocusPhase.Focus
+                ? new IslandEvent(IslandEventKind.Focus, "\uE916", "Focus session done", Detail: $"{next} min break")
+                : new IslandEvent(IslandEventKind.Focus, "\uE916", "Break over", Detail: "Ready to focus"));
+            if (s.FocusSound) System.Media.SystemSounds.Asterisk.Play();
+            MakeHappy();
+            SyncFocusTick();
+            return;
+        }
+        _window?.UpdateFocus(_focus.Remaining(now), _focus.Progress(now));
     }
 
     /// Lyrics are looked up only while the card is open (and the lyrics are shown).

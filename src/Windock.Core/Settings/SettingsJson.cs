@@ -130,7 +130,13 @@ public static class SettingsJson
                 Unit: GetEnum(island, "unit", di.Unit),
                 Place: ReadPlace(island?["place"] as JsonObject),
                 Mascot: Get(island, "mascot", di.Mascot),
-                Lyrics: Get(island, "lyrics", di.Lyrics)),
+                Lyrics: Get(island, "lyrics", di.Lyrics),
+                FocusPanel: Get(island, "focusPanel", di.FocusPanel),
+                FocusMinutes: Get(island, "focusMinutes", di.FocusMinutes),
+                ShortBreakMinutes: Get(island, "shortBreakMinutes", di.ShortBreakMinutes),
+                LongBreakMinutes: Get(island, "longBreakMinutes", di.LongBreakMinutes),
+                FocusSessions: Get(island, "focusSessions", di.FocusSessions),
+                FocusSound: Get(island, "focusSound", di.FocusSound)),
         };
 
         return SettingsNormalizer.Normalize(settings);
@@ -248,6 +254,12 @@ public static class SettingsJson
                     : null,
                 ["mascot"] = s.Island.Mascot,
                 ["lyrics"] = s.Island.Lyrics,
+                ["focusPanel"] = s.Island.FocusPanel,
+                ["focusMinutes"] = s.Island.FocusMinutes,
+                ["shortBreakMinutes"] = s.Island.ShortBreakMinutes,
+                ["longBreakMinutes"] = s.Island.LongBreakMinutes,
+                ["focusSessions"] = s.Island.FocusSessions,
+                ["focusSound"] = s.Island.FocusSound,
             },
             ["hiddenApps"] = new JsonArray(s.HiddenApps.Select(h => (JsonNode)new JsonObject { ["appId"] = h.AppId, ["name"] = h.Name }).ToArray()),
         };

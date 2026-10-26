@@ -50,10 +50,29 @@
                 <TextBlock Text="More panels" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
                 <StackPanel Grid.Column="1">
                     <CheckBox x:Name="DevicesPanel" Content="Devices (keyboards, mice, displays, audio, Bluetooth)" Margin="0,0,0,8" />
-                    <CheckBox x:Name="WeatherPanel" Content="Weather (from Open-Meteo, needs internet)" />
+                    <CheckBox x:Name="WeatherPanel" Content="Weather (from Open-Meteo, needs internet)" Margin="0,0,0,8" />
+                    <CheckBox x:Name="FocusPanel" Content="Focus timer (pomodoro)" />
                     <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"
                                Text="With the island open, click an icon in its tab bar, swipe left or right with two fingers on the touchpad, or scroll to switch panels. The dots at the bottom show where you are. Bluetooth devices show their battery when they report it." />
                 </StackPanel>
+            </Grid>
+
+            <Grid x:Name="FocusOptions" Style="{StaticResource Row}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /><ColumnDefinition Width="60" /></Grid.ColumnDefinitions>
+                <Grid.RowDefinitions><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /></Grid.RowDefinitions>
+                <TextBlock Text="Focus timer" Style="{StaticResource Label}" />
+                <Slider x:Name="FocusMinutes" Grid.Column="1" Minimum="5" Maximum="90" IsSnapToTickEnabled="True" TickFrequency="5" />
+                <TextBlock Grid.Column="2" Style="{StaticResource Label}" HorizontalAlignment="Right" Text="{Binding Value, ElementName=FocusMinutes, StringFormat={}{0} min}" />
+                <TextBlock Grid.Row="1" Text="Short break" Style="{StaticResource Label}" Margin="0,8,0,0" />
+                <Slider x:Name="ShortBreak" Grid.Row="1" Grid.Column="1" Minimum="1" Maximum="30" IsSnapToTickEnabled="True" TickFrequency="1" Margin="0,8,0,0" />
+                <TextBlock Grid.Row="1" Grid.Column="2" Style="{StaticResource Label}" HorizontalAlignment="Right" Margin="0,8,0,0" Text="{Binding Value, ElementName=ShortBreak, StringFormat={}{0} min}" />
+                <TextBlock Grid.Row="2" Text="Long break" Style="{StaticResource Label}" Margin="0,8,0,0" />
+                <Slider x:Name="LongBreak" Grid.Row="2" Grid.Column="1" Minimum="5" Maximum="60" IsSnapToTickEnabled="True" TickFrequency="5" Margin="0,8,0,0" />
+                <TextBlock Grid.Row="2" Grid.Column="2" Style="{StaticResource Label}" HorizontalAlignment="Right" Margin="0,8,0,0" Text="{Binding Value, ElementName=LongBreak, StringFormat={}{0} min}" />
+                <TextBlock Grid.Row="3" Text="Sessions per round" Style="{StaticResource Label}" Margin="0,8,0,0" />
+                <Slider x:Name="FocusSessions" Grid.Row="3" Grid.Column="1" Minimum="2" Maximum="8" IsSnapToTickEnabled="True" TickFrequency="1" Margin="0,8,0,0" />
+                <TextBlock Grid.Row="3" Grid.Column="2" Style="{StaticResource Label}" HorizontalAlignment="Right" Margin="0,8,0,0" Text="{Binding Value, ElementName=FocusSessions}" />
+                <CheckBox x:Name="FocusSound" Grid.Row="4" Grid.Column="1" Content="Play a sound when a session or break ends" Margin="0,8,0,0" />
             </Grid>
 
             <Grid x:Name="WeatherOptions" Style="{StaticResource Row}">
