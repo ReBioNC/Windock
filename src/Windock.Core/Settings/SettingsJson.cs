@@ -129,7 +129,8 @@ public static class SettingsJson
                 City: GetString(island, "city") ?? di.City,
                 Unit: GetEnum(island, "unit", di.Unit),
                 Place: ReadPlace(island?["place"] as JsonObject),
-                Mascot: Get(island, "mascot", di.Mascot)),
+                Mascot: Get(island, "mascot", di.Mascot),
+                Lyrics: Get(island, "lyrics", di.Lyrics)),
         };
 
         return SettingsNormalizer.Normalize(settings);
@@ -246,6 +247,7 @@ public static class SettingsJson
                     ? new JsonObject { ["query"] = place.Query, ["name"] = place.Name, ["latitude"] = place.Latitude, ["longitude"] = place.Longitude }
                     : null,
                 ["mascot"] = s.Island.Mascot,
+                ["lyrics"] = s.Island.Lyrics,
             },
             ["hiddenApps"] = new JsonArray(s.HiddenApps.Select(h => (JsonNode)new JsonObject { ["appId"] = h.AppId, ["name"] = h.Name }).ToArray()),
         };

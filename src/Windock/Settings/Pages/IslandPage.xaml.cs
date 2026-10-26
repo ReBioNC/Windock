@@ -24,6 +24,7 @@ internal partial class IslandPage : UserControl
         PageSync.OnToggle(Devices, on => Edit(s => s with { DeviceEvents = on }));
         PageSync.OnToggle(ExpandOnHover, on => Edit(s => s with { ExpandOnHover = on }));
         PageSync.OnToggle(Mascot, on => Edit(s => s with { Mascot = on }));
+        PageSync.OnToggle(Lyrics, on => Edit(s => s with { Lyrics = on }));
         AutoHide.Checked += (_, _) => Edit(s => s with { Visibility = IslandVisibility.AutoHide });
         Always.Checked += (_, _) => Edit(s => s with { Visibility = IslandVisibility.Always });
         Small.Checked += (_, _) => Edit(s => s with { Size = IslandSize.Small });
@@ -69,6 +70,8 @@ internal partial class IslandPage : UserControl
         Devices.IsChecked = s.DeviceEvents;
         ExpandOnHover.IsChecked = s.ExpandOnHover;
         Mascot.IsChecked = s.Mascot;
+        Lyrics.IsChecked = s.Lyrics;
+        Lyrics.IsEnabled = s.Media;
         EventSeconds.Value = s.EventSeconds;
         Small.IsChecked = s.Size == IslandSize.Small;
         Medium.IsChecked = s.Size == IslandSize.Medium;

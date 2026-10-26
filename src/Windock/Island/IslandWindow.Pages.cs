@@ -14,7 +14,9 @@ namespace Windock.Island;
 internal sealed partial class IslandWindow
 {
     private const string Bolt = "";
-    private const double ProgressWidth = 420;
+    private const double ProgressWidth = 420, ProgressWidthWithLyrics = 170;
+    private const string LyricsGlyph = "\uE8F2";
+    private static readonly Brush LyricDim = Frozen(Color.FromRgb(0x5A, 0x5A, 0x5A));
     private const int MaxDeviceRows = 6;
     private static readonly Brush Secondary = Frozen(Color.FromRgb(0xA8, 0xA8, 0xA8));
     private static readonly Brush Track = Frozen(Color.FromArgb(0x55, 0xFF, 0xFF, 0xFF));
@@ -29,6 +31,10 @@ internal sealed partial class IslandWindow
     private Storyboard? _bars;
     private Border? _progressFill;
     private TextBlock? _progressText, _durationText;
+    private double _progressWidth = ProgressWidth;
+    private IReadOnlyList<LyricLine>? _lyricLines;
+    private readonly TextBlock[] _lyricBlocks = new TextBlock[4];
+    private int _lyricIndex = int.MinValue;
 
     // ---- compact ----
 
@@ -125,7 +131,7 @@ internal sealed partial class IslandWindow
 
     private FrameworkElement MusicPage(IslandView v)
     {
-        if (v.Media is { } m) return MediaCard(m, v.Cover);
+        if (v.Media is { } m) return v.Lyrics.Show ? MediaCardWithLyrics(m, v.Cover, v.Lyrics) : MediaCard(m, v.Cover);
         var panel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(14, 10, 14, 6) };
         panel.Children.Add(Cover(null, 56, 12));
         var text = new StackPanel { Margin = new Thickness(14, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
@@ -138,6 +144,7 @@ internal sealed partial class IslandWindow
     private FrameworkElement MediaCard(MediaState m, ImageSource? cover)
     {
         var panel = new StackPanel { Margin = new Thickness(14, 6, 14, 4) };
+        _progressWidth = ProgressWidth;
 
         var top = new DockPanel();
         var art = Cover(cover, 56, 12);
@@ -145,6 +152,7 @@ internal sealed partial class IslandWindow
         DockPanel.SetDock(art, System.Windows.Controls.Dock.Left);
         top.Children.Add(art);
         var controls = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        controls.Children.Add(LyricsButton(on: false));
         controls.Children.Add(ControlButton(IslandGlyphs.Previous, 16, () => PreviousClicked?.Invoke()));
         controls.Children.Add(ControlButton(m.Playing ? IslandGlyphs.Pause : IslandGlyphs.Play, 20, () => PlayPauseClicked?.Invoke()));
         controls.Children.Add(ControlButton(IslandGlyphs.Next, 16, () => NextClicked?.Invoke()));
@@ -158,20 +166,100 @@ internal sealed partial class IslandWindow
         top.Children.Add(titles);
         panel.Children.Add(top);
 
-        var progress = new DockPanel { Margin = new Thickness(0, 12, 0, 0) };
+        panel.Children.Add(ProgressRow(new Thickness(0, 12, 0, 0)));
+        return panel;
+    }
+
+    /// Player at the left, the lyrics around the current line at the right.
+    private FrameworkElement MediaCardWithLyrics(MediaState m, ImageSource? cover, LyricsView lyrics)
+    {
+        _progressWidth = ProgressWidthWithLyrics;
+        var grid = new Grid { Margin = new Thickness(14, 4, 14, 4) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(262) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition());
+
+        var player = new StackPanel();
+        var top = new StackPanel { Orientation = Orientation.Horizontal };
+        var art = Cover(cover, 44, 10);
+        art.MouseLeftButtonUp += (_, e) => { e.Handled = true; CoverClicked?.Invoke(); };
+        top.Children.Add(art);
+        var titles = new StackPanel { Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, Width = 200, Cursor = Cursors.Hand, Background = Brushes.Transparent };
+        titles.MouseLeftButtonUp += (_, e) => { e.Handled = true; CoverClicked?.Invoke(); };
+        titles.Children.Add(Text(m.Title, 14, FontWeights.SemiBold));
+        if (m.Artist.Length > 0) titles.Children.Add(Text(m.Artist, 12, brush: Secondary));
+        top.Children.Add(titles);
+        player.Children.Add(top);
+        player.Children.Add(ProgressRow(new Thickness(0, 8, 0, 0)));
+        var controls = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(-6, 2, 0, 0) };
+        controls.Children.Add(LyricsButton(on: true));
+        controls.Children.Add(ControlButton(IslandGlyphs.Previous, 15, () => PreviousClicked?.Invoke()));
+        controls.Children.Add(ControlButton(m.Playing ? IslandGlyphs.Pause : IslandGlyphs.Play, 19, () => PlayPauseClicked?.Invoke()));
+        controls.Children.Add(ControlButton(IslandGlyphs.Next, 15, () => NextClicked?.Invoke()));
+        player.Children.Add(controls);
+        grid.Children.Add(player);
+
+        var words = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(18, 0, 0, 0) };
+        Grid.SetColumn(words, 1);
+        _lyricLines = lyrics.Lines;
+        _lyricIndex = int.MinValue;
+        if (lyrics.Lines is null)
+        {
+            var message = Text(lyrics.Message ?? "", 13, brush: Secondary);
+            message.TextWrapping = TextWrapping.Wrap;
+            words.Children.Add(message);
+        }
+        else
+        {
+            for (var i = 0; i < _lyricBlocks.Length; i++)
+            {
+                _lyricBlocks[i] = new TextBlock { FontSize = 14, Foreground = LyricDim, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 2, 0, 2) };
+                words.Children.Add(_lyricBlocks[i]);
+            }
+            ShowLyricLine(-1);
+        }
+        grid.Children.Add(words);
+        return grid;
+    }
+
+    private DockPanel ProgressRow(Thickness margin)
+    {
+        var progress = new DockPanel { Margin = margin };
         _progressText = new TextBlock { FontSize = 11, Foreground = Secondary, Width = 36, VerticalAlignment = VerticalAlignment.Center };
         _durationText = new TextBlock { FontSize = 11, Foreground = Secondary, Width = 36, TextAlignment = TextAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
         DockPanel.SetDock(_progressText, System.Windows.Controls.Dock.Left);
         DockPanel.SetDock(_durationText, System.Windows.Controls.Dock.Right);
         progress.Children.Add(_progressText);
         progress.Children.Add(_durationText);
-        var track = new Grid { Height = 4, Width = ProgressWidth, VerticalAlignment = VerticalAlignment.Center };
+        var track = new Grid { Height = 4, Width = _progressWidth, VerticalAlignment = VerticalAlignment.Center };
         track.Children.Add(new Border { Background = Track, CornerRadius = new CornerRadius(2) });
         _progressFill = new Border { Background = Brushes.White, CornerRadius = new CornerRadius(2), HorizontalAlignment = HorizontalAlignment.Left, Width = 0 };
         track.Children.Add(_progressFill);
         progress.Children.Add(track);
-        panel.Children.Add(progress);
-        return panel;
+        return progress;
+    }
+
+    private Border LyricsButton(bool on)
+    {
+        var button = ControlButton(LyricsGlyph, 15, () => LyricsToggled?.Invoke());
+        button.ToolTip = on ? "Hide lyrics" : "Show lyrics";
+        if (on) ((TextBlock)button.Child).Foreground = Sky;
+        return button;
+    }
+
+    /// The line before (dim), the current one (white), and the next two (dim).
+    private void ShowLyricLine(int index)
+    {
+        if (_lyricLines is null || index == _lyricIndex || _lyricBlocks[0] is null) return;
+        _lyricIndex = index;
+        for (var i = 0; i < _lyricBlocks.Length; i++)
+        {
+            var line = index - 1 + i;
+            var block = _lyricBlocks[i];
+            block.Text = line >= 0 && line < _lyricLines.Count ? _lyricLines[line].Text : "";
+            var current = i == 1 && index >= 0;
+            block.Foreground = current ? Brushes.White : LyricDim;
+            block.FontWeight = current ? FontWeights.SemiBold : FontWeights.Normal;
+        }
     }
 
     private static FrameworkElement DevicesPage(IReadOnlyList<DeviceEntry>? devices)
@@ -264,15 +352,19 @@ internal sealed partial class IslandWindow
     {
         if (_progressFill is null || _progressText is null || _durationText is null) return;
         var fraction = duration > TimeSpan.Zero ? Math.Clamp(position / duration, 0, 1) : 0;
-        _progressFill.Width = fraction * ProgressWidth;
+        _progressFill.Width = fraction * _progressWidth;
         _progressText.Text = Time(position);
         _durationText.Text = Time(duration);
+        // A quarter second early: the line appears as it is sung, not after.
+        if (_lyricLines is not null) ShowLyricLine(Lrc.LineAt(_lyricLines, position + TimeSpan.FromMilliseconds(250)));
     }
 
     private void ResetProgress()
     {
         _progressFill = null;
         _progressText = _durationText = null;
+        _lyricLines = null;
+        Array.Clear(_lyricBlocks);
     }
 
     private static Border ControlButton(string glyph, double size, Action click)

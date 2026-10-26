@@ -43,6 +43,7 @@ internal sealed class IslandController : IDisposable
     private DeviceWatcher? _devices;
     private IDisposable? _burstTimer, _hoverTimer;
     private readonly WeatherService _weather;
+    private readonly LyricsService _lyrics;
     private IReadOnlyList<DeviceEntry>? _deviceList;
     private bool _devicesReading, _devicesDirty = true;
     /// City text the geocoder did not find (so it is not asked again until the setting changes).
@@ -71,6 +72,8 @@ internal sealed class IslandController : IDisposable
         _model = new IslandModel(_scheduler, () => TimeSpan.FromSeconds(_settings.Current.Island.EventSeconds));
         _weather = new WeatherService(log);
         _weather.Changed += Render;
+        _lyrics = new LyricsService(log);
+        _lyrics.Changed += Render;
         _model.Changed += OnModelChanged;
         _clockTimer = new DispatcherTimer(DispatcherPriority.Background, ui);
         _clockTimer.Tick += (_, _) => OnClockTick();
@@ -114,6 +117,7 @@ internal sealed class IslandController : IDisposable
             _window.PreviousClicked += () => _media?.Previous();
             _window.PageTurnRequested += delta => _model.TurnPage(delta, Panels().Count);
             _window.TabClicked += page => _model.GoToPage(page, Panels().Count);
+            _window.LyricsToggled += () => _settings.Update(x => x with { Island = x.Island with { Lyrics = !x.Island.Lyrics } });
             if (!_suppressed) _window.Show();
             _log.Info("dynamic island on");
         }
@@ -439,15 +443,26 @@ internal sealed class IslandController : IDisposable
             _model.CurrentEvent,
             Panels(), _model.Page, _deviceList, WeatherState(settings.Island),
             battery?.Charging == true,
-            settings.Island.Mascot ? WadoRules.Mood(_model.Media?.Playing == true, focusRunning: false, DateTime.Now < _happyUntil, now) : null);
+            settings.Island.Mascot ? WadoRules.Mood(_model.Media?.Playing == true, focusRunning: false, DateTime.Now < _happyUntil, now) : null,
+            LyricsState(settings.Island));
         _window.Render(view);
 
-        // The progress bar moves only while the Music page is the one showing.
+        // The progress bar moves only while the Music page is the one showing; with lyrics it checks 4x a second.
         var progress = view.Expanded && _media is not null && view.Media is not null
                        && view.Page < view.Panels.Count && view.Panels[view.Page] == IslandPanel.Music;
+        _progressTimer.Interval = TimeSpan.FromMilliseconds(view.Lyrics.Lines is not null ? 250 : 1000);
         if (progress) UpdateProgress();
         if (progress && view.Media?.Playing == true) _progressTimer.Start();
         else _progressTimer.Stop();
+    }
+
+    /// Lyrics are looked up only while the card is open (and the lyrics are shown).
+    private LyricsView LyricsState(IslandSettings s)
+    {
+        if (!s.Lyrics || !s.Media || _model.Media is not { } media || _media is null) return LyricsView.Hidden;
+        if (!_model.Expanded) return new LyricsView(true, null, null);
+        var (lines, message) = _lyrics.For(media, _media.Duration);
+        return new LyricsView(true, lines, message);
     }
 
     private void UpdateProgress()

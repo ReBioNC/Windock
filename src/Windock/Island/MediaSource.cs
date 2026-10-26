@@ -143,7 +143,7 @@ internal sealed class MediaSource : IDisposable
                 return;
             }
             var state = new MediaState(props.Title.Trim(), (props.Artist ?? "").Trim(), MediaAppName.From(session.SourceAppUserModelId),
-                status == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing);
+                status == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing, (props.AlbumTitle ?? "").Trim());
             var coverKey = $"{session.SourceAppUserModelId}|{props.Title}|{props.Artist}|{props.AlbumTitle}";
             var cover = Cover;
             if (coverKey != _coverKey)

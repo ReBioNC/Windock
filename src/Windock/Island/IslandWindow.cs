@@ -18,7 +18,13 @@ internal sealed record IslandView(
     MediaState? Media, ImageSource? Cover,
     IslandEvent? Event,
     IReadOnlyList<IslandPanel> Panels, int Page, IReadOnlyList<DeviceEntry>? Devices, WeatherView Weather,
-    bool Charging, WadoMood? Mood);
+    bool Charging, WadoMood? Mood, LyricsView Lyrics);
+
+/// Lyrics on the Music page. Show false: hidden by the user (or turned off); Lines null: Message says why.
+internal sealed record LyricsView(bool Show, IReadOnlyList<LyricLine>? Lines, string? Message)
+{
+    public static readonly LyricsView Hidden = new(false, null, null);
+}
 
 /// Pages of the open card, in order. Home is always the clock card; Music has the player controls.
 internal enum IslandPanel { Home, Music, Devices, Weather }
@@ -100,7 +106,7 @@ internal sealed partial class IslandWindow : Window
     }
 
     public event Action? PointerEntered, PointerLeft, EdgeEntered, EdgeLeft;
-    public event Action? CoverClicked, PlayPauseClicked, NextClicked, PreviousClicked;
+    public event Action? CoverClicked, PlayPauseClicked, NextClicked, PreviousClicked, LyricsToggled;
     /// -1 previous page, +1 next page.
     public event Action<int>? PageTurnRequested;
     /// A tab in the tab bar was clicked: its page index.
@@ -227,7 +233,7 @@ internal sealed partial class IslandWindow : Window
         && a.Clock == b.Clock && a.Date == b.Date && a.BatteryGlyph == b.BatteryGlyph && a.BatteryPercent == b.BatteryPercent
         && a.BigClock == b.BigClock && a.LongDate == b.LongDate && a.BatteryLine == b.BatteryLine
         && a.Panels.SequenceEqual(b.Panels) && ReferenceEquals(a.Devices, b.Devices) && a.Weather == b.Weather
-        && a.Charging == b.Charging && a.Mood == b.Mood;
+        && a.Charging == b.Charging && a.Mood == b.Mood && a.Lyrics == b.Lyrics;
 
     private static double MinCompactWidth(IslandView v) => v.Mode switch
     {

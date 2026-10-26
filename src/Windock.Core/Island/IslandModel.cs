@@ -12,7 +12,7 @@ public sealed record IslandEvent(IslandEventKind Kind, string Glyph, string Text
 }
 
 /// What the media session reports. The cover image stays in the app layer.
-public sealed record MediaState(string Title, string Artist, string App, bool Playing);
+public sealed record MediaState(string Title, string Artist, string App, bool Playing, string Album = "");
 
 public enum IslandMode { Idle, Media, Event }
 

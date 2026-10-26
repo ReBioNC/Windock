@@ -38,6 +38,9 @@
                 <TextBlock Text="Activity" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
                 <StackPanel Grid.Column="1">
                     <CheckBox x:Name="Media" Content="Now playing (Spotify, browsers, media players)" />
+                    <CheckBox x:Name="Lyrics" Content="Synced lyrics on the Music page" Margin="22,8,0,0" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="44,2,0,0" TextWrapping="Wrap"
+                               Text="From LRCLIB (free, no account). Only the song title, artist, album and length are sent. The speech-bubble button on the Music page shows or hides them." />
                     <TextBlock Style="{StaticResource Hint}" Margin="22,4,0,0" Text="Cover art and moving bars in the pill, and a Music page in the open island (slide right from the clock) with the title, progress and play/pause, previous and next." />
                 </StackPanel>
             </Grid>
