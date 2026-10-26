@@ -13,7 +13,6 @@ public readonly record struct EffectPiece(RectD Source, RectD Destination, doubl
 public static class MinimizeEffects
 {
     public const int GenieStrips = 48, FoldStrips = 8;
-    public const double FoldedHeight = 10;
 
     public static IReadOnlyList<EffectPiece> Frame(MinimizeEffect effect, RectD window, RectD icon, double t)
     {
@@ -48,12 +47,13 @@ public static class MinimizeEffects
         return pieces;
     }
 
-    /// Folds into a thin strip like paper (alternate panels shaded), then drops into the icon.
+    /// Folds like paper (alternate panels shaded) into a strip as tall as the icon, then drops into it. A thinner
+    /// strip made the restore invisible for its first half, so it looked like no animation at all.
     private static IReadOnlyList<EffectPiece> Fold(RectD w, RectD icon, double t)
     {
         var a = InOut(Clamp01(t / 0.55));
         var b = InOut(Clamp01((t - 0.55) / 0.45));
-        var folded = Math.Min(FoldedHeight, w.Height);
+        var folded = Math.Min(icon.Height, w.Height);
         var total = Lerp(w.Height, folded, a);
         var width = Lerp(w.Width, icon.Width, b);
         var cx = Lerp(w.CenterX, icon.CenterX, b);

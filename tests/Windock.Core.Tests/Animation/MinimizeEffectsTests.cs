@@ -77,6 +77,15 @@ public class MinimizeEffectsTests
     }
 
     [Fact]
+    public void Fold_folds_to_the_icon_height_so_the_restore_is_visible_from_the_start()
+    {
+        var folded = MinimizeEffects.Frame(MinimizeEffect.Fold, Window, Icon, 0.55);
+        var height = folded.Max(p => p.Destination.Bottom) - folded.Min(p => p.Destination.Y);
+
+        Assert.Equal(Icon.Height, height, 0);
+    }
+
+    [Fact]
     public void Off_draws_nothing_and_progress_is_clamped()
     {
         Assert.Empty(MinimizeEffects.Frame(MinimizeEffect.Off, Window, Icon, 0.5));

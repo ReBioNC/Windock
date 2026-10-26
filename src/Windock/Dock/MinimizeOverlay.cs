@@ -95,6 +95,10 @@ internal sealed class MinimizeOverlay : Window
         _worstGapMs = 0;
         _clock.Restart();
         Show();
+        // Above the dock too (it re-raises itself, and showing a hidden window does not bring it forward), so the
+        // part of the animation at the icon isn't hidden behind the dock.
+        Native.SetWindowPos(new WindowInteropHelper(this).Handle, Native.HWND_TOPMOST, 0, 0, 0, 0,
+            Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE);
     }
 
     public void Start()
