@@ -65,6 +65,7 @@ internal sealed class IslandWindow : Window
     private const int WM_MOUSEHWHEEL = 0x020E;
     private readonly SwipeGesture _swipe = new();
     private readonly System.Diagnostics.Stopwatch _swipeClock = System.Diagnostics.Stopwatch.StartNew();
+    private readonly System.Windows.Threading.DispatcherTimer _swipeEnd = new() { Interval = SwipeGesture.GestureGap };
     private TranslateTransform? _pager;
     private StackPanel? _dots;
     private bool _shown = true;
@@ -96,6 +97,7 @@ internal sealed class IslandWindow : Window
             e.Handled = true;
             Swipe(-e.Delta);  // wheel up: previous page
         };
+        _swipeEnd.Tick += (_, _) => OnSwipeEnded();
         _edgeStrip.MouseEnter += (_, _) => EdgeEntered?.Invoke();
         _edgeStrip.MouseLeave += (_, _) => EdgeLeft?.Invoke();
         IsVisibleChanged += (_, _) => UpdateBars();  // hidden for a fullscreen app: the bars stop too
@@ -162,10 +164,31 @@ internal sealed class IslandWindow : Window
         return IntPtr.Zero;
     }
 
+    /// The card follows an unfinished swipe by up to this share of a page, then turns or springs back.
+    private const double DragFollow = 0.3;
+
     private void Swipe(int delta)
     {
-        var turn = _swipe.Feed(delta, _swipeClock.Elapsed);
-        if (turn != 0) PageTurnRequested?.Invoke(turn);
+        var step = _swipe.Feed(delta, _swipeClock.Elapsed);
+        _swipeEnd.Stop();
+        _swipeEnd.Start();
+        if (step.Turn != 0)
+        {
+            PageTurnRequested?.Invoke(step.Turn);
+            return;
+        }
+        if (_pager is null || _view is null || step.Drag == 0) return;
+        _pager.BeginAnimation(TranslateTransform.XProperty, null);
+        _pager.X = -_view.Page * ExpandedWidth - step.Drag * DragFollow * ExpandedWidth;
+    }
+
+    /// The fingers stopped before the swipe turned the page: back to where it was.
+    private void OnSwipeEnded()
+    {
+        _swipeEnd.Stop();
+        _swipe.Reset();
+        if (_view is { Expanded: true } && _pager is not null && Math.Abs(_pager.X + _view.Page * ExpandedWidth) > 0.5)
+            ShowPage(_view.Page, animate: true);
     }
 
     /// Slides the pill into view or up out of it.
@@ -384,7 +407,7 @@ internal sealed class IslandWindow : Window
         var to = -page * ExpandedWidth;
         if (animate)
         {
-            _pager.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(320))
+            _pager.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(240))
             {
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
             });
