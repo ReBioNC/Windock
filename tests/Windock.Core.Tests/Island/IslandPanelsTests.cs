@@ -155,17 +155,18 @@ public class IslandPanelsTests
     }
 
     [Fact]
-    public void A_laptop_keyboard_and_touchpad_are_not_listed()
+    public void The_laptops_own_keyboard_touchpad_speakers_and_screen_are_not_listed()
     {
         var list = DeviceList.Build(new[]
         {
             new DeviceEntry(DeviceKind.Mouse, null, BuiltIn: true),
             new DeviceEntry(DeviceKind.Keyboard, "N-KEY Device", BuiltIn: true),
-            new DeviceEntry(DeviceKind.Keyboard, null, BuiltIn: true),
-            new DeviceEntry(DeviceKind.Display, "Built-in display"),
+            new DeviceEntry(DeviceKind.Audio, "Speakers (Realtek(R) Audio)", Note: "Output", BuiltIn: true),
+            new DeviceEntry(DeviceKind.Display, null, BuiltIn: true),
+            new DeviceEntry(DeviceKind.Display, "Mi Monitor"),
         });
 
-        Assert.Equal(new[] { "Built-in display" }, list.Select(e => e.Name));
+        Assert.Equal(new[] { "Mi Monitor" }, list.Select(e => e.Name));
     }
 
     [Fact]

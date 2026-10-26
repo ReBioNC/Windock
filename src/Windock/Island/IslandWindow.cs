@@ -443,7 +443,7 @@ internal sealed class IslandWindow : Window
         panel.Children.Add(header);
         if (devices is null || devices.Count == 0)
         {
-            panel.Children.Add(new Border { Margin = new Thickness(0, 10, 0, 0), Child = Text(devices is null ? "Looking for devices\u2026" : "No devices found", 13, brush: Secondary) });
+            panel.Children.Add(new Border { Margin = new Thickness(0, 10, 0, 0), Child = Text(devices is null ? "Looking for devices\u2026" : "No devices connected", 13, brush: Secondary) });
             return panel;
         }
         var grid = new UniformGrid { Columns = 2, Margin = new Thickness(0, 2, 0, 0) };

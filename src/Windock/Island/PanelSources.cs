@@ -117,8 +117,7 @@ internal static class DeviceInventory
     {
         var aqs = $"System.Devices.InterfaceClassGuid:=\"{interfaceClass}\" AND System.Devices.InterfaceEnabled:=System.StructuredQueryType.Boolean#True";
         var found = await DeviceInformation.FindAllAsync(aqs, new[] { ContainerKey });
-        return found.Select(d => new DeviceEntry(kind, DeviceNames.Find(d.Id),
-            BuiltIn: d.Properties.TryGetValue(ContainerKey, out var c) && c is Guid g && g == LocalMachineContainer)).ToList();
+        return found.Select(d => new DeviceEntry(kind, DeviceNames.Find(d.Id), BuiltIn: IsBuiltIn(d))).ToList();
     }
 
     private static async Task<IEnumerable<DeviceEntry>> DisplaysAsync()
@@ -127,8 +126,9 @@ internal static class DeviceInventory
         foreach (var d in await DeviceInformation.FindAllAsync(DisplayMonitor.GetDeviceSelector()))
         {
             var monitor = await DisplayMonitor.FromInterfaceIdAsync(d.Id);
-            var name = monitor?.ConnectionKind == DisplayMonitorConnectionKind.Internal ? "Built-in display" : monitor?.DisplayName;
-            list.Add(new DeviceEntry(DeviceKind.Display, string.IsNullOrWhiteSpace(name) ? null : name.Trim()));
+            var name = monitor?.DisplayName;
+            list.Add(new DeviceEntry(DeviceKind.Display, string.IsNullOrWhiteSpace(name) ? null : name.Trim(),
+                BuiltIn: monitor?.ConnectionKind == DisplayMonitorConnectionKind.Internal));
         }
         return list;
     }
@@ -136,9 +136,13 @@ internal static class DeviceInventory
     private static async Task<IEnumerable<DeviceEntry>> AudioAsync()
     {
         var defaultId = MediaDevice.GetDefaultAudioRenderId(AudioDeviceRole.Default);
-        var found = await DeviceInformation.FindAllAsync(MediaDevice.GetAudioRenderSelector());
-        return found.Select(d => new DeviceEntry(DeviceKind.Audio, d.Name, Note: string.Equals(d.Id, defaultId, StringComparison.OrdinalIgnoreCase) ? "Output" : null)).ToList();
+        var found = await DeviceInformation.FindAllAsync(MediaDevice.GetAudioRenderSelector(), new[] { ContainerKey });
+        return found.Select(d => new DeviceEntry(DeviceKind.Audio, d.Name,
+            Note: string.Equals(d.Id, defaultId, StringComparison.OrdinalIgnoreCase) ? "Output" : null, BuiltIn: IsBuiltIn(d))).ToList();
     }
+
+    private static bool IsBuiltIn(DeviceInformation d) =>
+        d.Properties.TryGetValue(ContainerKey, out var c) && c is Guid g && g == LocalMachineContainer;
 
     private static async Task<IEnumerable<DeviceEntry>> BluetoothAsync()
     {
