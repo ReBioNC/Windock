@@ -136,7 +136,9 @@ public static class SettingsJson
                 ShortBreakMinutes: Get(island, "shortBreakMinutes", di.ShortBreakMinutes),
                 LongBreakMinutes: Get(island, "longBreakMinutes", di.LongBreakMinutes),
                 FocusSessions: Get(island, "focusSessions", di.FocusSessions),
-                FocusSound: Get(island, "focusSound", di.FocusSound)),
+                FocusSound: Get(island, "focusSound", di.FocusSound),
+                TasksPanel: Get(island, "tasksPanel", di.TasksPanel),
+                NotesPanel: Get(island, "notesPanel", di.NotesPanel)),
         };
 
         return SettingsNormalizer.Normalize(settings);
@@ -260,6 +262,8 @@ public static class SettingsJson
                 ["longBreakMinutes"] = s.Island.LongBreakMinutes,
                 ["focusSessions"] = s.Island.FocusSessions,
                 ["focusSound"] = s.Island.FocusSound,
+                ["tasksPanel"] = s.Island.TasksPanel,
+                ["notesPanel"] = s.Island.NotesPanel,
             },
             ["hiddenApps"] = new JsonArray(s.HiddenApps.Select(h => (JsonNode)new JsonObject { ["appId"] = h.AppId, ["name"] = h.Name }).ToArray()),
         };

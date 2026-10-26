@@ -2,7 +2,7 @@ using Windock.Core.Abstractions;
 
 namespace Windock.Core.Island;
 
-public enum IslandEventKind { Volume, Brightness, Battery, Device, Focus }
+public enum IslandEventKind { Volume, Brightness, Battery, Device, Focus, Reminder }
 
 /// A short pop-up in the island. Level (0..1) draws a bar (volume, brightness); Detail is right-aligned text.
 public sealed record IslandEvent(IslandEventKind Kind, string Glyph, string Text, double? Level = null, string? Detail = null)
@@ -109,10 +109,27 @@ public sealed class IslandModel(IDelayScheduler scheduler, Func<TimeSpan> eventD
         Changed?.Invoke();
     }
 
+    /// Typing in the card (a task or a note): it stays open when the pointer leaves, until released.
+    public bool Held { get; private set; }
+
+    public void Hold(bool held)
+    {
+        Held = held;
+        if (held)
+        {
+            _collapseTimer?.Dispose();
+            _collapseTimer = null;
+        }
+        else if (!PointerOver)
+        {
+            PointerLeft();
+        }
+    }
+
     public void PointerLeft()
     {
         PointerOver = false;
-        if (!Expanded) return;
+        if (!Expanded || Held) return;
         _collapseTimer?.Dispose();
         _collapseTimer = scheduler.Schedule(CollapseDelay, () =>
         {

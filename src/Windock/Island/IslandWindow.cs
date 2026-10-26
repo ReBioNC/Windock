@@ -18,7 +18,13 @@ internal sealed record IslandView(
     MediaState? Media, ImageSource? Cover,
     IslandEvent? Event,
     IReadOnlyList<IslandPanel> Panels, int Page, IReadOnlyList<DeviceEntry>? Devices, WeatherView Weather,
-    bool Charging, WadoMood? Mood, LyricsView Lyrics, FocusView? Focus);
+    bool Charging, WadoMood? Mood, LyricsView Lyrics, FocusView? Focus, TasksView Tasks, NotesView Notes);
+
+/// The Today list as shown (open tasks first).
+internal sealed record TasksView(IReadOnlyList<IslandTask> Items);
+
+/// The note being shown, of Count notes.
+internal sealed record NotesView(int Index, int Count, string Text);
 
 /// The focus timer's state apart from the seconds ticking by (those go through UpdateFocus).
 internal sealed record FocusView(FocusPhase Phase, int Session, int Sessions, bool Running, int NextBreakMinutes);
@@ -30,7 +36,7 @@ internal sealed record LyricsView(bool Show, IReadOnlyList<LyricLine>? Lines, st
 }
 
 /// Pages of the open card, in order. Home is always the clock card; Music has the player controls.
-internal enum IslandPanel { Home, Music, Weather, Devices, Focus }
+internal enum IslandPanel { Home, Music, Weather, Devices, Focus, Tasks, Notes }
 
 /// The Weather panel: a report, or a message instead (no city yet, city not found, loading, offline).
 internal sealed record WeatherView(WeatherReport? Report, string? Place, string? Message, bool Stale);
@@ -68,6 +74,8 @@ internal sealed partial class IslandWindow : Window
     private TranslateTransform? _pager;
     private readonly List<Border> _tabs = new();
     private bool _shown = true;
+    private bool _typing;
+    private IslandView? _pendingView;
 
     public IslandWindow()
     {
@@ -111,6 +119,11 @@ internal sealed partial class IslandWindow : Window
     public event Action? PointerEntered, PointerLeft, EdgeEntered, EdgeLeft;
     public event Action? CoverClicked, PlayPauseClicked, NextClicked, PreviousClicked, LyricsToggled;
     public event Action? FocusStartPause, FocusReset, FocusBreak;
+    public event Action<string>? TaskAdded, TaskToggled, TaskDeleted;
+    public event Action<int, string>? NoteEdited;
+    public event Action? NotePrevious, NoteNext, NoteAdded, NoteDeleted;
+    /// The user started (true) or stopped typing in the card.
+    public event Action<bool>? TypingChanged;
     /// -1 previous page, +1 next page.
     public event Action<int>? PageTurnRequested;
     /// A tab in the tab bar was clicked: its page index.
@@ -154,6 +167,48 @@ internal sealed partial class IslandWindow : Window
         base.OnSourceInitialized(e);
         WindowEffects.MakeToolNoActivate(Handle);
         HwndSource.FromHwnd(Handle)?.AddHook(OnMessage);
+        Deactivated += (_, _) => EndTyping();
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key != Key.Escape || !_typing) return;
+            e.Handled = true;
+            CancelTaskInput();
+            EndTyping();
+        };
+    }
+
+    /// The island never takes focus, except while the user types in it: then it activates like a normal window
+    /// and stays open until a click elsewhere or Esc.
+    private void BeginTyping(UIElement box)
+    {
+        if (!_typing)
+        {
+            _typing = true;
+            Native.SetWindowLongPtr(Handle, Native.GWL_EXSTYLE, new IntPtr(Native.ExStyle(Handle) & ~Native.WS_EX_NOACTIVATE));
+            Activate();
+            TypingChanged?.Invoke(true);
+        }
+        box.Focus();
+        Keyboard.Focus(box);
+    }
+
+    private void EndTyping()
+    {
+        if (!_typing) return;
+        _typing = false;
+        Native.AddExStyle(Handle, Native.WS_EX_NOACTIVATE);
+        TypingChanged?.Invoke(false);
+        if (_pendingView is not { } pending) return;
+        _pendingView = null;
+        Render(pending);
+    }
+
+    /// Builds the card again from the current view (after a change only the window knows about).
+    private void Rebuild()
+    {
+        if (_view is not { } view) return;
+        _view = null;
+        Render(view);
     }
 
     /// A two-finger touchpad swipe arrives as horizontal wheel steps, which WPF has no event for. Fingers moving
@@ -205,6 +260,12 @@ internal sealed partial class IslandWindow : Window
 
     public void Render(IslandView view)
     {
+        // Rebuilding the card would drop the text box being typed in: wait until typing ends.
+        if (_typing && _view is not null && !SameLayout(_view, view))
+        {
+            _pendingView = view;
+            return;
+        }
         var old = _view;
         _view = view;
         if (old is not null && SameLayout(old, view))
@@ -237,7 +298,8 @@ internal sealed partial class IslandWindow : Window
         && a.Clock == b.Clock && a.Date == b.Date && a.BatteryGlyph == b.BatteryGlyph && a.BatteryPercent == b.BatteryPercent
         && a.BigClock == b.BigClock && a.LongDate == b.LongDate && a.BatteryLine == b.BatteryLine
         && a.Panels.SequenceEqual(b.Panels) && ReferenceEquals(a.Devices, b.Devices) && a.Weather == b.Weather
-        && a.Charging == b.Charging && a.Mood == b.Mood && a.Lyrics == b.Lyrics && a.Focus == b.Focus;
+        && a.Charging == b.Charging && a.Mood == b.Mood && a.Lyrics == b.Lyrics && a.Focus == b.Focus
+        && ReferenceEquals(a.Tasks.Items, b.Tasks.Items) && a.Notes == b.Notes;
 
     private static double MinCompactWidth(IslandView v) => v.Mode switch
     {
@@ -278,6 +340,8 @@ internal sealed partial class IslandWindow : Window
                 IslandPanel.Devices => DevicesPage(v.Devices),
                 IslandPanel.Weather => WeatherPage(v.Weather),
                 IslandPanel.Focus when v.Focus is { } focus => FocusPage(focus),
+                IslandPanel.Tasks => TasksPage(v.Tasks),
+                IslandPanel.Notes => NotesPage(v.Notes),
                 _ => IdleCard(v),
             };
             strip.Children.Add(new Border { Width = ExpandedWidth, Padding = new Thickness(8, 0, 8, 0), Child = page });
@@ -340,6 +404,8 @@ internal sealed partial class IslandWindow : Window
         IslandPanel.Weather => (WeatherCodes.Cloud, Symbols),
         IslandPanel.Devices => ("", Icons),
         IslandPanel.Focus => ("", Icons),
+        IslandPanel.Tasks => ("☑", Symbols),
+        IslandPanel.Notes => ("", Icons),
         _ => ("", Icons),
     };
 

@@ -45,6 +45,8 @@ internal sealed class IslandController : IDisposable
     private readonly WeatherService _weather;
     private readonly LyricsService _lyrics;
     private readonly FocusTimer _focus;
+    private readonly IslandNotebook _notebook;
+    private int _noteIndex;
     private readonly DispatcherTimer _focusTick;
     private IReadOnlyList<DeviceEntry>? _deviceList;
     private bool _devicesReading, _devicesDirty = true;
@@ -83,6 +85,8 @@ internal sealed class IslandController : IDisposable
         });
         _focusTick = new DispatcherTimer(DispatcherPriority.Background, ui) { Interval = TimeSpan.FromSeconds(1) };
         _focusTick.Tick += (_, _) => OnFocusTick();
+        _notebook = new IslandNotebook(AppHost.DataDirectory, _scheduler, log);
+        _notebook.Load();
         _model.Changed += OnModelChanged;
         _clockTimer = new DispatcherTimer(DispatcherPriority.Background, ui);
         _clockTimer.Tick += (_, _) => OnClockTick();
@@ -141,6 +145,39 @@ internal sealed class IslandController : IDisposable
             {
                 _focus.BreakOrSkip(DateTime.Now);
                 SyncFocusTick();
+            };
+            _window.TaskAdded += input => EditTasks(list => list.Add(TaskList.Create(input, DateTime.Now)));
+            _window.TaskToggled += id => EditTasks(list =>
+            {
+                var i = list.FindIndex(t => t.Id == id);
+                if (i >= 0) list[i] = list[i] with { Done = !list[i].Done };
+            });
+            _window.TaskDeleted += id => EditTasks(list => list.RemoveAll(t => t.Id == id));
+            _window.NoteEdited += (index, text) =>
+            {
+                if (index >= _notebook.Notes.Count) return;
+                _notebook.Notes[index] = text;  // no re-render: the text box already shows it
+                _notebook.NotesChanged();
+            };
+            _window.NotePrevious += () => ShowNote(_noteIndex - 1);
+            _window.NoteNext += () => ShowNote(_noteIndex + 1);
+            _window.NoteAdded += () =>
+            {
+                _notebook.Notes.Add("");
+                _notebook.NotesChanged();
+                ShowNote(_notebook.Notes.Count - 1);
+            };
+            _window.NoteDeleted += () =>
+            {
+                if (_notebook.Notes.Count > 1) _notebook.Notes.RemoveAt(_noteIndex);
+                else _notebook.Notes[0] = "";
+                _notebook.NotesChanged();
+                ShowNote(Math.Min(_noteIndex, _notebook.Notes.Count - 1));
+            };
+            _window.TypingChanged += typing =>
+            {
+                _model.Hold(typing);
+                QueueEvaluate();
             };
             _window.LyricsToggled += () => _settings.Update(x => x with { Island = x.Island with { Lyrics = !x.Island.Lyrics } });
             if (!_suppressed) _window.Show();
@@ -246,7 +283,7 @@ internal sealed class IslandController : IDisposable
         IslandEventKind.Volume => s.VolumeEvents,
         IslandEventKind.Brightness => s.BrightnessEvents,
         IslandEventKind.Battery => s.BatteryEvents,
-        IslandEventKind.Focus => true,
+        IslandEventKind.Focus or IslandEventKind.Reminder => true,
         _ => s.DeviceEvents,
     };
 
@@ -369,6 +406,8 @@ internal sealed class IslandController : IDisposable
         if (s.DevicesPanel) list.Add(IslandPanel.Devices);
         if (s.WeatherPanel) list.Add(IslandPanel.Weather);
         if (s.FocusPanel) list.Add(IslandPanel.Focus);
+        if (s.TasksPanel) list.Add(IslandPanel.Tasks);
+        if (s.NotesPanel) list.Add(IslandPanel.Notes);
         return list;
     }
 
@@ -439,6 +478,8 @@ internal sealed class IslandController : IDisposable
     {
         ScheduleClock();
         CheckPower();  // remaining time drifts and low-battery marks are crossed without a power event
+        CheckReminders();
+        _tasksView = null;  // a new day hides yesterday's finished tasks
         Render();
     }
 
@@ -480,7 +521,9 @@ internal sealed class IslandController : IDisposable
             settings.Island.FocusPanel
                 ? new FocusView(_focus.Phase, _focus.Session, _focus.Sessions, _focus.Running,
                     _focus.NextBreak == FocusPhase.LongBreak ? settings.Island.LongBreakMinutes : settings.Island.ShortBreakMinutes)
-                : null);
+                : null,
+            _tasksView ??= new TasksView(TaskList.Visible(_notebook.Tasks, now)),
+            new NotesView(_noteIndex, _notebook.Notes.Count, _notebook.Notes[_noteIndex]));
         _window.Render(view);
         _window.UpdateFocus(_focus.Remaining(now), _focus.Progress(now));
 
@@ -491,6 +534,39 @@ internal sealed class IslandController : IDisposable
         if (progress) UpdateProgress();
         if (progress && view.Media?.Playing == true) _progressTimer.Start();
         else _progressTimer.Stop();
+    }
+
+    private TasksView? _tasksView;
+
+    private void EditTasks(Action<List<IslandTask>> change)
+    {
+        change(_notebook.Tasks);
+        _notebook.TasksChanged();
+        _tasksView = null;
+        Render();
+    }
+
+    private void ShowNote(int index)
+    {
+        _noteIndex = Math.Clamp(index, 0, _notebook.Notes.Count - 1);
+        Render();
+    }
+
+    /// Open tasks whose time has come pop up once, with a sound.
+    private void CheckReminders()
+    {
+        if (!_settings.Current.Island.TasksPanel) return;
+        var due = TaskList.DueReminders(_notebook.Tasks, DateTime.Now);
+        if (due.Count == 0) return;
+        foreach (var task in due)
+        {
+            Show(new IslandEvent(IslandEventKind.Reminder, "\uE823", task.Text, Detail: task.Due?.ToString(@"hh\:mm")));
+            var i = _notebook.Tasks.FindIndex(t => t.Id == task.Id);
+            _notebook.Tasks[i] = _notebook.Tasks[i] with { Reminded = true };
+        }
+        System.Media.SystemSounds.Exclamation.Play();
+        _notebook.TasksChanged();
+        _tasksView = null;
     }
 
     private void SyncFocusTick()
@@ -593,6 +669,7 @@ internal sealed class IslandController : IDisposable
 
     public void Dispose()
     {
+        _notebook.Flush();
         Teardown();
         _status.Audio.Changed -= OnVolumeChanged;
         SystemEvents.PowerModeChanged -= OnPowerChanged;

@@ -39,6 +39,10 @@ internal sealed partial class IslandWindow
     private readonly TextBlock[] _lyricBlocks = new TextBlock[4];
     private int _lyricIndex = int.MinValue;
     private TextBlock? _focusCompactText, _focusPageText;
+    private bool _addingTask;
+    private static readonly Brush Field = Frozen(Color.FromRgb(0x16, 0x16, 0x16));
+    private static readonly Brush Done = Frozen(Color.FromRgb(0x6A, 0x6A, 0x6A));
+    private const int MaxTaskRows = 3;
     private Path? _focusArc;
 
     // ---- compact ----
@@ -167,6 +171,164 @@ internal sealed partial class IslandWindow
         column.Children.Add(buttons);
         panel.Children.Add(column);
         return panel;
+    }
+
+    // ---- tasks and notes ----
+
+    private FrameworkElement TasksPage(TasksView tasks)
+    {
+        var panel = new StackPanel { Margin = new Thickness(14, 4, 14, 6) };
+        var header = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
+        var add = PillButton("\uE710  Task", Tile, () =>
+        {
+            _addingTask = true;
+            Rebuild();
+        });
+        add.Margin = new Thickness(0);
+        DockPanel.SetDock(add, System.Windows.Controls.Dock.Right);
+        header.Children.Add(add);
+        var title = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Foreground = Brushes.White };
+        title.Inlines.Add(new System.Windows.Documents.Run("Today") { FontSize = 15, FontWeight = FontWeights.SemiBold });
+        var open = tasks.Items.Count(t => !t.Done);
+        title.Inlines.Add(new System.Windows.Documents.Run(open == 0 ? "   No tasks" : $"   {open} task{(open == 1 ? "" : "s")}") { FontSize = 12, Foreground = Secondary });
+        header.Children.Add(title);
+        panel.Children.Add(header);
+
+        if (_addingTask)
+        {
+            var (field, box) = InputField("Call mom 14:30   (a time at the end sets a reminder)", false);
+            box.KeyDown += (_, e) =>
+            {
+                if (e.Key != Key.Enter) return;
+                e.Handled = true;
+                var text = box.Text.Trim();
+                _addingTask = false;
+                EndTyping();
+                if (text.Length > 0) TaskAdded?.Invoke(text);
+                else Rebuild();
+            };
+            panel.Children.Add(field);
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () => BeginTyping(box));
+        }
+        if (tasks.Items.Count == 0 && !_addingTask)
+        {
+            var hint = Text("Nothing planned. Add a task, and put a time at the end to be reminded.", 13, brush: Secondary);
+            hint.TextWrapping = TextWrapping.Wrap;
+            panel.Children.Add(hint);
+            return panel;
+        }
+        foreach (var task in tasks.Items.Take(_addingTask ? MaxTaskRows - 1 : MaxTaskRows)) panel.Children.Add(TaskRow(task));
+        var more = tasks.Items.Count - (_addingTask ? MaxTaskRows - 1 : MaxTaskRows);
+        if (more > 0) panel.Children.Add(Text($"+{more} more", 12, brush: Secondary));
+        return panel;
+    }
+
+    private void CancelTaskInput()
+    {
+        if (!_addingTask) return;
+        _addingTask = false;
+        Rebuild();
+    }
+
+    private FrameworkElement TaskRow(IslandTask task)
+    {
+        var row = new DockPanel { Margin = new Thickness(0, 2, 0, 2), Background = Brushes.Transparent };
+        var check = new TextBlock
+        {
+            Text = task.Done ? "\u2611" : "\u2610", FontFamily = Symbols, FontSize = 16, Foreground = task.Done ? Accent : Brushes.White,
+            VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0), Cursor = Cursors.Hand,
+        };
+        check.MouseLeftButtonUp += (_, e) => { e.Handled = true; TaskToggled?.Invoke(task.Id); };
+        DockPanel.SetDock(check, System.Windows.Controls.Dock.Left);
+        row.Children.Add(check);
+        var delete = Glyph("\uE711", 11, Secondary);
+        delete.Cursor = Cursors.Hand;
+        delete.Visibility = Visibility.Hidden;
+        delete.Margin = new Thickness(10, 0, 0, 0);
+        delete.MouseLeftButtonUp += (_, e) => { e.Handled = true; TaskDeleted?.Invoke(task.Id); };
+        row.MouseEnter += (_, _) => delete.Visibility = Visibility.Visible;
+        row.MouseLeave += (_, _) => delete.Visibility = Visibility.Hidden;
+        DockPanel.SetDock(delete, System.Windows.Controls.Dock.Right);
+        row.Children.Add(delete);
+        if (task.Due is { } due)
+        {
+            var time = Text(due.ToString(@"hh\:mm"), 12, brush: Secondary);
+            time.Margin = new Thickness(10, 0, 0, 0);
+            DockPanel.SetDock(time, System.Windows.Controls.Dock.Right);
+            row.Children.Add(time);
+        }
+        var text = Text(task.Text, 13, brush: task.Done ? Done : Brushes.White);
+        if (task.Done) text.TextDecorations = TextDecorations.Strikethrough;
+        row.Children.Add(text);
+        return row;
+    }
+
+    private FrameworkElement NotesPage(NotesView notes)
+    {
+        var panel = new StackPanel { Margin = new Thickness(14, 4, 14, 6) };
+        var header = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
+        var tools = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        tools.Children.Add(IconButton("\uE76B", "Previous note", () => NotePrevious?.Invoke(), notes.Index > 0));
+        tools.Children.Add(IconButton("\uE76C", "Next note", () => NoteNext?.Invoke(), notes.Index < notes.Count - 1));
+        tools.Children.Add(IconButton("\uE74D", "Delete this note", () => NoteDeleted?.Invoke(), notes.Count > 1 || notes.Text.Length > 0));
+        var add = PillButton("\uE710  New", Tile, () => NoteAdded?.Invoke());
+        add.Margin = new Thickness(6, 0, 0, 0);
+        tools.Children.Add(add);
+        DockPanel.SetDock(tools, System.Windows.Controls.Dock.Right);
+        header.Children.Add(tools);
+        var title = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Foreground = Brushes.White };
+        title.Inlines.Add(new System.Windows.Documents.Run("Quick note") { FontSize = 15, FontWeight = FontWeights.SemiBold });
+        title.Inlines.Add(new System.Windows.Documents.Run($"   {notes.Index + 1} of {notes.Count}") { FontSize = 12, Foreground = Secondary });
+        header.Children.Add(title);
+        panel.Children.Add(header);
+
+        var (field, box) = InputField("Jot something down\u2026", true);
+        box.Text = notes.Text;
+        var footer = Text(Count(notes.Text), 11, brush: Secondary);
+        footer.Margin = new Thickness(2, 4, 0, 0);
+        var index = notes.Index;
+        box.TextChanged += (_, _) =>
+        {
+            footer.Text = "Saved \u00b7 " + Count(box.Text);
+            NoteEdited?.Invoke(index, box.Text);
+        };
+        panel.Children.Add(field);
+        panel.Children.Add(footer);
+        return panel;
+    }
+
+    private static string Count(string text) => text.Length == 1 ? "1 character" : $"{text.Length} characters";
+
+    /// A dark text box with a grey placeholder; clicking it lets the island take the keyboard.
+    private (FrameworkElement Field, TextBox Box) InputField(string placeholder, bool multiline)
+    {
+        var box = new TextBox
+        {
+            Background = Brushes.Transparent, Foreground = Brushes.White, CaretBrush = Brushes.White, BorderThickness = new Thickness(0),
+            FontSize = 13, Padding = new Thickness(0), AcceptsReturn = multiline, TextWrapping = multiline ? TextWrapping.Wrap : TextWrapping.NoWrap,
+            Height = multiline ? 46 : double.NaN, VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
+            SelectionBrush = Sky,
+        };
+        var hint = new TextBlock { Text = placeholder, FontSize = 13, Foreground = LyricDim, IsHitTestVisible = false };
+        void SyncHint() => hint.Visibility = box.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        box.TextChanged += (_, _) => SyncHint();
+        SyncHint();
+        box.PreviewMouseLeftButtonDown += (_, _) => BeginTyping(box);
+        var grid = new Grid();
+        grid.Children.Add(hint);
+        grid.Children.Add(box);
+        return (new Border { Background = Field, CornerRadius = new CornerRadius(10), Padding = new Thickness(10, 7, 10, 7), Child = grid }, box);
+    }
+
+    private static Border IconButton(string glyph, string tooltip, Action click, bool enabled)
+    {
+        var button = ControlButton(glyph, 12, click);
+        button.Width = 30;
+        button.Height = 26;
+        button.ToolTip = tooltip;
+        button.IsEnabled = enabled;
+        if (!enabled) ((TextBlock)button.Child).Foreground = LyricDim;
+        return button;
     }
 
     /// A rounded text button; text may start with a Segoe MDL2 glyph.

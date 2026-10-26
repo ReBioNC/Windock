@@ -26,6 +26,8 @@ internal partial class IslandPage : UserControl
         PageSync.OnToggle(Mascot, on => Edit(s => s with { Mascot = on }));
         PageSync.OnToggle(Lyrics, on => Edit(s => s with { Lyrics = on }));
         PageSync.OnToggle(FocusPanel, on => Edit(s => s with { FocusPanel = on }));
+        PageSync.OnToggle(TasksPanel, on => Edit(s => s with { TasksPanel = on }));
+        PageSync.OnToggle(NotesPanel, on => Edit(s => s with { NotesPanel = on }));
         PageSync.OnToggle(FocusSound, on => Edit(s => s with { FocusSound = on }));
         FocusMinutes.ValueChanged += (_, e) => Edit(s => s with { FocusMinutes = (int)Math.Round(e.NewValue) });
         ShortBreak.ValueChanged += (_, e) => Edit(s => s with { ShortBreakMinutes = (int)Math.Round(e.NewValue) });
@@ -79,6 +81,8 @@ internal partial class IslandPage : UserControl
         Lyrics.IsChecked = s.Lyrics;
         Lyrics.IsEnabled = s.Media;
         FocusPanel.IsChecked = s.FocusPanel;
+        TasksPanel.IsChecked = s.TasksPanel;
+        NotesPanel.IsChecked = s.NotesPanel;
         FocusOptions.IsEnabled = s.FocusPanel;
         FocusMinutes.Value = s.FocusMinutes;
         ShortBreak.Value = s.ShortBreakMinutes;
