@@ -51,7 +51,16 @@ Windock replaces the Windows taskbar with a floating, blurred dock whose icons g
 - Short pop-ups for **volume**, **brightness** (laptop screen), **charger plugged in / out and low battery**, and **keyboard, mouse or monitor connected / disconnected**.
 - Slides up out of the way when a window covers it (e.g. a maximized browser) and comes back for pop-ups or when you touch the top edge above it. Can also stay on top always.
 - The clock, date and battery shown in the island leave the dock, so they are never shown twice.
-- The open island has a header (time, charging, music, Wado the whale) and a tab bar: click an icon, swipe with two fingers on the touchpad, or scroll to switch to **Music** (the player controls, so the clock stays the main page), **Devices** (the keyboards, mice, displays, audio outputs and Bluetooth devices you connect, with battery when reported; the laptop's own are left out) and **Weather** for your city (Open-Meteo, no account; only the city name and its coordinates are sent).
+- The open island has a header (time, charging, music, Wado the whale) and a tab bar: click an icon, swipe with two fingers on the touchpad, or scroll to switch panels:
+  - **Music**: the player, with **synced lyrics** next to it (LRCLIB, no account; only the song title, artist, album and length are sent).
+  - **Weather** for your city: now, high/low, "Rain until 19:00" and the next hours (Open-Meteo, no account; only the city name and its coordinates are sent).
+  - **Devices**: the keyboards, mice, displays, audio outputs and Bluetooth devices you connect, with battery when reported (the laptop's own are left out).
+  - **Focus timer**: pomodoro sessions and breaks; the pill shows the countdown while it runs.
+  - **Today**: tasks; put a time at the end ("Call mom 14:30") to get a reminder.
+  - **Quick notes**: several notes, saved as you type.
+  - **Clipboard**: the last 20 texts you copied; click one to copy it again (memory only; password managers are skipped).
+  - **Shelf**: drop files on the island to keep them handy, drag them out again later.
+- **Wado the whale** lives in the island: he blinks, dances to music, looks determined during a focus session, smiles when you plug something in, and sleeps at night.
 
 **Launcher** (`Alt+Space`)
 - Type an app name and press Enter to open it. It can also search files on the Desktop and in Documents.
@@ -154,7 +163,7 @@ Every option applies to the dock at once and is saved automatically. There is no
 | **Appearance** | Icon size, magnification and its maximum size, background opacity, blur, running indicators |
 | **Theme** | Dock color (presets, hex, follow the wallpaper), corner radius, border, indicator color, accent color |
 | **Status area** | Area on/off, each button, 24/12-hour clock, date, seconds, battery percentage |
-| **Dynamic Island** | On/off, hide when covered or always show, clock / date / battery in the island, now playing, each kind of pop-up, pop-up duration, open on hover, size, color, Devices and Weather panels, weather city, °C/°F |
+| **Dynamic Island** | On/off, hide when covered or always show, clock / date / battery in the island, now playing, each kind of pop-up, pop-up duration, open on hover, size, color, Wado, lyrics, each panel (Devices, Weather, Focus, Today, Notes, Clipboard, Shelf), weather city, °C/°F, focus and break lengths, focus sound |
 | **Behavior** | Windows taskbar mode (hide completely, auto-hide, leave visible), dock auto-hide, bounce while opening, start with Windows, icons asking for attention (bounce / red dot / off, once / until opened), Windows notifications, unread counts |
 | **Dock items** | Pin list (drag to reorder, add an `.exe` or `.lnk`, remove, restore defaults), hidden apps, Recycle Bin options, the Explorer **Pin to Windock** menu |
 | **Launcher** | On/off, shortcut, number of results, also search files |
