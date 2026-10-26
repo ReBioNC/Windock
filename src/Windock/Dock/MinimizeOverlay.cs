@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -9,25 +10,64 @@ using Windock.Interop;
 
 namespace Windock.Dock;
 
-/// A click-through, see-through window that plays one minimize or restore effect with a window snapshot and
-/// closes itself. It only covers the area the animation passes through, and exists only while it plays.
+/// The click-through, see-through window minimize and restore effects play in. One is kept ready while
+/// animations are on (building a window per animation left a visible gap at the start), hidden and empty
+/// between animations, and moved over the area each animation passes through.
+/// It is not a layered window: those are copied back from the GPU every frame, which made big animations drop
+/// frames. Instead DWM composes it with per-pixel alpha (frame extended over the whole client area).
 internal sealed class MinimizeOverlay : Window
 {
-    private readonly EffectCanvas _canvas;
-    private readonly MinimizeEffect _effect;
-    private readonly RectD _window, _icon;  // overlay-local DIPs
-    private readonly TimeSpan _duration;
-    private readonly bool _reverse;
-    private readonly Action? _done;
+    private readonly EffectCanvas _canvas = new();
     private readonly Stopwatch _clock = new();
+    private MinimizeEffect _effect;
+    private RectD _window, _icon;  // overlay-local DIPs
+    private TimeSpan _duration;
+    private bool _reverse, _playing;
+    private Action? _done;
+    private Action<string>? _report;
+    private int _frames;
+    private double _firstFrameMs, _worstGapMs, _lastFrameMs;
 
-    /// windowDip / iconDip are screen DIPs. reverse = restore (icon → window).
-    public MinimizeOverlay(WindowSnapshot snapshot, MinimizeEffect effect, RectD windowDip, RectD iconDip, TimeSpan duration, bool reverse, Action? done)
+    public MinimizeOverlay()
     {
+        Title = "Windock animation";
+        WindowStyle = WindowStyle.None;
+        ResizeMode = ResizeMode.NoResize;
+        Background = Brushes.Transparent;
+        ShowInTaskbar = false;
+        ShowActivated = false;
+        Topmost = true;
+        WindowStartupLocation = WindowStartupLocation.Manual;
+        Left = -10000;
+        Top = -10000;
+        Width = 1;
+        Height = 1;
+        Content = _canvas;
+        RenderOptions.SetBitmapScalingMode(_canvas, BitmapScalingMode.Linear);
+        new WindowInteropHelper(this).EnsureHandle();
+    }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        var hwnd = new WindowInteropHelper(this).Handle;
+        Native.AddExStyle(hwnd, Native.WS_EX_TOOLWINDOW | Native.WS_EX_NOACTIVATE | Native.WS_EX_TRANSPARENT);
+        if (HwndSource.FromHwnd(hwnd) is { CompositionTarget: { } target }) target.BackgroundColor = Colors.Transparent;
+        var margins = new MARGINS { Left = -1, Right = -1, Top = -1, Bottom = -1 };
+        DwmExtendFrameIntoClientArea(hwnd, ref margins);
+    }
+
+    /// windowDip / iconDip are screen DIPs. reverse = restore (icon → window); done runs on the last frame.
+    /// A newer animation finishes the one still playing at once.
+    public void Play(WindowSnapshot snapshot, MinimizeEffect effect, RectD windowDip, RectD iconDip, TimeSpan duration, bool reverse,
+        Action? done, Action<string>? report)
+    {
+        if (_playing) Finish(report: false);
         _effect = effect;
         _duration = duration;
         _reverse = reverse;
         _done = done;
+        _report = report;
         var margin = Math.Max(24, windowDip.Height * 0.12);
         var left = Math.Min(windowDip.X, iconDip.X) - margin;
         var top = Math.Min(windowDip.Y, iconDip.Y) - margin;
@@ -35,61 +75,77 @@ internal sealed class MinimizeOverlay : Window
         var bottom = Math.Max(windowDip.Bottom, iconDip.Bottom) + margin;
         _window = new RectD(windowDip.X - left, windowDip.Y - top, windowDip.Width, windowDip.Height);
         _icon = new RectD(iconDip.X - left, iconDip.Y - top, iconDip.Width, iconDip.Height);
-
-        Title = "Windock animation";
-        WindowStyle = WindowStyle.None;
-        AllowsTransparency = true;
-        Background = Brushes.Transparent;
-        ResizeMode = ResizeMode.NoResize;
-        ShowInTaskbar = false;
-        ShowActivated = false;
-        Topmost = true;
-        WindowStartupLocation = WindowStartupLocation.Manual;
         Left = left;
         Top = top;
         Width = right - left;
         Height = bottom - top;
-        _canvas = new EffectCanvas(snapshot.Image);
-        Content = _canvas;
-        RenderOptions.SetBitmapScalingMode(_canvas, BitmapScalingMode.Linear);
-        _canvas.Pieces = MinimizeEffects.Frame(_effect, _window, _icon, _reverse ? 1 : 0);
-    }
-
-    public void Play()
-    {
+        _canvas.Start(snapshot.Image, MinimizeEffects.Frame(_effect, _window, _icon, _reverse ? 1 : 0));
+        _frames = 0;
+        _firstFrameMs = -1;
+        _worstGapMs = 0;
+        _playing = true;
+        _clock.Restart();
         Show();
-        _clock.Start();
         CompositionTarget.Rendering += OnFrame;
-    }
-
-    protected override void OnSourceInitialized(EventArgs e)
-    {
-        base.OnSourceInitialized(e);
-        Native.AddExStyle(new WindowInteropHelper(this).Handle, Native.WS_EX_TOOLWINDOW | Native.WS_EX_NOACTIVATE | Native.WS_EX_TRANSPARENT);
     }
 
     private void OnFrame(object? sender, EventArgs e)
     {
-        var k = Math.Min(1, _clock.Elapsed.TotalMilliseconds / _duration.TotalMilliseconds);
+        var now = _clock.Elapsed.TotalMilliseconds;
+        if (_firstFrameMs < 0) _firstFrameMs = now;
+        else _worstGapMs = Math.Max(_worstGapMs, now - _lastFrameMs);
+        _lastFrameMs = now;
+        _frames++;
+        // Time counts from the first frame on screen, so a slow start never skips the beginning.
+        var k = Math.Min(1, (now - _firstFrameMs) / _duration.TotalMilliseconds);
         _canvas.Pieces = MinimizeEffects.Frame(_effect, _window, _icon, _reverse ? 1 - k : k);
-        if (k < 1) return;
-        CompositionTarget.Rendering -= OnFrame;
-        _done?.Invoke();
-        // One more frame with the restored window under the last picture, then go.
-        Dispatcher.BeginInvoke(Close, System.Windows.Threading.DispatcherPriority.Background);
+        if (k >= 1) Finish(report: true);
     }
 
-    protected override void OnClosed(EventArgs e)
+    private void Finish(bool report)
     {
         CompositionTarget.Rendering -= OnFrame;
-        base.OnClosed(e);
+        _playing = false;
+        if (report) _report?.Invoke($"{_frames} frames, first after {_firstFrameMs:0} ms, worst gap {_worstGapMs:0} ms, total {_clock.Elapsed.TotalMilliseconds:0} ms");
+        var done = _done;
+        _done = null;
+        done?.Invoke();
+        // Leave the last picture up for one more frame over the restored window, then hide and let the snapshot go.
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (_playing) return;
+            Hide();
+            _canvas.Clear();
+        }, System.Windows.Threading.DispatcherPriority.Background);
     }
 
-    /// Draws the effect's pieces; the snapshot is cut into its strips once, not every frame.
-    private sealed class EffectCanvas(BitmapSource image) : FrameworkElement
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MARGINS { public int Left, Right, Top, Bottom; }
+
+    [DllImport("dwmapi.dll")] private static extern int DwmExtendFrameIntoClientArea(IntPtr hwnd, ref MARGINS margins);
+
+    /// Draws the effect's pieces; the snapshot is cut into its strips once per animation, not every frame.
+    private sealed class EffectCanvas : FrameworkElement
     {
         private readonly Dictionary<RectD, BitmapSource> _crops = new();
+        private static readonly Brush[] Shades = Enumerable.Range(0, 101)
+            .Select(i => (Brush)Freeze(new SolidColorBrush(Color.FromArgb((byte)(i * 255 / 100), 0, 0, 0)))).ToArray();
+        private BitmapSource? _image;
         private IReadOnlyList<EffectPiece> _pieces = Array.Empty<EffectPiece>();
+
+        public void Start(BitmapSource image, IReadOnlyList<EffectPiece> pieces)
+        {
+            _crops.Clear();
+            _image = image;
+            Pieces = pieces;
+        }
+
+        public void Clear()
+        {
+            _crops.Clear();
+            _image = null;
+            Pieces = Array.Empty<EffectPiece>();
+        }
 
         public IReadOnlyList<EffectPiece> Pieces
         {
@@ -102,20 +158,22 @@ internal sealed class MinimizeOverlay : Window
 
         protected override void OnRender(DrawingContext dc)
         {
+            if (_image is null) return;
             foreach (var p in _pieces)
             {
                 if (p.Opacity <= 0 || p.Destination.Width <= 0 || p.Destination.Height <= 0) continue;
                 var dest = new Rect(p.Destination.X, p.Destination.Y, p.Destination.Width, p.Destination.Height);
-                dc.PushOpacity(p.Opacity);
-                dc.DrawImage(Crop(p.Source), dest);
-                if (p.Shade > 0) dc.DrawRectangle(new SolidColorBrush(Color.FromArgb((byte)(Math.Min(1, p.Shade) * 255), 0, 0, 0)), null, dest);
-                dc.Pop();
+                var faded = p.Opacity < 1;
+                if (faded) dc.PushOpacity(p.Opacity);
+                dc.DrawImage(Crop(_image, p.Source), dest);
+                if (p.Shade > 0) dc.DrawRectangle(Shades[(int)Math.Round(Math.Min(1, p.Shade) * 100)], null, dest);
+                if (faded) dc.Pop();
             }
         }
 
-        private BitmapSource Crop(RectD source)
+        private BitmapSource Crop(BitmapSource image, RectD source)
         {
-            if (source.X == 0 && source.Y == 0 && source.Width >= 1 && source.Height >= 1) return image;
+            if (source.Y <= 0 && source.Height >= 1) return image;
             if (_crops.TryGetValue(source, out var crop)) return crop;
             int w = image.PixelWidth, h = image.PixelHeight;
             var y = Math.Clamp((int)Math.Floor(source.Y * h), 0, h - 1);
@@ -123,6 +181,12 @@ internal sealed class MinimizeOverlay : Window
             crop = new CroppedBitmap(image, new Int32Rect(0, y, w, bottom - y));
             crop.Freeze();
             return _crops[source] = crop;
+        }
+
+        private static T Freeze<T>(T freezable) where T : Freezable
+        {
+            freezable.Freeze();
+            return freezable;
         }
     }
 }

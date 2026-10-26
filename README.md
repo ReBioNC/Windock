@@ -73,6 +73,11 @@ Windock replaces the Windows taskbar with a floating, blurred dock whose icons g
 - When an app flashes or sends a Windows notification (for example a WhatsApp message), its icon bounces or gets a red dot until you open it.
 - Apps with unread messages show the count in the red dot (for example WhatsApp "2").
 
+**Minimize animations**
+- Minimized windows pour into their dock icon and come back out of it when you click the icon: Genie, Scale, Fold, Squeeze or Drop, at the speed you pick.
+- Windows' own minimize animation is turned off while Windock runs, and comes back when you quit, switch to Windows mode or sign out.
+- The effect needs a picture of the window, taken when you press its title bar or click its dock icon; windows minimized another way (Win+Down, apps hiding in the tray) just minimize.
+
 **Theme**
 - Dock color (presets or `#RRGGBB`), or follow the wallpaper color. Corner radius, border, indicator color, and an accent color for menus and Settings.
 
@@ -168,6 +173,7 @@ Every option applies to the dock at once and is saved automatically. There is no
 | **Dock items** | Pin list (drag to reorder, add an `.exe` or `.lnk`, remove, restore defaults), hidden apps, Recycle Bin options, the Explorer **Pin to Windock** menu |
 | **Launcher** | On/off, shortcut, number of results, also search files |
 | **Alt+Tab** | Replace Windows' Alt+Tab, grouping, card size, live previews, current screen only, Windows Alt+Tab in fullscreen games |
+| **Animations** | Minimize effect (Genie, Scale, Fold, Squeeze, Drop, Off), speed, animate restoring, turn off Windows' own minimize animation |
 | **Safety** | Emergency shortcut, **Restore the taskbar now**, **Open data folder** |
 | **About** | Version, GitHub link, settings and log file locations |
 

@@ -15,9 +15,13 @@ internal sealed record WindowSnapshot(BitmapSource Image, RectD Bounds, DateTime
     private const uint PW_RENDERFULLCONTENT = 0x2;
     private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
 
+    /// How long taking it took (ms), for the log.
+    public double TookMs { get; init; }
+
     /// Any thread. Null when the window cannot be drawn (gone, minimized, zero size, or the copy failed).
     public static WindowSnapshot? Take(IntPtr hwnd)
     {
+        var started = System.Diagnostics.Stopwatch.StartNew();
         if (Native.IsIconic(hwnd) || !Native.GetWindowRect(hwnd, out var window)) return null;
         var frame = DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, out Native.RECT f, Marshal.SizeOf<Native.RECT>()) == 0 ? f : window;
         int ww = window.Right - window.Left, wh = window.Bottom - window.Top;
@@ -44,7 +48,7 @@ internal sealed record WindowSnapshot(BitmapSource Image, RectD Bounds, DateTime
             var pixels = new FormatConvertedBitmap(image, PixelFormats.Bgr32, null, 0);
             var copy = new WriteableBitmap(pixels);
             copy.Freeze();
-            return new WindowSnapshot(copy, new RectD(frame.Left, frame.Top, fw, fh), DateTime.UtcNow);
+            return new WindowSnapshot(copy, new RectD(frame.Left, frame.Top, fw, fh), DateTime.UtcNow) { TookMs = started.Elapsed.TotalMilliseconds };
         }
         catch (Exception ex) when (ex is COMException or ArgumentException or OutOfMemoryException)
         {

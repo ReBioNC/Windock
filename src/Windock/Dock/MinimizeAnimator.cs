@@ -26,6 +26,7 @@ internal sealed class MinimizeAnimator : IDisposable
     private readonly Dictionary<IntPtr, DateTime> _waiting = new();  // minimized before its snapshot was ready
     private readonly HashSet<IntPtr> _minimized = new();
     private TitleBarPressWatcher? _watcher;
+    private MinimizeOverlay? _overlay;
 
     /// active: false in Windows mode (no animations, Windows' own animation back).
     public MinimizeAnimator(SettingsStore settings, DockController dock, WindowTracker tracker, ILog log, Dispatcher ui, Func<bool> active)
@@ -49,11 +50,14 @@ internal sealed class MinimizeAnimator : IDisposable
         {
             _watcher = new TitleBarPressWatcher();
             _watcher.Captured += (hwnd, snapshot) => _ui.BeginInvoke(() => Store(hwnd, snapshot));
+            _overlay = new MinimizeOverlay();
         }
         else if (!Enabled && _watcher is not null)
         {
             _watcher.Dispose();
             _watcher = null;
+            _overlay?.Close();
+            _overlay = null;
             _snapshots.Clear();
             _minimized.Clear();
         }
@@ -139,8 +143,10 @@ internal sealed class MinimizeAnimator : IDisposable
             var dpi = _dock.DpiScale;
             var b = snapshot.Bounds;
             var window = new RectD(b.X / dpi, b.Y / dpi, b.Width / dpi, b.Height / dpi);
-            _log.Info($"{(reverse ? "restore" : "minimize")} animation: {Options.Effect}, {window.Width:0}x{window.Height:0} -> icon at {icon.X:0},{icon.Y:0}");
-            new MinimizeOverlay(snapshot, Options.Effect, window, icon, TimeSpan.FromMilliseconds(Options.DurationMs), reverse, done).Play();
+            _log.Info($"{(reverse ? "restore" : "minimize")} animation: {Options.Effect}, {window.Width:0}x{window.Height:0} -> icon at {icon.X:0},{icon.Y:0}, snapshot took {snapshot.TookMs:0} ms, {(DateTime.UtcNow - snapshot.TakenUtc).TotalMilliseconds:0} ms ago");
+            if (_overlay is null) { done?.Invoke(); return; }
+            _overlay.Play(snapshot, Options.Effect, window, icon, TimeSpan.FromMilliseconds(Options.DurationMs), reverse, done,
+                stats => _log.Info($"animation timing: {stats}"));
         }
         catch (Exception ex)
         {
@@ -153,6 +159,8 @@ internal sealed class MinimizeAnimator : IDisposable
     {
         _watcher?.Dispose();
         _watcher = null;
+        _overlay?.Close();
+        _overlay = null;
         _snapshots.Clear();
         try { WindowsMinimizeAnimation.Restore(); } catch (Exception ex) { _log.Error("restoring Windows' minimize animation failed", ex); }
     }
