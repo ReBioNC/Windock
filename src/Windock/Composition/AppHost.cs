@@ -83,12 +83,16 @@ internal sealed class AppHost
         // Undo anything a killed previous session left on the taskbar before showing anything (A-04).
         var taskbarController = new Win32TaskbarController(Log, Application.Current.Dispatcher, Windows);
         Taskbar = new TaskbarModeCoordinator(taskbarController, new RecoveryStateStore(DataDirectory), Environment.ProcessId);
-        var recovered = Taskbar.RecoverFromPreviousSession();
+        // In Windock mode a taskbar left auto-hidden by the previous session is taken over as it is, and the
+        // taskbar is hidden right away, before the dock is built, so sign-in never shows the full taskbar.
+        TaskbarMode? keep = InWindowsMode ? null : Settings.Current.Behavior.TaskbarMode;
+        var recovered = Taskbar.RecoverFromPreviousSession(keep);
         if (File.Exists(SessionMarker) && !recovered)
         {
             Log.Info("previous session ended uncleanly: clearing its reserved screen space");
             taskbarController.RefreshWorkArea();
         }
+        if (keep is { } early && early != TaskbarMode.Visible) Taskbar.Apply(early);
         Directory.CreateDirectory(DataDirectory);
         File.WriteAllText(SessionMarker, Environment.ProcessId.ToString());
 
@@ -638,7 +642,17 @@ internal sealed class AppHost
         {
             // Shutdown, restart or sign-out: Windows may end the process before any exit code runs,
             // so give the taskbar back now. If the shutdown is cancelled, WM_ENDSESSION(false) re-applies.
-            Log.Info("session ending: restoring the taskbar");
+            // When Windows will start Windock again, the taskbar stays auto-hidden so the next sign-in
+            // starts without it; that session takes it over (RecoverFromPreviousSession).
+            if (!InWindowsMode && Settings.Current.Behavior.TaskbarMode != TaskbarMode.Visible && StartupRegistration.WillStartAtSignIn())
+            {
+                Log.Info("session ending: taskbar stays hidden for the next sign-in (Windock starts with Windows)");
+                Try(() => Taskbar?.LeaveForNextSession());
+            }
+            else
+            {
+                Log.Info("session ending: restoring the taskbar");
+            }
             Try(() => Taskbar?.Restore());
             Try(() => AppBar?.Release());
             Settings.Flush();

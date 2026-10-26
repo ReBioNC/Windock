@@ -17,4 +17,21 @@ internal static class StartupRegistration
         if (enabled && !string.Equals(current, wanted, StringComparison.OrdinalIgnoreCase)) key.SetValue(ValueName, wanted);
         else if (!enabled && current is not null) key.DeleteValue(ValueName, throwOnMissingValue: false);
     }
+
+    /// True when Windows will really start Windock at the next sign-in: the Run value exists and is not
+    /// turned off in Task Manager › Startup (StartupApproved, first byte odd = disabled).
+    public static bool WillStartAtSignIn()
+    {
+        try
+        {
+            using var run = Registry.CurrentUser.OpenSubKey(RunKey);
+            if (run?.GetValue(ValueName) is not string) return false;
+            using var approved = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run");
+            return approved?.GetValue(ValueName) is not byte[] { Length: > 0 } state || (state[0] & 1) == 0;
+        }
+        catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or System.IO.IOException)
+        {
+            return false;
+        }
+    }
 }

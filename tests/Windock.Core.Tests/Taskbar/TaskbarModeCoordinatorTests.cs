@@ -136,6 +136,64 @@ public sealed class TaskbarModeCoordinatorTests : IDisposable
     }
 
     [Fact]
+    public void Sign_out_while_starting_with_windows_leaves_the_taskbar_hidden()
+    {
+        var c = New();
+        c.Apply(TaskbarMode.Hidden);
+        _controller.Calls.Clear();
+
+        c.LeaveForNextSession();
+        c.Restore();
+
+        Assert.Empty(_controller.Calls);
+        Assert.Equal(new TaskbarRecoveryState(true, 2, 1234), _store.Read());
+    }
+
+    [Fact]
+    public void Next_session_takes_the_hidden_taskbar_over_without_showing_it()
+    {
+        _store.Write(new TaskbarRecoveryState(true, 2, 999));
+        _controller.State = 3;
+        var c = New();
+
+        Assert.True(c.RecoverFromPreviousSession(TaskbarMode.Hidden));
+        c.Apply(TaskbarMode.Hidden);  // the normal start-up apply is then a no-op
+
+        Assert.Equal(new[] { "Set:3", "Hide" }, _controller.Calls);
+        Assert.Equal(new TaskbarRecoveryState(true, 2, 1234), _store.Read());
+        _controller.Calls.Clear();
+        c.Restore();
+        Assert.Equal(new[] { "Show", "Set:2" }, _controller.Calls);  // the original from before Windock, not 3
+    }
+
+    [Fact]
+    public void Next_session_in_windows_mode_restores_the_original()
+    {
+        _store.Write(new TaskbarRecoveryState(true, 2, 999));
+
+        Assert.True(New().RecoverFromPreviousSession(keepMode: null));
+
+        Assert.Equal(new[] { "Show", "Set:2" }, _controller.Calls);
+        Assert.Null(_store.Read());
+    }
+
+    [Fact]
+    public void Cancelled_shutdown_reapplies_with_the_same_original()
+    {
+        var c = New();
+        c.Apply(TaskbarMode.Hidden);
+        c.LeaveForNextSession();
+        c.Restore();
+        _controller.State = 3;  // still auto-hidden
+        c.Apply(TaskbarMode.Hidden);
+        _controller.Calls.Clear();
+
+        c.Restore();
+
+        Assert.Equal(new[] { "Show", "Set:2" }, _controller.Calls);
+    }
+
+    [Fact]
     public void Corrupt_state_file_reads_as_null()
     {
         File.WriteAllText(Path.Combine(_dir, "state.json"), "{ broken");
