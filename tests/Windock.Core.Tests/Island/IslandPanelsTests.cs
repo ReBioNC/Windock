@@ -178,6 +178,53 @@ public class IslandPanelsTests
     }
 
     [Fact]
+    public void A_tab_click_jumps_straight_to_its_page()
+    {
+        var model = new IslandModel(new ManualDelayScheduler(), () => TimeSpan.FromSeconds(2));
+        model.GoToPage(2, 4);
+        Assert.Equal(0, model.Page);  // closed card: nothing happens
+
+        model.PointerEntered(true);
+        model.GoToPage(3, 4);
+        Assert.Equal(3, model.Page);
+        model.GoToPage(7, 4);
+        Assert.Equal(3, model.Page);
+    }
+
+    [Fact]
+    public void Rain_note_says_until_when_it_rains_now()
+    {
+        var r = OpenMeteo.ParseForecast(Forecast, new DateTime(2026, 10, 25, 15, 3, 0));
+
+        Assert.Equal("Rain until 17:00", r?.RainNote);
+    }
+
+    [Fact]
+    public void Rain_note_says_from_when_rain_is_coming_and_nothing_when_dry()
+    {
+        var hours = new[]
+        {
+            new WeatherHour(new DateTime(2026, 10, 25, 16, 0, 0), 30, 1, true),
+            new WeatherHour(new DateTime(2026, 10, 25, 17, 0, 0), 29, 80, true),
+        };
+
+        Assert.Equal("Rain from 17:00", WeatherCodes.RainNote(0, hours));
+        Assert.Null(WeatherCodes.RainNote(0, hours.Take(1).ToList()));
+        Assert.Equal("Rain for the next hours", WeatherCodes.RainNote(61, new[] { hours[1] }));
+    }
+
+    [Theory]
+    [InlineData(false, false, false, 14, WadoMood.Idle)]
+    [InlineData(true, false, false, 14, WadoMood.Music)]
+    [InlineData(true, false, true, 14, WadoMood.Happy)]
+    [InlineData(true, true, true, 14, WadoMood.Focus)]
+    [InlineData(false, false, false, 23, WadoMood.Sleep)]
+    [InlineData(false, false, false, 5, WadoMood.Sleep)]
+    [InlineData(true, false, false, 2, WadoMood.Music)]
+    public void Wado_picks_one_mood(bool music, bool focus, bool happy, int hour, WadoMood expected) =>
+        Assert.Equal(expected, WadoRules.Mood(music, focus, happy, new DateTime(2026, 10, 26, hour, 0, 0)));
+
+    [Fact]
     public void Panel_settings_round_trip_with_the_found_city()
     {
         var d = SettingsDefaults.Create();
@@ -185,7 +232,7 @@ public class IslandPanelsTests
         {
             Island = d.Island with
             {
-                WeatherPanel = false, City = "Jakarta", Unit = TemperatureUnit.Fahrenheit,
+                WeatherPanel = false, City = "Jakarta", Unit = TemperatureUnit.Fahrenheit, Mascot = false,
                 Place = new WeatherPlace("Jakarta", "Jakarta, Indonesia", -6.2, 106.8),
             },
         };

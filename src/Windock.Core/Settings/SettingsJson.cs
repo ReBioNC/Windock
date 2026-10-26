@@ -128,7 +128,8 @@ public static class SettingsJson
                 WeatherPanel: Get(island, "weatherPanel", di.WeatherPanel),
                 City: GetString(island, "city") ?? di.City,
                 Unit: GetEnum(island, "unit", di.Unit),
-                Place: ReadPlace(island?["place"] as JsonObject)),
+                Place: ReadPlace(island?["place"] as JsonObject),
+                Mascot: Get(island, "mascot", di.Mascot)),
         };
 
         return SettingsNormalizer.Normalize(settings);
@@ -244,6 +245,7 @@ public static class SettingsJson
                 ["place"] = s.Island.Place is { } place
                     ? new JsonObject { ["query"] = place.Query, ["name"] = place.Name, ["latitude"] = place.Latitude, ["longitude"] = place.Longitude }
                     : null,
+                ["mascot"] = s.Island.Mascot,
             },
             ["hiddenApps"] = new JsonArray(s.HiddenApps.Select(h => (JsonNode)new JsonObject { ["appId"] = h.AppId, ["name"] = h.Name }).ToArray()),
         };

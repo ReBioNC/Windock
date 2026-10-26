@@ -129,6 +129,14 @@ public sealed class IslandModel(IDelayScheduler scheduler, Func<TimeSpan> eventD
         Changed?.Invoke();
     }
 
+    /// A tab in the open card's tab bar was clicked.
+    public void GoToPage(int page, int pageCount)
+    {
+        if (!Expanded || page < 0 || page >= pageCount || page == Page) return;
+        Page = page;
+        Changed?.Invoke();
+    }
+
     /// Settings turned expanding off, or the island was hidden.
     public void Collapse()
     {

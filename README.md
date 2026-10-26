@@ -51,7 +51,7 @@ Windock replaces the Windows taskbar with a floating, blurred dock whose icons g
 - Short pop-ups for **volume**, **brightness** (laptop screen), **charger plugged in / out and low battery**, and **keyboard, mouse or monitor connected / disconnected**.
 - Slides up out of the way when a window covers it (e.g. a maximized browser) and comes back for pop-ups or when you touch the top edge above it. Can also stay on top always.
 - The clock, date and battery shown in the island leave the dock, so they are never shown twice.
-- More panels in the open island: swipe left or right with two fingers on the touchpad (or scroll, or click its left or right side) to slide to **Music** (the player controls, so the clock stays the main page), **Devices** (the keyboards, mice, displays, audio outputs and Bluetooth devices you connect, with battery when reported; the laptop's own are left out) and **Weather** for your city (Open-Meteo, no account; only the city name and its coordinates are sent).
+- The open island has a header (time, charging, music, Wado the whale) and a tab bar: click an icon, swipe with two fingers on the touchpad, or scroll to switch to **Music** (the player controls, so the clock stays the main page), **Devices** (the keyboards, mice, displays, audio outputs and Bluetooth devices you connect, with battery when reported; the laptop's own are left out) and **Weather** for your city (Open-Meteo, no account; only the city name and its coordinates are sent).
 
 **Launcher** (`Alt+Space`)
 - Type an app name and press Enter to open it. It can also search files on the Desktop and in Documents.

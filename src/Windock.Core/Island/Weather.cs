@@ -7,7 +7,9 @@ namespace Windock.Core.Island;
 public sealed record WeatherHour(DateTime Time, double Temperature, int Code, bool IsDay);
 
 /// Times are local to the city (Open-Meteo "timezone=auto").
-public sealed record WeatherReport(double Temperature, int Code, bool IsDay, double High, double Low, IReadOnlyList<WeatherHour> Hours, DateTime FetchedAt);
+/// RainNote: "Rain until 00:00" while it rains, "Rain from 18:00" when rain comes in the next 12 hours, else null.
+public sealed record WeatherReport(double Temperature, int Code, bool IsDay, double High, double Low, IReadOnlyList<WeatherHour> Hours, DateTime FetchedAt,
+    string? RainNote = null);
 
 /// The free Open-Meteo API (no key): city lookup and forecast. Parsing is tolerant: anything missing → null.
 public static class OpenMeteo
@@ -59,15 +61,17 @@ public static class OpenMeteo
             var codes = hourly.GetProperty("weather_code");
             var days = hourly.GetProperty("is_day");
             var hours = new List<WeatherHour>();
-            for (var i = 0; i < times.GetArrayLength() && hours.Count < HoursShown; i++)
+            for (var i = 0; i < times.GetArrayLength() && hours.Count < 24; i++)
             {
                 var t = ParseTime(times[i].GetString());
                 if (t <= now || temps[i].ValueKind != JsonValueKind.Number) continue;
                 hours.Add(new WeatherHour(t, temps[i].GetDouble(), codes[i].GetInt32(), days[i].GetInt32() == 1));
             }
+            var code = current.GetProperty("weather_code").GetInt32();
             return new WeatherReport(
-                current.GetProperty("temperature_2m").GetDouble(), current.GetProperty("weather_code").GetInt32(), current.GetProperty("is_day").GetInt32() == 1,
-                daily.GetProperty("temperature_2m_max")[0].GetDouble(), daily.GetProperty("temperature_2m_min")[0].GetDouble(), hours, fetchedAt);
+                current.GetProperty("temperature_2m").GetDouble(), code, current.GetProperty("is_day").GetInt32() == 1,
+                daily.GetProperty("temperature_2m_max")[0].GetDouble(), daily.GetProperty("temperature_2m_min")[0].GetDouble(),
+                hours.Take(HoursShown).ToList(), fetchedAt, WeatherCodes.RainNote(code, hours));
         }
         catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException or FormatException or IndexOutOfRangeException)
         {
@@ -102,6 +106,21 @@ public static class WeatherCodes
         >= 95 => ("Thunderstorm", Storm),
         _ => ("—", Cloud),
     };
+
+    /// Drizzle, rain, showers and thunderstorms.
+    public static bool IsRain(int code) => code is (>= 51 and <= 67) or (>= 80 and <= 82) or >= 95;
+
+    /// upcoming: the next hours in order (local times).
+    public static string? RainNote(int currentCode, IReadOnlyList<WeatherHour> upcoming)
+    {
+        if (IsRain(currentCode))
+        {
+            var dry = upcoming.FirstOrDefault(h => !IsRain(h.Code));
+            return dry is null ? "Rain for the next hours" : $"Rain until {dry.Time:HH}:00";
+        }
+        var wet = upcoming.Take(12).FirstOrDefault(h => IsRain(h.Code));
+        return wet is null ? null : $"Rain from {wet.Time:HH}:00";
+    }
 
     public static string Temperature(double value) => $"{Math.Round(value).ToString(CultureInfo.InvariantCulture)}°";
 }

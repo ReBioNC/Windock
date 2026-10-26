@@ -48,6 +48,9 @@ internal sealed class IslandController : IDisposable
     /// City text the geocoder did not find (so it is not asked again until the setting changes).
     private string? _cityNotFound;
     private bool _cityLookup, _wasExpanded;
+    /// Wado smiles until then (charger plugged in, device connected).
+    private DateTime _happyUntil = DateTime.MinValue;
+    private static readonly TimeSpan HappyFor = TimeSpan.FromSeconds(3);
     private PowerReading? _power;
     private (double Level, bool Muted)? _volume;
     private bool _suppressed, _edgeHover, _pillHover, _evaluationQueued;
@@ -110,6 +113,7 @@ internal sealed class IslandController : IDisposable
             _window.NextClicked += () => _media?.Next();
             _window.PreviousClicked += () => _media?.Previous();
             _window.PageTurnRequested += delta => _model.TurnPage(delta, Panels().Count);
+            _window.TabClicked += page => _model.GoToPage(page, Panels().Count);
             if (!_suppressed) _window.Show();
             _log.Info("dynamic island on");
         }
@@ -264,7 +268,9 @@ internal sealed class IslandController : IDisposable
         _burstTimer ??= _scheduler.Schedule(DeviceBurst.BurstWindow, () =>
         {
             _burstTimer = null;
-            if (_burst.Resolve() is { } e) Show(e);
+            if (_burst.Resolve() is not { } e) return;
+            if (e.Text.EndsWith("connected", StringComparison.Ordinal) && !e.Text.EndsWith("disconnected", StringComparison.Ordinal)) MakeHappy();
+            Show(e);
         });
     }
 
@@ -279,7 +285,16 @@ internal sealed class IslandController : IDisposable
         var now = ReadPower();
         var before = _power;
         _power = now;
-        if (BatteryEvents.Diff(before, now) is { } e) Show(e);
+        if (BatteryEvents.Diff(before, now) is not { } e) return;
+        if (now?.PluggedIn == true && before?.PluggedIn == false) MakeHappy();
+        Show(e);
+    }
+
+    private void MakeHappy()
+    {
+        _happyUntil = DateTime.Now + HappyFor;
+        _scheduler.Schedule(HappyFor + TimeSpan.FromMilliseconds(100), Render);
+        Render();
     }
 
     private static PowerReading? ReadPower() =>
@@ -422,7 +437,9 @@ internal sealed class IslandController : IDisposable
             battery is { } bt ? StatusFormat.BatteryTooltip(bt.Percent, bt.Charging, bt.PluggedIn, bt.Remaining) : null,
             _model.Media, _model.Media is null ? null : _media?.Cover,
             _model.CurrentEvent,
-            Panels(), _model.Page, _deviceList, WeatherState(settings.Island));
+            Panels(), _model.Page, _deviceList, WeatherState(settings.Island),
+            battery?.Charging == true,
+            settings.Island.Mascot ? WadoRules.Mood(_model.Media?.Playing == true, focusRunning: false, DateTime.Now < _happyUntil, now) : null);
         _window.Render(view);
 
         // The progress bar moves only while the Music page is the one showing.
