@@ -51,10 +51,12 @@ internal sealed record WeatherView(WeatherReport? Report, string? Place, string?
 /// the top edge brings the island back when slid out of view, and keeps it there while the pointer rests on it.
 internal sealed partial class IslandWindow : Window
 {
-    public const double CompactHeight = 34, ExpandedWidth = 560, TopMargin = 6;
+    /// ExpandedWidth: the open card's usual width; a page that needs more (Music with long lyrics) widens it,
+    /// up to MaxCardWidth.
+    public const double CompactHeight = 34, ExpandedWidth = 560, MaxCardWidth = 1000, TopMargin = 6;
     /// The compact pill is this much wider than its content (the user asked for 20 % wider than v0.10.0).
     private const double CompactWidthFactor = 1.2;
-    private const double CanvasWidth = 700, CanvasHeight = 260, EdgeStripWidth = 384;
+    private const double CanvasWidth = 1240, CanvasHeight = 260, EdgeStripWidth = 384;
     private const int WM_MOUSEHWHEEL = 0x020E;
     /// The card follows an unfinished swipe by up to this share of a page, then turns or springs back.
     private const double DragFollow = 0.3;
@@ -77,6 +79,8 @@ internal sealed partial class IslandWindow : Window
     private IslandView? _view;
     private TranslateTransform? _pager;
     private readonly List<Border> _tabs = new();
+    /// Width of each page of the open card, in tab order.
+    private readonly List<double> _pageWidths = new();
     private bool _shown = true;
     private bool _typing;
     private IslandView? _pendingView;
@@ -270,7 +274,7 @@ internal sealed partial class IslandWindow : Window
         }
         if (_pager is null || _view is null || step.Drag == 0) return;
         _pager.BeginAnimation(TranslateTransform.XProperty, null);
-        _pager.X = -_view.Page * ExpandedWidth - step.Drag * DragFollow * ExpandedWidth;
+        _pager.X = -PageOffset(_view.Page) - step.Drag * DragFollow * PageWidth(_view.Page);
     }
 
     /// The fingers stopped before the swipe turned the page: back to where it was.
@@ -278,7 +282,7 @@ internal sealed partial class IslandWindow : Window
     {
         _swipeEnd.Stop();
         _swipe.Reset();
-        if (_view is { Expanded: true } && _pager is not null && Math.Abs(_pager.X + _view.Page * ExpandedWidth) > 0.5)
+        if (_view is { Expanded: true } && _pager is not null && Math.Abs(_pager.X + PageOffset(_view.Page)) > 0.5)
             ShowPage(_view.Page, animate: true);
     }
 
@@ -311,10 +315,10 @@ internal sealed partial class IslandWindow : Window
             return;  // e.g. only the media position moved: UpdateProgress handles it
         }
         var content = view.Expanded ? BuildExpanded(view) : BuildCompact(view);
-        var maxWidth = view.Expanded ? ExpandedWidth : 480;
+        var maxWidth = view.Expanded ? MaxCardWidth : 480;
         _content.Content = content;  // measured in place, so it inherits the window's font
         content.Measure(new Size(maxWidth, double.PositiveInfinity));
-        var width = view.Expanded ? ExpandedWidth
+        var width = view.Expanded ? PageWidth(view.Page)
             : Math.Clamp(content.DesiredSize.Width * CompactWidthFactor, MinCompactWidth(view) * CompactWidthFactor, maxWidth);
         var height = view.Expanded ? Math.Max(96, content.DesiredSize.Height) : CompactHeight;
         if (view.Expanded) ShowPage(view.Page, animate: old is { Expanded: true } && old.Page != view.Page);
@@ -360,10 +364,12 @@ internal sealed partial class IslandWindow : Window
         _pager = null;
         _tabs.Clear();
         ResetProgress();
-        var card = new StackPanel { Width = ExpandedWidth };
+        _pageWidths.Clear();
+        var card = new StackPanel();
         card.Children.Add(Header(v));
         if (v.Panels.Count < 2)
         {
+            _pageWidths.Add(ExpandedWidth);
             card.Children.Add(IdleCard(v));
             return card;
         }
@@ -384,14 +390,17 @@ internal sealed partial class IslandWindow : Window
                 IslandPanel.Shelf => ShelfPage(v.Shelf),
                 _ => IdleCard(v),
             };
-            strip.Children.Add(new Border { Width = ExpandedWidth, Padding = new Thickness(8, 0, 8, 0), Child = page });
+            var width = panel == IslandPanel.Music ? MusicPageWidth(v) : ExpandedWidth;
+            _pageWidths.Add(width);
+            strip.Children.Add(new Border { Width = width, Padding = new Thickness(8, 0, 8, 0), Child = page });
         }
         _pager = new TranslateTransform();
         strip.RenderTransform = _pager;
         // A negative right margin arranges the strip at its full width (an element arranged narrower than it wants
         // is clipped to that width, which would cut off every page but the first); the grid clips to one page.
-        strip.Margin = new Thickness(0, 0, -(v.Panels.Count - 1) * ExpandedWidth, 0);
-        var pages = new Grid { ClipToBounds = true, Width = ExpandedWidth };
+        // The grid follows the card's (animated) width; the strip hangs out of it to the right by its whole length.
+        strip.Margin = new Thickness(0, 0, -_pageWidths.Sum(), 0);
+        var pages = new Grid { ClipToBounds = true };
         pages.Children.Add(strip);
         card.Children.Add(pages);
         card.Children.Add(TabBar(v.Panels));
@@ -451,11 +460,16 @@ internal sealed partial class IslandWindow : Window
         _ => ("", Icons),
     };
 
+    private double PageWidth(int page) => page >= 0 && page < _pageWidths.Count ? _pageWidths[page] : ExpandedWidth;
+
+    private double PageOffset(int page) => _pageWidths.Take(Math.Max(0, page)).Sum();
+
     private void ShowPage(int page, bool animate)
     {
         if (_pager is null || _tabs.Count == 0) return;
         page = Math.Clamp(page, 0, _tabs.Count - 1);
-        var to = -page * ExpandedWidth;
+        var to = -PageOffset(page);
+        if (animate) Spring(WidthProperty, PageWidth(page));  // the card grows or shrinks to the new page
         if (animate)
         {
             _pager.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(to, TimeSpan.FromMilliseconds(240))

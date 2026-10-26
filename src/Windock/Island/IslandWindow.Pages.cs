@@ -626,6 +626,19 @@ internal sealed partial class IslandWindow
         return grid;
     }
 
+    /// Wide enough for the longest lyric line next to the player (plus page and card padding), within the card's
+    /// limits; without lyrics the usual width.
+    private double MusicPageWidth(IslandView v)
+    {
+        if (v.Media is null || !v.Lyrics.Show || v.Lyrics.Lines is not { Count: > 0 } lines) return ExpandedWidth;
+        var typeface = new Typeface(FontFamily, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+        var dip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+        var longest = lines.Max(l => new FormattedText(l.Text, System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+            typeface, 14, Brushes.White, dip).WidthIncludingTrailingWhitespace);
+        const double chrome = 8 + 14 + 262 + 18 + 14 + 8 + 4;  // page padding, card margin, player column, gap
+        return Math.Clamp(Math.Ceiling(longest + chrome), ExpandedWidth, MaxCardWidth);
+    }
+
     private DockPanel ProgressRow(Thickness margin)
     {
         var progress = new DockPanel { Margin = margin };
