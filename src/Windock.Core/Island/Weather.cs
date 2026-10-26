@@ -106,21 +106,24 @@ public static class WeatherCodes
     public static string Temperature(double value) => $"{Math.Round(value).ToString(CultureInfo.InvariantCulture)}°";
 }
 
-/// One row of the island's Devices panel. Battery is a percentage when the device reports one.
-public sealed record DeviceEntry(DeviceKind Kind, string? Name, int? Battery = null, string? Note = null);
+/// One row of the island's Devices panel. Battery is a percentage when the device reports one. BuiltIn: part of
+/// the PC itself (Windows puts it in the computer's own device container), like a laptop keyboard or touchpad.
+public sealed record DeviceEntry(DeviceKind Kind, string? Name, int? Battery = null, string? Note = null, bool BuiltIn = false);
 
 /// Cleans the raw device list for the Devices panel: generic entries ("HID Keyboard Device", no name) of a kind
 /// are dropped when a named device of that kind exists and otherwise shown once by kind name; duplicates merge
 /// (keeping a battery level); a Bluetooth device already listed as a keyboard, mouse or headset lends it its battery.
 /// A device that is both keyboard and mouse (receivers, gaming gear) is listed once, by its name or as a mouse.
 /// Of the audio outputs only the current one is listed (plus Bluetooth headsets), without Windows' "1 - " prefix.
+/// Built-in keyboards and touchpads are not listed: the panel shows what is plugged in or paired.
 public static class DeviceList
 {
     private static readonly DeviceKind[] Order = { DeviceKind.Mouse, DeviceKind.Keyboard, DeviceKind.Audio, DeviceKind.Display, DeviceKind.Bluetooth };
 
     public static IReadOnlyList<DeviceEntry> Build(IEnumerable<DeviceEntry> raw)
     {
-        var all = raw.Select(e => e.Kind == DeviceKind.Audio && e.Name is { } n ? e with { Name = AudioName(n) } : e).ToList();
+        var all = raw.Where(e => !(e.BuiltIn && e.Kind is DeviceKind.Keyboard or DeviceKind.Mouse))
+            .Select(e => e.Kind == DeviceKind.Audio && e.Name is { } n ? e with { Name = AudioName(n) } : e).ToList();
         var keyboards = Names(all, DeviceKind.Keyboard);
         var mice = Names(all, DeviceKind.Mouse);
         all.RemoveAll(e => e.Name is { } n && keyboards.Contains(n) && mice.Contains(n)

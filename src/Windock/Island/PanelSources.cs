@@ -98,6 +98,9 @@ internal static class DeviceInventory
     private const string MouseClass = "{378de44c-56ef-11d1-bc8c-00a0c91405dd}";
     // DEVPKEY_Bluetooth_Battery (DEVPKEY_Device_BatteryLevel on some drivers): percent, when the device reports it.
     private const string BatteryKey = "{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2";
+    private const string ContainerKey = "System.Devices.ContainerId";
+    /// The container Windows gives every device that is part of the PC itself.
+    private static readonly Guid LocalMachineContainer = new("00000000-0000-0000-ffff-ffffffffffff");
 
     public static async Task<IReadOnlyList<DeviceEntry>> ReadAsync(ILog log)
     {
@@ -113,8 +116,9 @@ internal static class DeviceInventory
     private static async Task<IEnumerable<DeviceEntry>> HidAsync(string interfaceClass, DeviceKind kind)
     {
         var aqs = $"System.Devices.InterfaceClassGuid:=\"{interfaceClass}\" AND System.Devices.InterfaceEnabled:=System.StructuredQueryType.Boolean#True";
-        var found = await DeviceInformation.FindAllAsync(aqs);
-        return found.Select(d => new DeviceEntry(kind, DeviceNames.Find(d.Id))).ToList();
+        var found = await DeviceInformation.FindAllAsync(aqs, new[] { ContainerKey });
+        return found.Select(d => new DeviceEntry(kind, DeviceNames.Find(d.Id),
+            BuiltIn: d.Properties.TryGetValue(ContainerKey, out var c) && c is Guid g && g == LocalMachineContainer)).ToList();
     }
 
     private static async Task<IEnumerable<DeviceEntry>> DisplaysAsync()

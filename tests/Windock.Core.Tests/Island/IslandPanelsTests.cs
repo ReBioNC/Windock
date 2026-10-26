@@ -155,6 +155,28 @@ public class IslandPanelsTests
     }
 
     [Fact]
+    public void A_laptop_keyboard_and_touchpad_are_not_listed()
+    {
+        var list = DeviceList.Build(new[]
+        {
+            new DeviceEntry(DeviceKind.Mouse, null, BuiltIn: true),
+            new DeviceEntry(DeviceKind.Keyboard, "N-KEY Device", BuiltIn: true),
+            new DeviceEntry(DeviceKind.Keyboard, null, BuiltIn: true),
+            new DeviceEntry(DeviceKind.Display, "Built-in display"),
+        });
+
+        Assert.Equal(new[] { "Built-in display" }, list.Select(e => e.Name));
+    }
+
+    [Fact]
+    public void A_plugged_in_mouse_without_a_product_name_is_still_listed()
+    {
+        var list = DeviceList.Build(new[] { new DeviceEntry(DeviceKind.Mouse, null, BuiltIn: true), new DeviceEntry(DeviceKind.Mouse, null) });
+
+        Assert.Equal("Mouse", Assert.Single(list).Name);
+    }
+
+    [Fact]
     public void Panel_settings_round_trip_with_the_found_city()
     {
         var d = SettingsDefaults.Create();
