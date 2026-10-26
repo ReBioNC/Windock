@@ -15,4 +15,5 @@ internal sealed record SettingsContext(
     Func<string, bool> TryRegisterLauncherHotkey,
     Action<bool> SuspendHotkey,
     string DataDirectory,
-    ILog Log);
+    ILog Log,
+    Action? ClearUsageHistory = null);

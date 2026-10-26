@@ -4,7 +4,7 @@
     <StackPanel>
         <TextBlock Text="Launcher" Style="{StaticResource PageTitle}" />
         <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,10"
-                   Text="A quick search box: press the shortcut, type an app name, then Enter. The shortcut may use a single modifier key, such as Alt+Space." />
+                   Text="Press the shortcut to open your apps: type to search, then Enter. The shortcut may use a single modifier key, such as Alt+Space." />
 
         <CheckBox x:Name="Enabled" Content="Turn the launcher on" FontWeight="SemiBold" />
 
@@ -19,6 +19,54 @@
             <TextBlock x:Name="RecorderMessage" Style="{StaticResource Hint}" Margin="170,-6,0,14" />
 
             <Grid Style="{StaticResource Row}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                <TextBlock Text="Layout" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                <StackPanel Grid.Column="1">
+                    <RadioButton x:Name="LayoutGrid" GroupName="Layout" Content="Grid: tabs and app icons, filtered as you type" Margin="0,0,0,8" />
+                    <RadioButton x:Name="LayoutList" GroupName="Layout" Content="List: a search box with a short result list" />
+                </StackPanel>
+            </Grid>
+
+            <StackPanel x:Name="GridOptions">
+                <Grid Style="{StaticResource Row}">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /><ColumnDefinition Width="50" /></Grid.ColumnDefinitions>
+                    <TextBlock Text="Columns" Style="{StaticResource Label}" />
+                    <Slider x:Name="Columns" Grid.Column="1" Minimum="4" Maximum="8" IsSnapToTickEnabled="True" TickFrequency="1" />
+                    <TextBlock Grid.Column="2" Style="{StaticResource Label}" HorizontalAlignment="Right" Text="{Binding Value, ElementName=Columns}" />
+                </Grid>
+
+                <Grid Style="{StaticResource Row}">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                    <TextBlock Text="Tabs" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                    <StackPanel Grid.Column="1">
+                        <CheckBox x:Name="ShowCategories" Content="Show category tabs (Games, Development, Internet, …)" />
+                        <TextBlock Style="{StaticResource Hint}" Margin="22,4,0,0"
+                                   Text="Categories are guessed. Right-click an app in the launcher › Move to category to correct one; Windock remembers it." />
+                    </StackPanel>
+                </Grid>
+
+                <Grid Style="{StaticResource Row}">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /><ColumnDefinition Width="50" /></Grid.ColumnDefinitions>
+                    <TextBlock Text="Frequent apps shown" Style="{StaticResource Label}" />
+                    <Slider x:Name="FrequentCount" Grid.Column="1" Minimum="8" Maximum="24" IsSnapToTickEnabled="True" TickFrequency="1" />
+                    <TextBlock Grid.Column="2" Style="{StaticResource Label}" HorizontalAlignment="Right" Text="{Binding Value, ElementName=FrequentCount}" />
+                </Grid>
+
+                <Grid Style="{StaticResource Row}">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                    <TextBlock Text="Learn what you use" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                    <StackPanel Grid.Column="1">
+                        <CheckBox x:Name="UseWindowsHistory" Content="From Windows' launch history" Margin="0,0,0,8" />
+                        <CheckBox x:Name="TrackLaunches" Content="From apps opened with the dock and launcher" />
+                        <TextBlock Style="{StaticResource Hint}" Margin="22,4,0,8"
+                                   Text="Windows' history is only read, never changed. Windock's own counts are kept in usage.json in the data folder. Nothing leaves this PC." />
+                        <Button Content="Clear usage history" HorizontalAlignment="Left" Click="OnClearHistory" />
+                        <TextBlock x:Name="ClearMessage" Style="{StaticResource Hint}" Margin="0,4,0,0" />
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+
+            <Grid x:Name="ListOptions" Style="{StaticResource Row}">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /><ColumnDefinition Width="50" /></Grid.ColumnDefinitions>
                 <TextBlock Text="Results shown" Style="{StaticResource Label}" />
                 <Slider x:Name="MaxResults" Grid.Column="1" Minimum="5" Maximum="12" IsSnapToTickEnabled="True" TickFrequency="1" />

@@ -1,3 +1,5 @@
+using Windock.Core.Launcher;
+
 namespace Windock.Core.Settings;
 
 public enum DockPosition { Bottom, Left, Right }
@@ -69,9 +71,29 @@ public sealed record SwitcherSettings(bool Enabled, bool GroupByApp, SwitcherCar
     public static readonly SwitcherSettings Default = new(false, true, SwitcherCardSize.Medium, false, true, true);
 }
 
+public enum LauncherLayout { Grid, List }
+
+/// MaxResults applies to the List layout. The Grid layout shows tabs (Frequent, All, categories) and fills
+/// Frequent from launch history.
 public sealed record LauncherSettings(bool Enabled, string Hotkey, int MaxResults, bool IncludeFiles)
 {
     public static readonly LauncherSettings Default = new(true, "Alt+Space", 8, false);
+
+    public LauncherLayout Layout { get; init; } = LauncherLayout.Grid;
+    public bool ShowCategories { get; init; } = true;
+    public bool UseWindowsHistory { get; init; } = true;
+    public bool TrackLaunches { get; init; } = true;
+    public int FrequentCount { get; init; } = 18;
+    public int Columns { get; init; } = 6;
+    public IReadOnlyList<LauncherCategoryOverride> CategoryOverrides { get; init; } = Array.Empty<LauncherCategoryOverride>();
+
+    public bool Equals(LauncherSettings? other) =>
+        other is not null && Enabled == other.Enabled && Hotkey == other.Hotkey && MaxResults == other.MaxResults
+        && IncludeFiles == other.IncludeFiles && Layout == other.Layout && ShowCategories == other.ShowCategories
+        && UseWindowsHistory == other.UseWindowsHistory && TrackLaunches == other.TrackLaunches && FrequentCount == other.FrequentCount
+        && Columns == other.Columns && CategoryOverrides.SequenceEqual(other.CategoryOverrides);
+
+    public override int GetHashCode() => HashCode.Combine(Enabled, Hotkey, MaxResults, IncludeFiles, Layout, FrequentCount, Columns, CategoryOverrides.Count);
 }
 
 public sealed record TrashSettings(bool ShowRecycleBin, bool ConfirmBeforeTrash)

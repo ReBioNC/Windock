@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using Microsoft.Win32;
 using Windock.Core.Apps;
+using Windock.Core.Launcher;
 using Windock.Core.Input;
 using Windock.Core.Layout;
 using Windock.Core.Logging;
@@ -55,12 +56,15 @@ internal sealed class AppHost
     public Status.StatusArea? StatusArea { get; private set; }
     private Island.IslandController? _island;
     private Launcher.LauncherWindow? _launcherWindow;
+    /// Apps opened through Windock, for the launcher's Frequent tab.
+    public UsageStore? Usage { get; private set; }
 
     public void Start(string[] args)
     {
         Log.Info($"Windock starting (args: {string.Join(' ', args)})");
         Settings = new SettingsStore(DataDirectory, new DispatcherDelayScheduler(Application.Current.Dispatcher), Log);
         Settings.Load();
+        Usage = new UsageStore(DataDirectory, Log);
         if (!Settings.Current.FirstRunCompleted)
         {
             var pins = DetectDefaultPins();
@@ -110,7 +114,11 @@ internal sealed class AppHost
             Log.Info($"click {item.Key} windows=[{string.Join(",", item.Windows.Select(w => $"0x{w.Handle:X}"))}] fg=0x{foreground:X} -> {action}");
             if (action is ClickAction.ShowWindows) Dock.ShowPreview(item);
             else Launcher.Execute(action, item);
-            if (action is ClickAction.Launch) Dock.BounceLaunch(item.Key);
+            if (action is ClickAction.Launch launch)
+            {
+                Dock.BounceLaunch(item.Key);
+                RecordLaunch(item.AppId?.Value ?? UsageKeys.ForTarget(launch.Target, KnownFolders.Path).FirstOrDefault());
+            }
         };
         Dock.ContextRequested += item =>
         {
@@ -201,7 +209,8 @@ internal sealed class AppHost
             return;
         }
         var context = new SettingsContext(Settings, Icons, PinResolver, DetectDefaultPins, text => RegisterHotkey(text, notify: false),
-            text => RegisterLauncherHotkey(Settings.Current.Launcher with { Hotkey = text }, notify: false), SuspendHotkey, DataDirectory, Log);
+            text => RegisterLauncherHotkey(Settings.Current.Launcher with { Hotkey = text }, notify: false), SuspendHotkey, DataDirectory, Log,
+            () => Usage?.Clear());
         _settingsWindow = new SettingsWindow(context);
         _settingsWindow.Closed += (_, _) =>
         {
@@ -458,11 +467,26 @@ internal sealed class AppHost
         if (Icons is null || Launcher is null) return;
         var l = Settings.Current.Launcher;
         Log.Info("launcher opened");
-        _launcherWindow = new Launcher.LauncherWindow(Icons, l.MaxResults, l.IncludeFiles, entry =>
-        {
-            Log.Info($"launcher open {entry.Target}");
-            Launcher.Launch(entry.Target, entry.Name);
-        }, Log);
+        var actions = new Launcher.LauncherActions(
+            Open: entry =>
+            {
+                Log.Info($"launcher open {entry.Target}");
+                Launcher.Launch(entry.Target, entry.Name);
+                RecordLaunch(entry.UsageKeys.FirstOrDefault());
+            },
+            Pin: path => PinPath(path),
+            Reveal: Launcher.RevealInExplorer,
+            SetCategory: (name, category) => Settings.Update(s => s with
+            {
+                Launcher = s.Launcher with
+                {
+                    CategoryOverrides = s.Launcher.CategoryOverrides
+                        .Where(o => !o.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                        .Append(new LauncherCategoryOverride(name, category)).ToList(),
+                },
+            }),
+            OpenSettings: OpenSettings);
+        _launcherWindow = new Launcher.LauncherWindow(Icons, l, Usage ??= new UsageStore(DataDirectory, Log), actions, Log);
         _launcherWindow.Closed += (_, _) =>
         {
             _launcherWindow = null;
@@ -470,6 +494,11 @@ internal sealed class AppHost
         };
         _launcherWindow.Show();
         _launcherWindow.Activate();
+    }
+
+    private void RecordLaunch(string? usageKey)
+    {
+        if (usageKey is not null && Settings.Current.Launcher.TrackLaunches) Usage?.Record(usageKey, DateTime.UtcNow);
     }
 
     /// Pins a program or shortcut (Explorer "Pin to Windock", drag and drop). index = gap among pins; null = last.

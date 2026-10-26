@@ -9,6 +9,7 @@ public static class SettingsNormalizer
     public const double MinOpacityWithoutBlur = 0.30;
     public const int MinCornerRadius = 0, MaxCornerRadius = 30;
     public const int MinLauncherResults = 5, MaxLauncherResults = 12;
+    public const int MinLauncherFrequent = 8, MaxLauncherFrequent = 24, MinLauncherColumns = 4, MaxLauncherColumns = 8;
     public const int MinIslandEventSeconds = 1, MaxIslandEventSeconds = 5;
 
     public static DockSettings Normalize(DockSettings s)
@@ -33,7 +34,12 @@ public static class SettingsNormalizer
             AccentColor = ThemeColor.Normalize(t.AccentColor) ?? ThemeSettings.Default.AccentColor,
             CornerRadius = Math.Clamp(t.CornerRadius, MinCornerRadius, MaxCornerRadius),
         };
-        var launcher = s.Launcher with { MaxResults = Math.Clamp(s.Launcher.MaxResults, MinLauncherResults, MaxLauncherResults) };
+        var launcher = s.Launcher with
+        {
+            MaxResults = Math.Clamp(s.Launcher.MaxResults, MinLauncherResults, MaxLauncherResults),
+            FrequentCount = Math.Clamp(s.Launcher.FrequentCount, MinLauncherFrequent, MaxLauncherFrequent),
+            Columns = Math.Clamp(s.Launcher.Columns, MinLauncherColumns, MaxLauncherColumns),
+        };
         var island = s.Island with
         {
             EventSeconds = Math.Clamp(s.Island.EventSeconds, MinIslandEventSeconds, MaxIslandEventSeconds),

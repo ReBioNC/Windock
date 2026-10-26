@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Windock.Core.Launcher;
 
 namespace Windock.Core.Settings;
 
@@ -87,7 +88,16 @@ public static class SettingsJson
                 Enabled: Get(launcher, "enabled", d.Launcher.Enabled),
                 Hotkey: GetString(launcher, "hotkey") ?? d.Launcher.Hotkey,
                 MaxResults: Get(launcher, "maxResults", d.Launcher.MaxResults),
-                IncludeFiles: Get(launcher, "includeFiles", d.Launcher.IncludeFiles)),
+                IncludeFiles: Get(launcher, "includeFiles", d.Launcher.IncludeFiles))
+            {
+                Layout = GetEnum(launcher, "layout", d.Launcher.Layout),
+                ShowCategories = Get(launcher, "showCategories", d.Launcher.ShowCategories),
+                UseWindowsHistory = Get(launcher, "useWindowsHistory", d.Launcher.UseWindowsHistory),
+                TrackLaunches = Get(launcher, "trackLaunches", d.Launcher.TrackLaunches),
+                FrequentCount = Get(launcher, "frequentCount", d.Launcher.FrequentCount),
+                Columns = Get(launcher, "columns", d.Launcher.Columns),
+                CategoryOverrides = ReadCategoryOverrides(launcher?["categories"] as JsonArray),
+            },
             Switcher = new SwitcherSettings(
                 Enabled: Get(switcher, "enabled", d.Switcher.Enabled),
                 GroupByApp: Get(switcher, "groupByApp", d.Switcher.GroupByApp),
@@ -188,6 +198,14 @@ public static class SettingsJson
                 ["hotkey"] = s.Launcher.Hotkey,
                 ["maxResults"] = s.Launcher.MaxResults,
                 ["includeFiles"] = s.Launcher.IncludeFiles,
+                ["layout"] = s.Launcher.Layout.ToString(),
+                ["showCategories"] = s.Launcher.ShowCategories,
+                ["useWindowsHistory"] = s.Launcher.UseWindowsHistory,
+                ["trackLaunches"] = s.Launcher.TrackLaunches,
+                ["frequentCount"] = s.Launcher.FrequentCount,
+                ["columns"] = s.Launcher.Columns,
+                ["categories"] = new JsonArray(s.Launcher.CategoryOverrides
+                    .Select(o => (JsonNode)new JsonObject { ["name"] = o.Name, ["category"] = o.Category.ToString() }).ToArray()),
             },
             ["switcher"] = new JsonObject
             {
@@ -257,6 +275,20 @@ public static class SettingsJson
             apps.Add(new HiddenApp(id, GetString(item as JsonObject, "name") ?? id));
         }
         return apps;
+    }
+
+    private static IReadOnlyList<LauncherCategoryOverride> ReadCategoryOverrides(JsonArray? array)
+    {
+        if (array is null) return Array.Empty<LauncherCategoryOverride>();
+        var list = new List<LauncherCategoryOverride>();
+        foreach (var item in array)
+        {
+            var o = item as JsonObject;
+            if (GetString(o, "name") is not { Length: > 0 } name) continue;
+            var category = GetEnum(o, "category", (LauncherCategory)(-1));
+            if (Enum.IsDefined(category)) list.Add(new LauncherCategoryOverride(name, category));
+        }
+        return list;
     }
 
     private static IReadOnlyList<PinEntry> ReadPins(JsonArray? array)

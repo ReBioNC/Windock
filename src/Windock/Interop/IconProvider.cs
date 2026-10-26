@@ -42,6 +42,12 @@ internal sealed class IconProvider : IDisposable
     public static int PixelSizeFor(double dip, double dpiScale) =>
         Sizes.FirstOrDefault(s => s >= Math.Ceiling(dip * dpiScale), Sizes[^1]);
 
+    /// Drops cached icons whose key starts with prefix (the launcher's, when it closes). UI thread only.
+    public void Forget(string keyPrefix)
+    {
+        foreach (var k in _cache.Keys.Where(k => k.Key.StartsWith(keyPrefix, StringComparison.Ordinal)).ToList()) _cache.Remove(k);
+    }
+
     /// Calls onReady on the UI thread — immediately when cached. key is the dock item key.
     public void Request(string key, string? iconPath, IntPtr hwndFallback, int pixelSize, Action<string, ImageSource> onReady)
     {

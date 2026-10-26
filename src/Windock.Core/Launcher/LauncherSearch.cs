@@ -6,7 +6,12 @@ namespace Windock.Core.Launcher;
 public enum LauncherEntryKind { App, File }
 
 /// Something the launcher can open. Target is passed to the shell (path, or shell:AppsFolder\…).
-public sealed record LauncherEntry(string Name, string Target, LauncherEntryKind Kind);
+/// UsageKeys tie it to launch history (UsageKeys.ForTarget); the first one is what a launch is recorded under.
+public sealed record LauncherEntry(string Name, string Target, LauncherEntryKind Kind)
+{
+    public IReadOnlyList<string> UsageKeys { get; init; } = Array.Empty<string>();
+    public LauncherCategory Category { get; init; } = LauncherCategory.Other;
+}
 
 /// Ranks launcher entries for a query: name starts with it > a word starts with it > contains it > its letters in order.
 /// Apps come before files at the same rank; then shorter names, then alphabetical (spec v0.6 §9).
