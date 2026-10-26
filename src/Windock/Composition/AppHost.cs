@@ -115,7 +115,7 @@ internal sealed class AppHost
         Dock.ContextRequested += item =>
         {
             var menu = menus.Build(item);
-            menu.PlacementTarget = Dock.MenuAnchor;
+            Dock.PlaceMenuAbove(menu, item);
             Dock.SetMenuOpen(true);
             // The dock never takes focus, so the menu would not notice clicks elsewhere; watch for them.
             OutsideClickWatcher? outside = null;

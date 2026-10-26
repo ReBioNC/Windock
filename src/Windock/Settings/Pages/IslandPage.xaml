@@ -49,7 +49,7 @@
                     <CheckBox x:Name="DevicesPanel" Content="Devices (keyboards, mice, displays, audio, Bluetooth)" Margin="0,0,0,8" />
                     <CheckBox x:Name="WeatherPanel" Content="Weather (from Open-Meteo, needs internet)" />
                     <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"
-                               Text="With the island open, click its left or right side (or scroll) to slide to the next panel. The dots at the bottom show where you are. Bluetooth devices show their battery when they report it." />
+                               Text="With the island open, swipe left or right with two fingers on the touchpad, scroll, or click its left or right side to slide to the next panel. The dots at the bottom show where you are. Bluetooth devices show their battery when they report it." />
                 </StackPanel>
             </Grid>
 

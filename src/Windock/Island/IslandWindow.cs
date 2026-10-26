@@ -62,6 +62,9 @@ internal sealed class IslandWindow : Window
     private Border? _progressFill;
     private TextBlock? _progressText, _durationText;
     private IslandView? _view;
+    private const int WM_MOUSEHWHEEL = 0x020E;
+    private readonly SwipeGesture _swipe = new();
+    private readonly System.Diagnostics.Stopwatch _swipeClock = System.Diagnostics.Stopwatch.StartNew();
     private TranslateTransform? _pager;
     private StackPanel? _dots;
     private bool _shown = true;
@@ -91,7 +94,7 @@ internal sealed class IslandWindow : Window
         {
             if (_view is not { Expanded: true } || _view.Panels.Count < 2) return;
             e.Handled = true;
-            PageTurnRequested?.Invoke(e.Delta > 0 ? -1 : 1);
+            Swipe(-e.Delta);  // wheel up: previous page
         };
         _edgeStrip.MouseEnter += (_, _) => EdgeEntered?.Invoke();
         _edgeStrip.MouseLeave += (_, _) => EdgeLeft?.Invoke();
@@ -146,6 +149,23 @@ internal sealed class IslandWindow : Window
     {
         base.OnSourceInitialized(e);
         WindowEffects.MakeToolNoActivate(Handle);
+        HwndSource.FromHwnd(Handle)?.AddHook(OnMessage);
+    }
+
+    /// A two-finger touchpad swipe arrives as horizontal wheel steps, which WPF has no event for. Fingers moving
+    /// left scroll right (positive steps): the next page, as on a phone.
+    private IntPtr OnMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg != WM_MOUSEHWHEEL || _view is not { Expanded: true } || _view.Panels.Count < 2) return IntPtr.Zero;
+        Swipe((short)((wParam.ToInt64() >> 16) & 0xFFFF));
+        handled = true;
+        return IntPtr.Zero;
+    }
+
+    private void Swipe(int delta)
+    {
+        var turn = _swipe.Feed(delta, _swipeClock.Elapsed);
+        if (turn != 0) PageTurnRequested?.Invoke(turn);
     }
 
     /// Slides the pill into view or up out of it.

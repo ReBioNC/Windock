@@ -81,7 +81,27 @@ internal sealed partial class DockController
 
     public IntPtr WindowHandle => _window.Handle;
 
-    public UIElement MenuAnchor => _window.Root;
+    /// Opens a context menu above the dock, centred on the item (or the pointer on the empty plate), so no entry
+    /// ends up under the plate. Popup sizes in the callback are in device pixels, hence the scale factor.
+    public void PlaceMenuAbove(System.Windows.Controls.ContextMenu menu, DockItem? item)
+    {
+        const double gap = 8;
+        var root = _window.Root;
+        var bounds = item is null ? null : _layout?.Items.Where(l => l.Key == item.Key).Select(l => (RectD?)l.Bounds).FirstOrDefault();
+        var x = bounds?.CenterX ?? Mouse.GetPosition(root).X;
+        var top = Math.Min(_layout?.Plate.Y ?? 0, bounds?.Y ?? double.MaxValue) - gap;
+        menu.PlacementTarget = root;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Custom;
+        menu.CustomPopupPlacementCallback = (popup, target, _) =>
+        {
+            var k = root.ActualWidth > 0 ? target.Width / root.ActualWidth : 1;
+            return new[]
+            {
+                new System.Windows.Controls.Primitives.CustomPopupPlacement(
+                    new Point(x * k - popup.Width / 2, top * k - popup.Height), System.Windows.Controls.Primitives.PopupPrimaryAxis.None),
+            };
+        };
+    }
 
     public double DpiScale => _window.DpiScale;
 
