@@ -1,0 +1,47 @@
+<UserControl x:Class="Windock.Settings.Pages.AnimationsPage" x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel>
+        <TextBlock Text="Animations" Style="{StaticResource PageTitle}" />
+        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,10"
+                   Text="Windows you minimize pour into their dock icon, and come back out of it when you click the icon." />
+
+        <Grid Style="{StaticResource Row}">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+            <TextBlock Text="Minimize effect" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+            <StackPanel Grid.Column="1">
+                <RadioButton x:Name="EffectGenie" GroupName="Effect" Content="Genie: bends and pours into the icon, like a Mac" Margin="0,0,0,8" />
+                <RadioButton x:Name="EffectScale" GroupName="Effect" Content="Scale: shrinks and slides into the icon" Margin="0,0,0,8" />
+                <RadioButton x:Name="EffectFold" GroupName="Effect" Content="Fold: folds up like paper, then drops in" Margin="0,0,0,8" />
+                <RadioButton x:Name="EffectSqueeze" GroupName="Effect" Content="Squeeze: squeezes thin, then shoots in" Margin="0,0,0,8" />
+                <RadioButton x:Name="EffectDrop" GroupName="Effect" Content="Drop: sinks toward the dock and fades" Margin="0,0,0,8" />
+                <RadioButton x:Name="EffectOff" GroupName="Effect" Content="Off: Windows' own minimize animation" />
+            </StackPanel>
+        </Grid>
+
+        <StackPanel x:Name="Options">
+            <Grid Style="{StaticResource Row}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /><ColumnDefinition Width="70" /></Grid.ColumnDefinitions>
+                <TextBlock Text="Speed" Style="{StaticResource Label}" />
+                <Slider x:Name="Duration" Grid.Column="1" Minimum="200" Maximum="1500" IsSnapToTickEnabled="True" TickFrequency="50" />
+                <TextBlock x:Name="DurationText" Grid.Column="2" Style="{StaticResource Label}" HorizontalAlignment="Right" />
+            </Grid>
+
+            <Grid Style="{StaticResource Row}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="170" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                <TextBlock Text="Also" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                <StackPanel Grid.Column="1">
+                    <CheckBox x:Name="AnimateRestore" Content="Animate windows coming back out of the dock" Margin="0,0,0,8" />
+                    <CheckBox x:Name="DisableWindows" Content="Turn off Windows' own minimize animation while Windock runs" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="22,4,0,0"
+                               Text="So the two don't play at once. Only changed until you quit Windock, switch to Windows mode or sign out; your saved Windows setting is never touched." />
+                </StackPanel>
+            </Grid>
+
+            <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
+                       Text="The animation needs a picture of the window, taken when you press its title bar (where the minimize button is) or click its dock icon. Windows minimized another way, such as Win+Down or an app hiding itself in the tray, just minimize." />
+        </StackPanel>
+
+        <Button Content="Reset to defaults" HorizontalAlignment="Right" Margin="0,12,0,0" Click="OnReset" />
+    </StackPanel>
+</UserControl>

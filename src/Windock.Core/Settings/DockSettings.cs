@@ -98,6 +98,13 @@ public sealed record LauncherSettings(bool Enabled, string Hotkey, int MaxResult
     public override int GetHashCode() => HashCode.Combine(Enabled, Hotkey, MaxResults, IncludeFiles, Layout, FrequentCount, Columns, CategoryOverrides.Count);
 }
 
+/// Windock's own minimize/restore animation into the dock icon; DisableWindowsAnimation turns Windows' own
+/// minimize/maximize animation off while Windock runs (never saved, so a sign-out always brings it back).
+public sealed record AnimationSettings(Animation.MinimizeEffect Effect, bool AnimateRestore, int DurationMs, bool DisableWindowsAnimation)
+{
+    public static readonly AnimationSettings Default = new(Animation.MinimizeEffect.Genie, true, 450, true);
+}
+
 public sealed record TrashSettings(bool ShowRecycleBin, bool ConfirmBeforeTrash)
 {
     public static readonly TrashSettings Default = new(true, true);
@@ -137,6 +144,7 @@ public sealed record DockSettings(
     public SwitcherSettings Switcher { get; init; } = SwitcherSettings.Default;
     public TrashSettings Trash { get; init; } = TrashSettings.Default;
     public IslandSettings Island { get; init; } = IslandSettings.Default;
+    public AnimationSettings Animations { get; init; } = AnimationSettings.Default;
     public IReadOnlyList<HiddenApp> HiddenApps { get; init; } = Array.Empty<HiddenApp>();
 
     // Lists compare by content, not by reference.
@@ -154,6 +162,7 @@ public sealed record DockSettings(
         && Switcher == other.Switcher
         && Trash == other.Trash
         && Island == other.Island
+        && Animations == other.Animations
         && HiddenApps.SequenceEqual(other.HiddenApps);
 
     public override int GetHashCode()
@@ -171,6 +180,7 @@ public sealed record DockSettings(
         hash.Add(Switcher);
         hash.Add(Trash);
         hash.Add(Island);
+        hash.Add(Animations);
         foreach (var app in HiddenApps) hash.Add(app);
         return hash.ToHashCode();
     }

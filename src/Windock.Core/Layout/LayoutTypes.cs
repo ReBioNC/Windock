@@ -5,6 +5,7 @@ public readonly record struct RectD(double X, double Y, double Width, double Hei
     public double Right => X + Width;
     public double Bottom => Y + Height;
     public double CenterX => X + Width / 2;
+    public double CenterY => Y + Height / 2;
 }
 
 /// Fixed: a status-area button with its own width that never magnifies.

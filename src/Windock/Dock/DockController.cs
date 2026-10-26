@@ -105,6 +105,19 @@ internal sealed partial class DockController
 
     public double DpiScale => _window.DpiScale;
 
+    /// Where the dock icon of the app owning hwnd sits on screen (DIPs); null when the dock is hidden for a
+    /// fullscreen app or Windows mode, or the app has no icon. Auto-hide leaves the rest position, so a window
+    /// minimizes toward the edge the dock comes out of.
+    public RectD? IconScreenBounds(IntPtr hwnd)
+    {
+        if (_hidden || _layout is null) return null;
+        var item = _model.Items.FirstOrDefault(i => i.Windows.Any(w => w.Handle == hwnd));
+        if (item is null) return null;
+        foreach (var l in _layout.Items)
+            if (l.Key == item.Key) return new RectD(_window.Left + l.Bounds.X, _window.Top + l.Bounds.Y, l.Bounds.Width, l.Bounds.Height);
+        return null;
+    }
+
     public void SetBottomEdge(double bottomDip)
     {
         if (_bottomEdge == bottomDip) return;

@@ -9,6 +9,7 @@ public static class SettingsNormalizer
     public const double MinOpacityWithoutBlur = 0.30;
     public const int MinCornerRadius = 0, MaxCornerRadius = 30;
     public const int MinLauncherResults = 5, MaxLauncherResults = 12;
+    public const int MinAnimationMs = 200, MaxAnimationMs = 1500;
     public const int MinLauncherFrequent = 8, MaxLauncherFrequent = 24, MinLauncherColumns = 4, MaxLauncherColumns = 8;
     public const int MinIslandEventSeconds = 1, MaxIslandEventSeconds = 5;
 
@@ -50,7 +51,9 @@ public static class SettingsNormalizer
             FocusSessions = Math.Clamp(s.Island.FocusSessions, 2, 8),
         };
 
-        if (appearance == a && theme == t && launcher == s.Launcher && island == s.Island) return s;
-        return s with { Appearance = appearance, Theme = theme, Launcher = launcher, Island = island };
+        var animations = s.Animations with { DurationMs = Math.Clamp(s.Animations.DurationMs, MinAnimationMs, MaxAnimationMs) };
+
+        if (appearance == a && theme == t && launcher == s.Launcher && island == s.Island && animations == s.Animations) return s;
+        return s with { Appearance = appearance, Theme = theme, Launcher = launcher, Island = island, Animations = animations };
     }
 }

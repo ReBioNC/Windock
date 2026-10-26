@@ -35,6 +35,7 @@ public static class SettingsJson
         var switcher = obj["switcher"] as JsonObject;
         var trash = obj["trash"] as JsonObject;
         var island = obj["island"] as JsonObject;
+        var animations = obj["animations"] as JsonObject;
         var ds = d.Status;
         var di = d.Island;
 
@@ -141,6 +142,11 @@ public static class SettingsJson
                 NotesPanel: Get(island, "notesPanel", di.NotesPanel),
                 ClipboardPanel: Get(island, "clipboardPanel", di.ClipboardPanel),
                 ShelfPanel: Get(island, "shelfPanel", di.ShelfPanel)),
+            Animations = new AnimationSettings(
+                Effect: GetEnum(animations, "effect", d.Animations.Effect),
+                AnimateRestore: Get(animations, "animateRestore", d.Animations.AnimateRestore),
+                DurationMs: Get(animations, "durationMs", d.Animations.DurationMs),
+                DisableWindowsAnimation: Get(animations, "disableWindowsAnimation", d.Animations.DisableWindowsAnimation)),
         };
 
         return SettingsNormalizer.Normalize(settings);
@@ -268,6 +274,13 @@ public static class SettingsJson
                 ["notesPanel"] = s.Island.NotesPanel,
                 ["clipboardPanel"] = s.Island.ClipboardPanel,
                 ["shelfPanel"] = s.Island.ShelfPanel,
+            },
+            ["animations"] = new JsonObject
+            {
+                ["effect"] = s.Animations.Effect.ToString(),
+                ["animateRestore"] = s.Animations.AnimateRestore,
+                ["durationMs"] = s.Animations.DurationMs,
+                ["disableWindowsAnimation"] = s.Animations.DisableWindowsAnimation,
             },
             ["hiddenApps"] = new JsonArray(s.HiddenApps.Select(h => (JsonNode)new JsonObject { ["appId"] = h.AppId, ["name"] = h.Name }).ToArray()),
         };

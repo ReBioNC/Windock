@@ -56,6 +56,7 @@ internal sealed class AppHost
     public Status.StatusArea? StatusArea { get; private set; }
     private Island.IslandController? _island;
     private Launcher.LauncherWindow? _launcherWindow;
+    private MinimizeAnimator? _minimizeAnimator;
     /// Apps opened through Windock, for the launcher's Frequent tab.
     public UsageStore? Usage { get; private set; }
 
@@ -117,6 +118,12 @@ internal sealed class AppHost
             var action = DockClickPolicy.Decide(item, foreground, shift);
             Log.Info($"click {item.Key} windows=[{string.Join(",", item.Windows.Select(w => $"0x{w.Handle:X}"))}] fg=0x{foreground:X} -> {action}");
             if (action is ClickAction.ShowWindows) Dock.ShowPreview(item);
+            else if (action is ClickAction.Minimize minimize)
+            {
+                _minimizeAnimator?.CaptureBeforeMinimize(minimize.Hwnd);
+                Launcher.Execute(action, item);
+            }
+            else if (action is ClickAction.Activate activate && _minimizeAnimator?.TryRestore(activate.Hwnd, () => Launcher.Execute(action, item)) == true) { }
             else Launcher.Execute(action, item);
             if (action is ClickAction.Launch launch)
             {
@@ -166,6 +173,7 @@ internal sealed class AppHost
         AppBar.FullscreenChanged += _ => CheckFullscreen();
         Windows.ForegroundChanged += (_, _) => CheckFullscreen();
         _island = new Island.IslandController(Settings, StatusArea, Windows, Messages, Launcher, Icons, Log, Application.Current.Dispatcher, InWindowsMode);
+        _minimizeAnimator = new MinimizeAnimator(Settings, Dock, Windows, Log, Application.Current.Dispatcher, () => !InWindowsMode);
         ApplyMode();
 
         Hotkey = new HotkeyService(Messages);
@@ -249,6 +257,7 @@ internal sealed class AppHost
             Taskbar?.Apply(Settings.Current.Behavior.TaskbarMode);
         }
         Tray?.SetMode(InWindowsMode);
+        _minimizeAnimator?.Apply();
         UpdateDockVisibility();
         Log.Info($"mode: {Settings.Current.Behavior.Mode}");
     }
@@ -272,6 +281,7 @@ internal sealed class AppHost
         Try(() => AppBar?.Release());
         Try(() => Hotkey?.UnregisterAll());
         Try(() => _switcher?.Dispose());
+        Try(WindowsMinimizeAnimation.Restore);
         Try(() => File.Delete(SessionMarker));
     }
 
@@ -285,6 +295,7 @@ internal sealed class AppHost
             AutoHide?.Apply();
         }
         if (e.New.Behavior.Mode != e.Old.Behavior.Mode) ApplyMode();
+        else if (e.Sections.HasFlag(SettingsSection.Animations)) _minimizeAnimator?.Apply();
         else if (e.Sections.HasFlag(SettingsSection.Behavior) && !InWindowsMode) Taskbar?.Apply(e.New.Behavior.TaskbarMode);
         if (e.Sections.HasFlag(SettingsSection.Safety)) RegisterHotkey(e.New.Safety.EmergencyHotkey);
         if (e.New.Behavior.ExplorerContextMenu != e.Old.Behavior.ExplorerContextMenu) SyncExplorerMenu(e.New.Behavior.ExplorerContextMenu);

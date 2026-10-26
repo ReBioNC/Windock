@@ -52,6 +52,7 @@
                 <ListBoxItem Content="Dock items" />
                 <ListBoxItem Content="Launcher" />
                 <ListBoxItem Content="Alt+Tab" />
+                <ListBoxItem Content="Animations" />
                 <ListBoxItem Content="Safety" />
                 <ListBoxItem Content="About" />
             </ListBox>
