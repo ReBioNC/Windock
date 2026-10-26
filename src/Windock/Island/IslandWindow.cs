@@ -18,7 +18,11 @@ internal sealed record IslandView(
     MediaState? Media, ImageSource? Cover,
     IslandEvent? Event,
     IReadOnlyList<IslandPanel> Panels, int Page, IReadOnlyList<DeviceEntry>? Devices, WeatherView Weather,
-    bool Charging, WadoMood? Mood, LyricsView Lyrics, FocusView? Focus, TasksView Tasks, NotesView Notes);
+    bool Charging, WadoMood? Mood, LyricsView Lyrics, FocusView? Focus, TasksView Tasks, NotesView Notes,
+    IReadOnlyList<string> Clipboard, IReadOnlyList<ShelfItem> Shelf);
+
+/// A file or folder on the shelf; Icon arrives a moment after it is added.
+internal sealed record ShelfItem(string Path, string Name, ImageSource? Icon);
 
 /// The Today list as shown (open tasks first).
 internal sealed record TasksView(IReadOnlyList<IslandTask> Items);
@@ -36,7 +40,7 @@ internal sealed record LyricsView(bool Show, IReadOnlyList<LyricLine>? Lines, st
 }
 
 /// Pages of the open card, in order. Home is always the clock card; Music has the player controls.
-internal enum IslandPanel { Home, Music, Weather, Devices, Focus, Tasks, Notes }
+internal enum IslandPanel { Home, Music, Weather, Devices, Focus, Tasks, Notes, Clipboard, Shelf }
 
 /// The Weather panel: a report, or a message instead (no city yet, city not found, loading, offline).
 internal sealed record WeatherView(WeatherReport? Report, string? Place, string? Message, bool Stale);
@@ -107,6 +111,24 @@ internal sealed partial class IslandWindow : Window
         _swipeEnd.Tick += (_, _) => OnSwipeEnded();
         _edgeStrip.MouseEnter += (_, _) => EdgeEntered?.Invoke();
         _edgeStrip.MouseLeave += (_, _) => EdgeLeft?.Invoke();
+        // Files dragged to the top of the screen: the island comes out and opens on the shelf.
+        _edgeStrip.AllowDrop = true;
+        _edgeStrip.DragEnter += (_, _) => EdgeEntered?.Invoke();
+        _edgeStrip.DragLeave += (_, _) => EdgeLeft?.Invoke();
+        _pill.AllowDrop = true;
+        _pill.DragEnter += (_, e) => OnFileDrag(e, entering: true);
+        _pill.DragOver += (_, e) => OnFileDrag(e, entering: false);
+        _pill.DragLeave += (_, e) =>
+        {
+            var p = e.GetPosition(_pill);
+            if (p.X > 0 && p.Y > 0 && p.X < _pill.ActualWidth && p.Y < _pill.ActualHeight) return;  // moved onto a child
+            ShelfDragLeft?.Invoke();
+        };
+        _pill.Drop += (_, e) =>
+        {
+            e.Handled = true;
+            if (AcceptsFiles(e) && e.Data.GetData(DataFormats.FileDrop) is string[] files) ShelfDropped?.Invoke(files);
+        };
         IsVisibleChanged += (_, _) => UpdateBars();  // hidden for a fullscreen app: the bars stop too
 
         _root.LayoutTransform = _scale;
@@ -122,6 +144,10 @@ internal sealed partial class IslandWindow : Window
     public event Action<string>? TaskAdded, TaskToggled, TaskDeleted;
     public event Action<int, string>? NoteEdited;
     public event Action? NotePrevious, NoteNext, NoteAdded, NoteDeleted;
+    public event Action<int>? ClipboardChosen;
+    public event Action? ClipboardCleared, ShelfCleared, ShelfDragEntered, ShelfDragLeft;
+    public event Action<string[]>? ShelfDropped;
+    public event Action<string>? ShelfOpened, ShelfRemoved;
     /// The user started (true) or stopped typing in the card.
     public event Action<bool>? TypingChanged;
     /// -1 previous page, +1 next page.
@@ -201,6 +227,17 @@ internal sealed partial class IslandWindow : Window
         if (_pendingView is not { } pending) return;
         _pendingView = null;
         Render(pending);
+    }
+
+    private bool AcceptsFiles(DragEventArgs e) =>
+        _view is not null && _view.Panels.Contains(IslandPanel.Shelf) && e.Data.GetDataPresent(DataFormats.FileDrop)
+        && e.Data.GetData(DataFormats.FileDrop) is string[] files && !files.All(f => _view.Shelf.Any(s => string.Equals(s.Path, f, StringComparison.OrdinalIgnoreCase)));
+
+    private void OnFileDrag(DragEventArgs e, bool entering)
+    {
+        e.Effects = AcceptsFiles(e) ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = true;
+        if (entering && e.Effects != DragDropEffects.None) ShelfDragEntered?.Invoke();
     }
 
     /// Builds the card again from the current view (after a change only the window knows about).
@@ -299,7 +336,8 @@ internal sealed partial class IslandWindow : Window
         && a.BigClock == b.BigClock && a.LongDate == b.LongDate && a.BatteryLine == b.BatteryLine
         && a.Panels.SequenceEqual(b.Panels) && ReferenceEquals(a.Devices, b.Devices) && a.Weather == b.Weather
         && a.Charging == b.Charging && a.Mood == b.Mood && a.Lyrics == b.Lyrics && a.Focus == b.Focus
-        && ReferenceEquals(a.Tasks.Items, b.Tasks.Items) && a.Notes == b.Notes;
+        && ReferenceEquals(a.Tasks.Items, b.Tasks.Items) && a.Notes == b.Notes
+        && ReferenceEquals(a.Clipboard, b.Clipboard) && ReferenceEquals(a.Shelf, b.Shelf);
 
     private static double MinCompactWidth(IslandView v) => v.Mode switch
     {
@@ -342,6 +380,8 @@ internal sealed partial class IslandWindow : Window
                 IslandPanel.Focus when v.Focus is { } focus => FocusPage(focus),
                 IslandPanel.Tasks => TasksPage(v.Tasks),
                 IslandPanel.Notes => NotesPage(v.Notes),
+                IslandPanel.Clipboard => ClipboardPage(v.Clipboard),
+                IslandPanel.Shelf => ShelfPage(v.Shelf),
                 _ => IdleCard(v),
             };
             strip.Children.Add(new Border { Width = ExpandedWidth, Padding = new Thickness(8, 0, 8, 0), Child = page });
@@ -406,6 +446,8 @@ internal sealed partial class IslandWindow : Window
         IslandPanel.Focus => ("", Icons),
         IslandPanel.Tasks => ("☑", Symbols),
         IslandPanel.Notes => ("", Icons),
+        IslandPanel.Clipboard => ("", Icons),
+        IslandPanel.Shelf => ("", Icons),
         _ => ("", Icons),
     };
 

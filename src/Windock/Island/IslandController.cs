@@ -46,6 +46,12 @@ internal sealed class IslandController : IDisposable
     private readonly LyricsService _lyrics;
     private readonly FocusTimer _focus;
     private readonly IslandNotebook _notebook;
+    private readonly ClipboardHistory _clipboard = new();
+    private ClipboardWatcher? _clipboardWatcher;
+    private IReadOnlyList<string> _clipboardView = Array.Empty<string>();
+    private IReadOnlyList<ShelfItem>? _shelfView;
+    private readonly Dictionary<string, System.Windows.Media.ImageSource> _shelfIcons = new(StringComparer.OrdinalIgnoreCase);
+    private readonly IconProvider _icons;
     private int _noteIndex;
     private readonly DispatcherTimer _focusTick;
     private IReadOnlyList<DeviceEntry>? _deviceList;
@@ -62,8 +68,9 @@ internal sealed class IslandController : IDisposable
 
     /// suppressed: the starting value of SetSuppressed, so Windows mode never flashes the island at startup.
     public IslandController(SettingsStore settings, Status.StatusArea status, WindowTracker tracker, MessageWindow messages,
-        AppLauncher launcher, ILog log, Dispatcher ui, bool suppressed)
+        AppLauncher launcher, IconProvider icons, ILog log, Dispatcher ui, bool suppressed)
     {
+        _icons = icons;
         _suppressed = suppressed;
         _settings = settings;
         _status = status;
@@ -174,6 +181,39 @@ internal sealed class IslandController : IDisposable
                 _notebook.NotesChanged();
                 ShowNote(Math.Min(_noteIndex, _notebook.Notes.Count - 1));
             };
+            _window.ClipboardChosen += index =>
+            {
+                if (index < _clipboard.Items.Count) ClipboardWatcher.Copy(_clipboard.Items[index]);
+            };
+            _window.ClipboardCleared += () =>
+            {
+                _clipboard.Clear();
+                _clipboardView = Array.Empty<string>();
+                Render();
+            };
+            _window.ShelfDragEntered += () =>
+            {
+                _pillHover = true;
+                _model.PointerEntered(expandAllowed: true);
+                var page = Panels().ToList().IndexOf(IslandPanel.Shelf);
+                if (page >= 0) _model.GoToPage(page, Panels().Count);
+                QueueEvaluate();
+            };
+            _window.ShelfDragLeft += OnPillLeft;
+            _window.ShelfDropped += files => EditShelf(Shelf.Add(_notebook.ShelfItems, files));
+            _window.ShelfRemoved += path => EditShelf(_notebook.ShelfItems.Where(p => !string.Equals(p, path, StringComparison.OrdinalIgnoreCase)).ToList());
+            _window.ShelfCleared += () => EditShelf(new List<string>());
+            _window.ShelfOpened += path =>
+            {
+                try
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true })?.Dispose();
+                }
+                catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+                {
+                    _log.Error($"shelf: cannot open {path}", ex);
+                }
+            };
             _window.TypingChanged += typing =>
             {
                 _model.Hold(typing);
@@ -265,6 +305,19 @@ internal sealed class IslandController : IDisposable
             _brightness.Dispose();
             _brightness = null;
         }
+        if (s.ClipboardPanel && _clipboardWatcher is null)
+        {
+            _clipboardWatcher = new ClipboardWatcher(_messages, _ui, _log);
+            _clipboardWatcher.TextCopied += OnTextCopied;
+        }
+        else if (!s.ClipboardPanel && _clipboardWatcher is not null)
+        {
+            _clipboardWatcher.Dispose();
+            _clipboardWatcher = null;
+            _clipboard.Clear();
+            _clipboardView = Array.Empty<string>();
+        }
+        if (s.ShelfPanel) RequestShelfIcons();
         if (s.DeviceEvents && _devices is null)
         {
             _devices = new DeviceWatcher(_messages, _log);
@@ -301,6 +354,8 @@ internal sealed class IslandController : IDisposable
         _brightness = null;
         _devices?.Dispose();
         _devices = null;
+        _clipboardWatcher?.Dispose();
+        _clipboardWatcher = null;
         if (_window is null) return;
         _window.Close();
         _window = null;
@@ -408,6 +463,8 @@ internal sealed class IslandController : IDisposable
         if (s.FocusPanel) list.Add(IslandPanel.Focus);
         if (s.TasksPanel) list.Add(IslandPanel.Tasks);
         if (s.NotesPanel) list.Add(IslandPanel.Notes);
+        if (s.ClipboardPanel) list.Add(IslandPanel.Clipboard);
+        if (s.ShelfPanel) list.Add(IslandPanel.Shelf);
         return list;
     }
 
@@ -523,7 +580,9 @@ internal sealed class IslandController : IDisposable
                     _focus.NextBreak == FocusPhase.LongBreak ? settings.Island.LongBreakMinutes : settings.Island.ShortBreakMinutes)
                 : null,
             _tasksView ??= new TasksView(TaskList.Visible(_notebook.Tasks, now)),
-            new NotesView(_noteIndex, _notebook.Notes.Count, _notebook.Notes[_noteIndex]));
+            new NotesView(_noteIndex, _notebook.Notes.Count, _notebook.Notes[_noteIndex]),
+            _clipboardView,
+            _shelfView ??= ShelfView());
         _window.Render(view);
         _window.UpdateFocus(_focus.Remaining(now), _focus.Progress(now));
 
@@ -537,6 +596,39 @@ internal sealed class IslandController : IDisposable
     }
 
     private TasksView? _tasksView;
+
+    private IReadOnlyList<ShelfItem> ShelfView() => _notebook.ShelfItems.Select(p =>
+    {
+        var name = System.IO.Path.GetFileName(p.TrimEnd('\\'));
+        return new ShelfItem(p, name.Length > 0 ? name : p, _shelfIcons.GetValueOrDefault(p));
+    }).ToList();
+
+    private void EditShelf(List<string> items)
+    {
+        _notebook.ShelfChanged(items);
+        _shelfView = null;
+        RequestShelfIcons();
+        Render();
+    }
+
+    private void RequestShelfIcons()
+    {
+        var px = IconProvider.PixelSizeFor(30, _window is null ? 1.0 : System.Windows.Media.VisualTreeHelper.GetDpi(_window).DpiScaleX);
+        foreach (var path in _notebook.ShelfItems.Where(p => !_shelfIcons.ContainsKey(p)))
+            _icons.Request("shelf:" + path, path, IntPtr.Zero, px, (_, image) =>
+            {
+                _shelfIcons[path] = image;
+                _shelfView = null;
+                Render();
+            });
+    }
+
+    private void OnTextCopied(string text)
+    {
+        if (!_clipboard.Add(text)) return;
+        _clipboardView = _clipboard.Items.ToList();
+        if (_model.Expanded) Render();
+    }
 
     private void EditTasks(Action<List<IslandTask>> change)
     {

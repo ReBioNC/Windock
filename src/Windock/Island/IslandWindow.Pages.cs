@@ -42,7 +42,8 @@ internal sealed partial class IslandWindow
     private bool _addingTask;
     private static readonly Brush Field = Frozen(Color.FromRgb(0x16, 0x16, 0x16));
     private static readonly Brush Done = Frozen(Color.FromRgb(0x6A, 0x6A, 0x6A));
-    private const int MaxTaskRows = 3;
+    private const int MaxTaskRows = 3, MaxClipRows = 4, MaxShelfTiles = 6;
+    private static readonly Brush RowHover = Frozen(Color.FromArgb(0x20, 0xFF, 0xFF, 0xFF));
     private Path? _focusArc;
 
     // ---- compact ----
@@ -295,6 +296,132 @@ internal sealed partial class IslandWindow
         panel.Children.Add(field);
         panel.Children.Add(footer);
         return panel;
+    }
+
+    // ---- clipboard and shelf ----
+
+    private FrameworkElement ClipboardPage(IReadOnlyList<string> items)
+    {
+        var panel = new StackPanel { Margin = new Thickness(14, 4, 14, 6) };
+        var header = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
+        var copied = Text("Copied", 12, brush: Accent);
+        copied.Visibility = Visibility.Collapsed;
+        copied.Margin = new Thickness(0, 0, 10, 0);
+        var right = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        right.Children.Add(copied);
+        if (items.Count > 0)
+        {
+            var clear = PillButton("Clear", Tile, () => ClipboardCleared?.Invoke());
+            clear.Margin = new Thickness(0);
+            right.Children.Add(clear);
+        }
+        DockPanel.SetDock(right, System.Windows.Controls.Dock.Right);
+        header.Children.Add(right);
+        var title = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Foreground = Brushes.White };
+        title.Inlines.Add(new System.Windows.Documents.Run("Clipboard") { FontSize = 15, FontWeight = FontWeights.SemiBold });
+        title.Inlines.Add(new System.Windows.Documents.Run("   click to copy again") { FontSize = 12, Foreground = Secondary });
+        header.Children.Add(title);
+        panel.Children.Add(header);
+        if (items.Count == 0)
+        {
+            panel.Children.Add(Text("Text you copy shows up here (kept only until Windock closes).", 13, brush: Secondary));
+            return panel;
+        }
+        for (var i = 0; i < Math.Min(items.Count, MaxClipRows); i++)
+        {
+            var index = i;
+            var row = new Border { CornerRadius = new CornerRadius(8), Padding = new Thickness(8, 3, 8, 3), Background = Brushes.Transparent, Cursor = Cursors.Hand };
+            row.Child = Text(ClipboardHistory.Preview(items[i]), 13, brush: i == 0 ? Brushes.White : Secondary);
+            row.MouseEnter += (_, _) => row.Background = RowHover;
+            row.MouseLeave += (_, _) => row.Background = Brushes.Transparent;
+            row.MouseLeftButtonUp += (_, e) =>
+            {
+                e.Handled = true;
+                copied.Visibility = Visibility.Visible;
+                ClipboardChosen?.Invoke(index);
+            };
+            panel.Children.Add(row);
+        }
+        return panel;
+    }
+
+    private FrameworkElement ShelfPage(IReadOnlyList<ShelfItem> items)
+    {
+        var panel = new StackPanel { Margin = new Thickness(14, 4, 14, 6) };
+        var header = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
+        if (items.Count > 0)
+        {
+            var clear = PillButton("Clear", Tile, () => ShelfCleared?.Invoke());
+            clear.Margin = new Thickness(0);
+            DockPanel.SetDock(clear, System.Windows.Controls.Dock.Right);
+            header.Children.Add(clear);
+        }
+        var title = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Foreground = Brushes.White };
+        title.Inlines.Add(new System.Windows.Documents.Run("Shelf") { FontSize = 15, FontWeight = FontWeights.SemiBold });
+        title.Inlines.Add(new System.Windows.Documents.Run(items.Count == 0 ? "" : items.Count > MaxShelfTiles ? $"   {items.Count} items, newest shown" : "   drag out or click to open")
+            { FontSize = 12, Foreground = Secondary });
+        header.Children.Add(title);
+        panel.Children.Add(header);
+        if (items.Count == 0)
+        {
+            var hint = Text("Drop files here to keep them handy. Drag them out again later, or click to open.", 13, brush: Secondary);
+            hint.TextWrapping = TextWrapping.Wrap;
+            panel.Children.Add(hint);
+            return panel;
+        }
+        var tiles = new StackPanel { Orientation = Orientation.Horizontal };
+        foreach (var item in items.Skip(Math.Max(0, items.Count - MaxShelfTiles))) tiles.Children.Add(ShelfTile(item));
+        panel.Children.Add(tiles);
+        return panel;
+    }
+
+    /// Click opens the file; dragging it out drops it wherever it lands (Explorer, a mail, a chat).
+    private FrameworkElement ShelfTile(ShelfItem item)
+    {
+        var stack = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        stack.Children.Add(item.Icon is { } icon
+            ? new Image { Source = icon, Width = 30, Height = 30, HorizontalAlignment = HorizontalAlignment.Center }
+            : Glyph("\uE8A5", 24));
+        var name = Text(item.Name, 11);
+        name.MaxWidth = 64;
+        name.HorizontalAlignment = HorizontalAlignment.Center;
+        name.Margin = new Thickness(0, 4, 0, 0);
+        stack.Children.Add(name);
+        var remove = Glyph("\uE711", 9, Secondary);
+        remove.HorizontalAlignment = HorizontalAlignment.Right;
+        remove.VerticalAlignment = VerticalAlignment.Top;
+        remove.Margin = new Thickness(0, 5, 6, 0);
+        remove.Visibility = Visibility.Hidden;
+        remove.Cursor = Cursors.Hand;
+        remove.MouseLeftButtonUp += (_, e) => { e.Handled = true; ShelfRemoved?.Invoke(item.Path); };
+        var grid = new Grid();
+        grid.Children.Add(stack);
+        grid.Children.Add(remove);
+        var tile = new Border
+        {
+            Width = 72, Height = 64, CornerRadius = new CornerRadius(12), Background = Tile, Margin = new Thickness(0, 0, 8, 0),
+            Child = grid, Cursor = Cursors.Hand, ToolTip = item.Path,
+        };
+        Point? pressedAt = null;
+        tile.MouseEnter += (_, _) => remove.Visibility = Visibility.Visible;
+        tile.MouseLeave += (_, _) => remove.Visibility = Visibility.Hidden;
+        tile.MouseLeftButtonDown += (_, e) => pressedAt = e.GetPosition(tile);
+        tile.MouseMove += (_, e) =>
+        {
+            if (pressedAt is not { } start || e.LeftButton != MouseButtonState.Pressed) return;
+            var p = e.GetPosition(tile);
+            if (Math.Abs(p.X - start.X) < 5 && Math.Abs(p.Y - start.Y) < 5) return;
+            pressedAt = null;
+            DragDrop.DoDragDrop(tile, new DataObject(DataFormats.FileDrop, new[] { item.Path }), DragDropEffects.Copy | DragDropEffects.Move | DragDropEffects.Link);
+        };
+        tile.MouseLeftButtonUp += (_, e) =>
+        {
+            if (pressedAt is null) return;
+            pressedAt = null;
+            e.Handled = true;
+            ShelfOpened?.Invoke(item.Path);
+        };
+        return tile;
     }
 
     private static string Count(string text) => text.Length == 1 ? "1 character" : $"{text.Length} characters";

@@ -53,7 +53,9 @@
                     <CheckBox x:Name="WeatherPanel" Content="Weather (from Open-Meteo, needs internet)" Margin="0,0,0,8" />
                     <CheckBox x:Name="FocusPanel" Content="Focus timer (pomodoro)" Margin="0,0,0,8" />
                     <CheckBox x:Name="TasksPanel" Content="Today tasks (put a time at the end, e.g. &quot;Call mom 14:30&quot;, to be reminded)" Margin="0,0,0,8" />
-                    <CheckBox x:Name="NotesPanel" Content="Quick notes" />
+                    <CheckBox x:Name="NotesPanel" Content="Quick notes" Margin="0,0,0,8" />
+                    <CheckBox x:Name="ClipboardPanel" Content="Clipboard: the last 20 texts you copied (kept in memory only, skips password managers)" Margin="0,0,0,8" />
+                    <CheckBox x:Name="ShelfPanel" Content="Shelf: drop files on the island to keep them handy" />
                     <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"
                                Text="With the island open, click an icon in its tab bar, swipe left or right with two fingers on the touchpad, or scroll to switch panels. The dots at the bottom show where you are. Bluetooth devices show their battery when they report it." />
                 </StackPanel>

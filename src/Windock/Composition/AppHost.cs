@@ -165,7 +165,7 @@ internal sealed class AppHost
         // The shell also reports the desktop itself as "fullscreen"; treat its signal only as a cue to check.
         AppBar.FullscreenChanged += _ => CheckFullscreen();
         Windows.ForegroundChanged += (_, _) => CheckFullscreen();
-        _island = new Island.IslandController(Settings, StatusArea, Windows, Messages, Launcher, Log, Application.Current.Dispatcher, InWindowsMode);
+        _island = new Island.IslandController(Settings, StatusArea, Windows, Messages, Launcher, Icons, Log, Application.Current.Dispatcher, InWindowsMode);
         ApplyMode();
 
         Hotkey = new HotkeyService(Messages);

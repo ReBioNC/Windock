@@ -138,7 +138,9 @@ public static class SettingsJson
                 FocusSessions: Get(island, "focusSessions", di.FocusSessions),
                 FocusSound: Get(island, "focusSound", di.FocusSound),
                 TasksPanel: Get(island, "tasksPanel", di.TasksPanel),
-                NotesPanel: Get(island, "notesPanel", di.NotesPanel)),
+                NotesPanel: Get(island, "notesPanel", di.NotesPanel),
+                ClipboardPanel: Get(island, "clipboardPanel", di.ClipboardPanel),
+                ShelfPanel: Get(island, "shelfPanel", di.ShelfPanel)),
         };
 
         return SettingsNormalizer.Normalize(settings);
@@ -264,6 +266,8 @@ public static class SettingsJson
                 ["focusSound"] = s.Island.FocusSound,
                 ["tasksPanel"] = s.Island.TasksPanel,
                 ["notesPanel"] = s.Island.NotesPanel,
+                ["clipboardPanel"] = s.Island.ClipboardPanel,
+                ["shelfPanel"] = s.Island.ShelfPanel,
             },
             ["hiddenApps"] = new JsonArray(s.HiddenApps.Select(h => (JsonNode)new JsonObject { ["appId"] = h.AppId, ["name"] = h.Name }).ToArray()),
         };

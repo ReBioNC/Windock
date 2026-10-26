@@ -5,7 +5,8 @@ using Windock.Core.Logging;
 
 namespace Windock.Island;
 
-/// The island's tasks and notes, kept in Windock's data folder (island-tasks.json, island-notes.json).
+/// The island's tasks, notes and shelf, kept in Windock's data folder (island-tasks.json, island-notes.json,
+/// island-shelf.json).
 /// Edits are saved half a second after the last change, and at once on Flush.
 internal sealed class IslandNotebook(string directory, IDelayScheduler scheduler, ILog log)
 {
@@ -13,15 +14,18 @@ internal sealed class IslandNotebook(string directory, IDelayScheduler scheduler
 
     private readonly string _tasksPath = Path.Combine(directory, "island-tasks.json");
     private readonly string _notesPath = Path.Combine(directory, "island-notes.json");
+    private readonly string _shelfPath = Path.Combine(directory, "island-shelf.json");
     private IDisposable? _tasksSave, _notesSave;
 
     public List<IslandTask> Tasks { get; private set; } = new();
     public List<string> Notes { get; private set; } = new() { "" };
+    public List<string> ShelfItems { get; private set; } = new();
 
     public void Load()
     {
         Tasks = TaskList.Prune(TaskList.Parse(Read(_tasksPath) ?? "[]"), DateTime.Now).ToList();
         Notes = NoteBook.Parse(Read(_notesPath) ?? "[]");
+        ShelfItems = Shelf.Prune(Shelf.Parse(Read(_shelfPath) ?? "[]"), p => File.Exists(p) || Directory.Exists(p));
     }
 
     public void TasksChanged()
@@ -34,6 +38,12 @@ internal sealed class IslandNotebook(string directory, IDelayScheduler scheduler
     {
         _notesSave?.Dispose();
         _notesSave = scheduler.Schedule(SaveDelay, SaveNotes);
+    }
+
+    public void ShelfChanged(List<string> items)
+    {
+        ShelfItems = items;
+        Write(_shelfPath, Shelf.Serialize(items));  // rare and small: saved at once
     }
 
     public void Flush()
