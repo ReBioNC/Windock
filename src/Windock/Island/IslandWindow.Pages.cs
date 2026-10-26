@@ -36,7 +36,11 @@ internal sealed partial class IslandWindow
     private TextBlock? _progressText, _durationText;
     private double _progressWidth = ProgressWidth;
     private IReadOnlyList<LyricLine>? _lyricLines;
-    private readonly TextBlock[] _lyricBlocks = new TextBlock[4];
+    private readonly List<TextBlock> _lyricRows = new();
+    private TranslateTransform? _lyricScroll;
+    /// Lyrics show four rows; the sung line sits on the second, and the list glides up to the next one.
+    private const double LyricRowHeight = 24, LyricRows = 4, LyricDimOpacity = 0.35;
+    private static readonly Duration LyricGlide = TimeSpan.FromMilliseconds(380);
     private int _lyricIndex = int.MinValue;
     private TextBlock? _focusCompactText, _focusPageText;
     private bool _addingTask;
@@ -597,12 +601,26 @@ internal sealed partial class IslandWindow
         }
         else
         {
-            for (var i = 0; i < _lyricBlocks.Length; i++)
+            // Every line in one column inside a window four rows tall; a Canvas lays it out without clipping it.
+            var column = new StackPanel();
+            _lyricScroll = new TranslateTransform();
+            column.RenderTransform = _lyricScroll;
+            foreach (var line in lyrics.Lines)
             {
-                _lyricBlocks[i] = new TextBlock { FontSize = 14, Foreground = LyricDim, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 2, 0, 2) };
-                words.Children.Add(_lyricBlocks[i]);
+                var row = new TextBlock
+                {
+                    Text = line.Text, FontSize = 14, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White, Opacity = LyricDimOpacity,
+                    Height = LyricRowHeight, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center,
+                    RenderTransformOrigin = new Point(0, 0.5), RenderTransform = new ScaleTransform(0.94, 0.94),
+                };
+                _lyricRows.Add(row);
+                column.Children.Add(row);
             }
-            ShowLyricLine(-1);
+            var viewport = new Canvas { Height = LyricRowHeight * LyricRows, ClipToBounds = true };
+            viewport.SizeChanged += (_, _) => column.Width = viewport.ActualWidth;
+            viewport.Children.Add(column);
+            words.Children.Add(viewport);
+            ShowLyricLine(-1, animate: false);
         }
         grid.Children.Add(words);
         return grid;
@@ -633,19 +651,35 @@ internal sealed partial class IslandWindow
         return button;
     }
 
-    /// The line before (dim), the current one (white), and the next two (dim).
-    private void ShowLyricLine(int index)
+    /// Glides the lyrics so the sung line sits on the second row: it brightens and grows a little as it arrives,
+    /// the previous one dims and shrinks back (like Apple Music). Seeking glides over several lines at once.
+    private void ShowLyricLine(int index, bool animate = true)
     {
-        if (_lyricLines is null || index == _lyricIndex || _lyricBlocks[0] is null) return;
+        if (_lyricLines is null || _lyricScroll is null || index == _lyricIndex) return;
+        var previous = _lyricIndex;
         _lyricIndex = index;
-        for (var i = 0; i < _lyricBlocks.Length; i++)
+        var to = -(index - 1) * LyricRowHeight;
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        if (animate) _lyricScroll.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(to, LyricGlide) { EasingFunction = ease });
+        else _lyricScroll.Y = to;
+        foreach (var i in new[] { previous, index })
         {
-            var line = index - 1 + i;
-            var block = _lyricBlocks[i];
-            block.Text = line >= 0 && line < _lyricLines.Count ? _lyricLines[line].Text : "";
-            var current = i == 1 && index >= 0;
-            block.Foreground = current ? Brushes.White : LyricDim;
-            block.FontWeight = current ? FontWeights.SemiBold : FontWeights.Normal;
+            if (i < 0 || i >= _lyricRows.Count) continue;
+            var current = i == index;
+            var row = _lyricRows[i];
+            var scale = (ScaleTransform)row.RenderTransform;
+            var size = current ? 1.0 : 0.94;
+            if (animate)
+            {
+                row.BeginAnimation(OpacityProperty, new DoubleAnimation(current ? 1 : LyricDimOpacity, LyricGlide) { EasingFunction = ease });
+                scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(size, LyricGlide) { EasingFunction = ease });
+                scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(size, LyricGlide) { EasingFunction = ease });
+            }
+            else
+            {
+                row.Opacity = current ? 1 : LyricDimOpacity;
+                scale.ScaleX = scale.ScaleY = size;
+            }
         }
     }
 
@@ -751,7 +785,8 @@ internal sealed partial class IslandWindow
         _progressFill = null;
         _progressText = _durationText = null;
         _lyricLines = null;
-        Array.Clear(_lyricBlocks);
+        _lyricRows.Clear();
+        _lyricScroll = null;
         _focusCompactText = _focusPageText = null;
         _focusArc = null;
     }
