@@ -149,7 +149,11 @@ internal sealed class AppHost
             menu.IsOpen = true;
         };
         Dock.DropCompleted += HandleDrop;
-        Dock.PreviewWindowChosen += hwnd => Launcher.Activate(hwnd);
+        Dock.PreviewWindowChosen += hwnd =>
+        {
+            if (Native.IsIconic(hwnd) && _minimizeAnimator?.TryRestore(hwnd, () => Launcher.Activate(hwnd)) == true) return;
+            Launcher.Activate(hwnd);
+        };
         Dock.PreviewCloseRequested += hwnd => Launcher.CloseWindows(new[] { hwnd });
         Dock.SetHidden(InWindowsMode);
         Dock.Start();
@@ -174,6 +178,7 @@ internal sealed class AppHost
         Windows.ForegroundChanged += (_, _) => CheckFullscreen();
         _island = new Island.IslandController(Settings, StatusArea, Windows, Messages, Launcher, Icons, Log, Application.Current.Dispatcher, InWindowsMode);
         _minimizeAnimator = new MinimizeAnimator(Settings, Dock, Windows, Log, Application.Current.Dispatcher, () => !InWindowsMode);
+        if (_switcher is not null) _switcher.AnimatedRestore = (hwnd, restore) => _minimizeAnimator.TryRestore(hwnd, restore);
         ApplyMode();
 
         Hotkey = new HotkeyService(Messages);

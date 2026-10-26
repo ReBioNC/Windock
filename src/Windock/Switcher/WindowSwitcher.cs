@@ -162,9 +162,17 @@ internal sealed class WindowSwitcher : IDisposable
         _log.Info($"Alt+Tab: picked {_selected} of {_shown.Count}");
         Close();
         if (target == IntPtr.Zero) return;
-        Native.Restore(target);
-        if (!BringToFront(target)) _log.Info($"Alt+Tab could not focus 0x{target:X} '{Native.WindowText(target)}'");
+        void Focus()
+        {
+            Native.Restore(target);
+            if (!BringToFront(target)) _log.Info($"Alt+Tab could not focus 0x{target:X} '{Native.WindowText(target)}'");
+        }
+        if (Native.IsIconic(target) && AnimatedRestore?.Invoke(target, Focus) == true) return;
+        Focus();
     }
+
+    /// Plays the restore animation for a minimized window, then runs the action; false when it won't animate.
+    public Func<IntPtr, Action, bool>? AnimatedRestore { get; set; }
 
     /// Windows only lets the app that owns the focus give it away. Joining the focused window's input queue for
     /// a moment makes Windock count as that app; SwitchToThisWindow (Windows' own Alt+Tab call) is the last resort.
