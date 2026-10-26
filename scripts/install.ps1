@@ -57,4 +57,9 @@ foreach ($folder in $folders) {
 }
 
 Write-Host "Done. Windock is installed in $dest"
-if ($Launch) { Start-Process -FilePath $exe -ArgumentList "--settings" }
+if ($Launch) {
+    # Started through WMI so Windock does not belong to this console: apps that end their whole process tree
+    # when they quit (some terminals, IDEs and agents) would otherwise take Windock, and the hidden taskbar, down too.
+    $started = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = "`"$exe`" --settings" }
+    if ($started.ReturnValue -ne 0) { Start-Process -FilePath $exe -ArgumentList "--settings" }
+}
