@@ -27,6 +27,7 @@ internal sealed class MinimizeAnimator : IDisposable
     private readonly HashSet<IntPtr> _minimized = new();
     private TitleBarPressWatcher? _watcher;
     private MinimizeOverlay? _overlay;
+    private IntPtr _armed;  // window whose first frame is already up, waiting for its minimize
 
     /// active: false in Windows mode (no animations, Windows' own animation back).
     public MinimizeAnimator(SettingsStore settings, DockController dock, WindowTracker tracker, ILog log, Dispatcher ui, Func<bool> active)
@@ -49,7 +50,12 @@ internal sealed class MinimizeAnimator : IDisposable
         if (Enabled && _watcher is null)
         {
             _watcher = new TitleBarPressWatcher();
-            _watcher.Captured += (hwnd, snapshot) => _ui.BeginInvoke(() => Store(hwnd, snapshot));
+            _watcher.Captured += (hwnd, snapshot, onMinimize) => _ui.BeginInvoke(() =>
+            {
+                Store(hwnd, snapshot);
+                if (onMinimize) Arm(hwnd);
+            });
+            _watcher.Released += () => _ui.BeginInvoke(DisarmSoon);
             _overlay = new MinimizeOverlay();
         }
         else if (!Enabled && _watcher is not null)
@@ -74,7 +80,36 @@ internal sealed class MinimizeAnimator : IDisposable
     /// Before Windock itself minimizes a window (dock click).
     public void CaptureBeforeMinimize(IntPtr hwnd)
     {
-        if (Enabled && WindowSnapshot.Take(hwnd) is { } snapshot) Store(hwnd, snapshot);
+        if (!Enabled || WindowSnapshot.Take(hwnd) is not { } snapshot) return;
+        Store(hwnd, snapshot);
+        Arm(hwnd);
+        DisarmSoon();
+    }
+
+    /// The minimize button is pressed: put the first frame (the window itself) up now, so the window vanishing
+    /// underneath on release can't blink the desktop through before the animation shows.
+    private void Arm(IntPtr hwnd)
+    {
+        if (!Enabled || _overlay is null || _minimized.Contains(hwnd) || !_snapshots.TryGetValue(hwnd, out var snapshot)) return;
+        if (Target(hwnd) is not { } icon) return;
+        Prepare(snapshot, icon, reverse: false, done: null);
+        _armed = hwnd;
+    }
+
+    /// Released without a minimize (pressed, then moved off the button): take the first frame down again.
+    private void DisarmSoon()
+    {
+        if (_armed == IntPtr.Zero) return;
+        var armed = _armed;
+        var timer = new DispatcherTimer(DispatcherPriority.Normal, _ui) { Interval = TimeSpan.FromMilliseconds(350) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            if (_armed != armed || Native.IsIconic(armed)) return;
+            _armed = IntPtr.Zero;
+            _overlay?.Cancel();
+        };
+        timer.Start();
     }
 
     /// Plays the restore effect, then calls restore. False when there is nothing to play (restore not called).
@@ -106,8 +141,17 @@ internal sealed class MinimizeAnimator : IDisposable
                 if (_snapshots.TryGetValue(hwnd, out var s) && DateTime.UtcNow - s.TakenUtc < Fresh) Minimized(hwnd);
                 else _waiting[hwnd] = DateTime.UtcNow;
                 break;
+            case Native.EVENT_OBJECT_HIDE when hwnd == _armed:
+                _armed = IntPtr.Zero;
+                _overlay?.Cancel();
+                break;
             case Native.EVENT_SYSTEM_MINIMIZEEND:
             case Native.EVENT_OBJECT_DESTROY:
+                if (hwnd == _armed)
+                {
+                    _armed = IntPtr.Zero;
+                    _overlay?.Cancel();
+                }
                 _minimized.Remove(hwnd);
                 _snapshots.Remove(hwnd);
                 _waiting.Remove(hwnd);
@@ -125,6 +169,13 @@ internal sealed class MinimizeAnimator : IDisposable
         }
         if (Options.AnimateRestore) _minimized.Add(hwnd);
         else _snapshots.Remove(hwnd);
+        if (_armed == hwnd && _overlay is not null)
+        {
+            _armed = IntPtr.Zero;
+            _overlay.Start();
+            return;
+        }
+        _armed = IntPtr.Zero;
         Play(snapshot, icon, reverse: false, done: null);
     }
 
@@ -138,20 +189,31 @@ internal sealed class MinimizeAnimator : IDisposable
 
     private void Play(WindowSnapshot snapshot, RectD icon, bool reverse, Action? done)
     {
+        if (Prepare(snapshot, icon, reverse, done)) _overlay!.Start();
+    }
+
+    private bool Prepare(WindowSnapshot snapshot, RectD icon, bool reverse, Action? done)
+    {
         try
         {
             var dpi = _dock.DpiScale;
             var b = snapshot.Bounds;
             var window = new RectD(b.X / dpi, b.Y / dpi, b.Width / dpi, b.Height / dpi);
             _log.Info($"{(reverse ? "restore" : "minimize")} animation: {Options.Effect}, {window.Width:0}x{window.Height:0} -> icon at {icon.X:0},{icon.Y:0}, snapshot took {snapshot.TookMs:0} ms, {(DateTime.UtcNow - snapshot.TakenUtc).TotalMilliseconds:0} ms ago");
-            if (_overlay is null) { done?.Invoke(); return; }
-            _overlay.Play(snapshot, Options.Effect, window, icon, TimeSpan.FromMilliseconds(Options.DurationMs), reverse, done,
+            if (_overlay is null)
+            {
+                done?.Invoke();
+                return false;
+            }
+            _overlay.Prepare(snapshot, Options.Effect, window, icon, TimeSpan.FromMilliseconds(Options.DurationMs), reverse, done,
                 stats => _log.Info($"animation timing: {stats}"));
+            return true;
         }
         catch (Exception ex)
         {
             _log.Error("minimize animation failed", ex);
             done?.Invoke();
+            return false;
         }
     }
 

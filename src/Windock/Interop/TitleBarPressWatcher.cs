@@ -9,7 +9,10 @@ namespace Windock.Interop;
 /// thread pool, so mouse input is never held up. Captured is raised on the thread pool.
 internal sealed class TitleBarPressWatcher : IDisposable
 {
-    private const int WH_MOUSE_LL = 14, WM_LBUTTONDOWN = 0x0201, WM_QUIT = 0x0012;
+    private const int WH_MOUSE_LL = 14, WM_LBUTTONDOWN = 0x0201, WM_LBUTTONUP = 0x0202, WM_QUIT = 0x0012, WM_NCHITTEST = 0x0084, HTMINBUTTON = 8;
+    private const uint SMTO_ABORTIFHUNG = 0x2;
+    private const long WS_MINIMIZEBOX = 0x00020000;
+    private const int DWMWA_CAPTION_BUTTON_BOUNDS = 5;
     private const uint GA_ROOT = 2;
     /// Title bars (including custom ones like Chrome's or Discord's) are within this many DIPs of the top.
     private const double TitleBarDip = 48;
@@ -22,7 +25,11 @@ internal sealed class TitleBarPressWatcher : IDisposable
     private IntPtr _hook;
     private int _busy;
 
-    public event Action<IntPtr, WindowSnapshot>? Captured;
+    /// The window, its snapshot, and whether the press was on its minimize button (a minimize is likely on release).
+    public event Action<IntPtr, WindowSnapshot, bool>? Captured;
+
+    /// The left button went up (raised on the hook thread: hand the work over).
+    public event Action? Released;
 
     public TitleBarPressWatcher()
     {
@@ -50,6 +57,10 @@ internal sealed class TitleBarPressWatcher : IDisposable
             var point = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam).pt;
             ThreadPool.UnsafeQueueUserWorkItem(_ => Inspect(point), null);
         }
+        else if (code >= 0 && (int)wParam == WM_LBUTTONUP)
+        {
+            Released?.Invoke();
+        }
         return CallNextHookEx(_hook, code, wParam, lParam);
     }
 
@@ -64,7 +75,8 @@ internal sealed class TitleBarPressWatcher : IDisposable
             if (!Native.GetWindowRect(hwnd, out var rect)) return;
             var titleBar = TitleBarDip * GetDpiForWindow(hwnd) / 96.0;
             if (point.Y < rect.Top || point.Y > rect.Top + titleBar + 8) return;  // + the invisible resize border
-            if (WindowSnapshot.Take(hwnd) is { } snapshot) Captured?.Invoke(hwnd, snapshot);
+            var onMinimize = OnMinimizeButton(hwnd, rect, point);
+            if (WindowSnapshot.Take(hwnd) is { } snapshot) Captured?.Invoke(hwnd, snapshot, onMinimize);
         }
         catch (Exception ex)
         {
@@ -74,6 +86,25 @@ internal sealed class TitleBarPressWatcher : IDisposable
         {
             Interlocked.Exchange(ref _busy, 0);
         }
+    }
+
+    /// Windows 10 draws and handles the wide caption buttons itself, and many apps' own hit-test still answers
+    /// "title bar" over them, so the button area Windows reports decides: minimize is the first of the three.
+    /// The app's own answer covers custom title bars (Chrome and the like).
+    private static bool OnMinimizeButton(IntPtr hwnd, Native.RECT window, POINT point)
+    {
+        if ((Native.GetWindowLongPtr(hwnd, Native.GWL_STYLE).ToInt64() & WS_MINIMIZEBOX) == 0) return false;
+        if (DwmGetWindowAttribute(hwnd, DWMWA_CAPTION_BUTTON_BOUNDS, out var b, Marshal.SizeOf<Native.RECT>()) == 0)
+        {
+            int width = b.Right - b.Left, height = b.Bottom - b.Top;
+            if (width >= height * 2.5 && height > 0)
+            {
+                int x = point.X - window.Left, y = point.Y - window.Top;
+                if (y >= b.Top && y < b.Bottom && x >= b.Left && x < b.Left + width / 3) return true;
+            }
+        }
+        var lParam = (IntPtr)((point.Y << 16) | (point.X & 0xFFFF));
+        return SendMessageTimeout(hwnd, WM_NCHITTEST, IntPtr.Zero, lParam, SMTO_ABORTIFHUNG, 50, out var hit) != IntPtr.Zero && (int)hit == HTMINBUTTON;
     }
 
     public void Dispose()
@@ -96,6 +127,8 @@ internal sealed class TitleBarPressWatcher : IDisposable
     [DllImport("user32.dll")] private static extern IntPtr WindowFromPoint(POINT point);
     [DllImport("user32.dll")] private static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
     [DllImport("user32.dll")] private static extern uint GetDpiForWindow(IntPtr hwnd);
+    [DllImport("dwmapi.dll")] private static extern int DwmGetWindowAttribute(IntPtr hwnd, int attribute, out Native.RECT value, int size);
+    [DllImport("user32.dll")] private static extern IntPtr SendMessageTimeout(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, uint flags, uint timeout, out IntPtr result);
     [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern IntPtr GetModuleHandle(string? name);
 }

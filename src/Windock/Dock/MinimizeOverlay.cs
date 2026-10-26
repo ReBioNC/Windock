@@ -25,7 +25,7 @@ internal sealed class MinimizeOverlay : Window
     private bool _reverse, _playing;
     private Action? _done;
     private Action<string>? _report;
-    private int _frames;
+    private int _frames, _generation;
     private double _firstFrameMs, _worstGapMs, _lastFrameMs;
 
     public MinimizeOverlay()
@@ -62,7 +62,17 @@ internal sealed class MinimizeOverlay : Window
     public void Play(WindowSnapshot snapshot, MinimizeEffect effect, RectD windowDip, RectD iconDip, TimeSpan duration, bool reverse,
         Action? done, Action<string>? report)
     {
-        if (_playing) Finish(report: false);
+        Prepare(snapshot, effect, windowDip, iconDip, duration, reverse, done, report);
+        Start();
+    }
+
+    /// Shows the first frame and waits for Start. For a minimize, the first frame is the window itself, exactly
+    /// where it is: put up while the minimize button is pressed, the window can vanish under it without a blink.
+    public void Prepare(WindowSnapshot snapshot, MinimizeEffect effect, RectD windowDip, RectD iconDip, TimeSpan duration, bool reverse,
+        Action? done, Action<string>? report)
+    {
+        if (_playing || IsVisible) Finish(report: false);
+        _generation++;
         _effect = effect;
         _duration = duration;
         _reverse = reverse;
@@ -83,10 +93,25 @@ internal sealed class MinimizeOverlay : Window
         _frames = 0;
         _firstFrameMs = -1;
         _worstGapMs = 0;
-        _playing = true;
         _clock.Restart();
         Show();
+    }
+
+    public void Start()
+    {
+        if (_playing || !IsVisible) return;
+        _playing = true;
+        _clock.Restart();
         CompositionTarget.Rendering += OnFrame;
+    }
+
+    /// A prepared animation that will not play (the minimize did not happen): take it down.
+    public void Cancel()
+    {
+        if (_playing || !IsVisible) return;
+        _done = null;
+        Hide();
+        _canvas.Clear();
     }
 
     private void OnFrame(object? sender, EventArgs e)
@@ -111,9 +136,10 @@ internal sealed class MinimizeOverlay : Window
         _done = null;
         done?.Invoke();
         // Leave the last picture up for one more frame over the restored window, then hide and let the snapshot go.
+        var generation = _generation;
         Dispatcher.BeginInvoke(() =>
         {
-            if (_playing) return;
+            if (_playing || generation != _generation) return;  // a newer animation took over
             Hide();
             _canvas.Clear();
         }, System.Windows.Threading.DispatcherPriority.Background);
