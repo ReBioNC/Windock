@@ -104,6 +104,9 @@ internal sealed class LauncherWindow : Window
             Activate();
             _query.Focus();
             Keyboard.Focus(_query);
+            // Line the placeholder up with where typed text (and the caret) really starts.
+            var start = _query.GetRectFromCharacterIndex(0);
+            if (!start.IsEmpty) _placeholder.Margin = new Thickness(start.Left, 0, 0, 0);
         };
         _hint.Text = "Loading apps…";
         LoadIndex();
@@ -143,7 +146,6 @@ internal sealed class LauncherWindow : Window
         _placeholder.Opacity = 0.4;
         _placeholder.IsHitTestVisible = false;
         _placeholder.VerticalAlignment = VerticalAlignment.Center;
-        _placeholder.Margin = new Thickness(2, 0, 0, 0);
 
         var row = new DockPanel { Margin = new Thickness(16, 12, 12, 12) };
         var glyph = new TextBlock { Text = "", FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 16, Foreground = Brushes.White, Opacity = 0.7, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
