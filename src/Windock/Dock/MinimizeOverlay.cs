@@ -22,7 +22,8 @@ internal sealed class MinimizeOverlay : Window
     private MinimizeEffect _effect;
     private RectD _window, _icon;  // overlay-local DIPs
     private TimeSpan _duration;
-    private bool _reverse, _playing;
+    private const double HoleDip = 40;
+    private bool _reverse, _playing, _holed;
     private Action? _done;
     private Action<string>? _report;
     private int _frames, _generation;
@@ -72,6 +73,7 @@ internal sealed class MinimizeOverlay : Window
         Action? done, Action<string>? report)
     {
         if (_playing || IsVisible) Finish(report: false);
+        ClearHole();
         _generation++;
         _effect = effect;
         _duration = duration;
@@ -101,9 +103,34 @@ internal sealed class MinimizeOverlay : Window
             Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE);
     }
 
+    /// While the first frame waits for the release on the minimize button, the release must reach the app: apps
+    /// that handle their own caption buttons (WinUI ones like WhatsApp) minimize on button-up, and this window is
+    /// not click-through (only layered windows are). A hole around the pointer lets it through.
+    public void PassClicksAtCursor()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (!IsVisible || !GetCursorPos(out var cursor) || !Native.GetWindowRect(hwnd, out var rect)) return;
+        var r = (int)(HoleDip * GetDpiForWindow(hwnd) / 96.0);
+        int x = cursor.X - rect.Left, y = cursor.Y - rect.Top;
+        var region = CreateRectRgn(0, 0, rect.Right - rect.Left, rect.Bottom - rect.Top);
+        var hole = CreateRectRgn(x - r, y - r, x + r, y + r);
+        CombineRgn(region, region, hole, RGN_DIFF);
+        DeleteObject(hole);
+        if (SetWindowRgn(hwnd, region, true) == 0) DeleteObject(region);  // on success the region belongs to the window
+        _holed = true;
+    }
+
+    private void ClearHole()
+    {
+        if (!_holed) return;
+        _holed = false;
+        SetWindowRgn(new WindowInteropHelper(this).Handle, IntPtr.Zero, true);
+    }
+
     public void Start()
     {
         if (_playing || !IsVisible) return;
+        ClearHole();
         _playing = true;
         _clock.Restart();
         CompositionTarget.Rendering += OnFrame;
@@ -115,6 +142,7 @@ internal sealed class MinimizeOverlay : Window
         if (_playing || !IsVisible) return;
         _done = null;
         Hide();
+        ClearHole();
         _canvas.Clear();
     }
 
@@ -152,7 +180,18 @@ internal sealed class MinimizeOverlay : Window
     [StructLayout(LayoutKind.Sequential)]
     private struct MARGINS { public int Left, Right, Top, Bottom; }
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT { public int X, Y; }
+
+    private const int RGN_DIFF = 4;
+
     [DllImport("dwmapi.dll")] private static extern int DwmExtendFrameIntoClientArea(IntPtr hwnd, ref MARGINS margins);
+    [DllImport("user32.dll")] private static extern bool GetCursorPos(out POINT point);
+    [DllImport("user32.dll")] private static extern uint GetDpiForWindow(IntPtr hwnd);
+    [DllImport("user32.dll")] private static extern int SetWindowRgn(IntPtr hwnd, IntPtr region, bool redraw);
+    [DllImport("gdi32.dll")] private static extern IntPtr CreateRectRgn(int left, int top, int right, int bottom);
+    [DllImport("gdi32.dll")] private static extern int CombineRgn(IntPtr dest, IntPtr a, IntPtr b, int mode);
+    [DllImport("gdi32.dll")] private static extern bool DeleteObject(IntPtr obj);
 
     /// Draws the effect's pieces; the snapshot is cut into its strips once per animation, not every frame.
     private sealed class EffectCanvas : FrameworkElement

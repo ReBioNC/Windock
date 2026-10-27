@@ -92,7 +92,8 @@ internal sealed class MinimizeAnimator : IDisposable
     {
         if (!Enabled || _overlay is null || _minimized.Contains(hwnd) || !_snapshots.TryGetValue(hwnd, out var snapshot)) return;
         if (Target(hwnd) is not { } icon) return;
-        Prepare(snapshot, icon, reverse: false, done: null);
+        if (!Prepare(snapshot, icon, reverse: false, done: null)) return;
+        _overlay.PassClicksAtCursor();
         _armed = hwnd;
     }
 
