@@ -193,7 +193,10 @@ internal sealed class LauncherWindow : Window
         }
         _list.MouseUp += (_, e) =>
         {
-            if (e.ChangedButton == MouseButton.Left && (e.OriginalSource as FrameworkElement)?.DataContext is ResultRow) OpenSelected();
+            // Open what was clicked, not what the keyboard highlighted: the click does not always move the selection.
+            if (e.ChangedButton != MouseButton.Left || (e.OriginalSource as FrameworkElement)?.DataContext is not ResultRow row) return;
+            _list.SelectedItem = row;
+            OpenSelected();
         };
         _list.MouseRightButtonUp += (_, e) =>
         {
