@@ -1,4 +1,5 @@
 using Windock.Core.Island;
+using Windock.Core.Settings;
 
 namespace Windock.Core.Tests.Island;
 
@@ -12,7 +13,7 @@ public class ClipboardAndShelfTests
         history.Add("two");
         history.Add("one");
 
-        Assert.Equal(new[] { "one", "two" }, history.Items);
+        Assert.Equal(new[] { "one", "two" }, history.Items.Select(i => i.Text));
     }
 
     [Fact]
@@ -34,7 +35,46 @@ public class ClipboardAndShelfTests
         history.Add(new string('x', 20_000));
 
         Assert.Equal(ClipboardHistory.MaxItems, history.Items.Count);
-        Assert.Equal(ClipboardHistory.MaxLength, history.Items[0].Length);
+        Assert.Equal(ClipboardHistory.MaxLength, history.Items[0].Text!.Length);
+    }
+
+    [Fact]
+    public void Pictures_join_the_history_and_the_same_picture_moves_up()
+    {
+        var history = new ClipboardHistory();
+        history.Add("text");
+        Assert.True(history.AddImage("a", new object(), 10, 20));
+        history.Add("more");
+        Assert.True(history.AddImage("a", new object(), 10, 20));
+
+        Assert.Equal(3, history.Items.Count);
+        Assert.Equal("a", history.Items[0].ImageKey);
+        Assert.False(history.AddImage("a", new object(), 10, 20));
+        Assert.False(history.AddImage("", new object(), 10, 20));
+    }
+
+    [Fact]
+    public void Only_the_newest_pictures_are_kept_and_they_can_be_dropped()
+    {
+        var history = new ClipboardHistory();
+        for (var i = 0; i < 8; i++) history.AddImage($"img {i}", new object(), 1, 1);
+        history.Add("text");
+
+        Assert.Equal(ClipboardHistory.MaxImages, history.Items.Count(i => i.IsImage));
+        Assert.Equal("img 7", history.Items[1].ImageKey);
+
+        history.RemoveImages();
+        Assert.Equal(new[] { "text" }, history.Items.Select(i => i.Text));
+    }
+
+    [Fact]
+    public void Keeping_images_is_on_by_default_and_saved()
+    {
+        Assert.True(SettingsDefaults.Create().Island.ClipboardImages);
+        var s = SettingsDefaults.Create();
+        s = s with { Island = s.Island with { ClipboardImages = false } };
+
+        Assert.False(SettingsJson.Parse(SettingsJson.Serialize(s)).Island.ClipboardImages);
     }
 
     [Fact]

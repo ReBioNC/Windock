@@ -58,7 +58,7 @@ Windock replaces the Windows taskbar with a floating, blurred dock whose icons g
   - **Focus timer**: pomodoro sessions and breaks; the pill shows the countdown while it runs.
   - **Today**: tasks; put a time at the end ("Call mom 14:30") to get a reminder.
   - **Quick notes**: several notes, saved as you type.
-  - **Clipboard**: the last 20 texts you copied; click one to copy it again (memory only; password managers are skipped).
+  - **Clipboard**: the last 20 things you copied, texts and images (the newest 5 images); click one to copy it again (memory only; password managers are skipped).
   - **Shelf**: drop files on the island to keep them handy, drag them out again later.
 - **Wado the whale** lives in the island: he blinks, dances to music, looks determined during a focus session, smiles when you plug something in, and sleeps at night.
 
@@ -168,7 +168,7 @@ Every option applies to the dock at once and is saved automatically. There is no
 | **Appearance** | Icon size, magnification and its maximum size, background opacity, blur, running indicators |
 | **Theme** | Dock color (presets, hex, follow the wallpaper), corner radius, border, indicator color, accent color |
 | **Status area** | Area on/off, each button, 24/12-hour clock, date, seconds, battery percentage |
-| **Dynamic Island** | On/off, hide when covered or always show, clock / date / battery in the island, now playing, each kind of pop-up, pop-up duration, open on hover, size, color, Wado, lyrics, each panel (Devices, Weather, Focus, Today, Notes, Clipboard, Shelf), weather city, °C/°F, focus and break lengths, focus sound |
+| **Dynamic Island** | On/off, hide when covered or always show, clock / date / battery in the island, now playing, each kind of pop-up, pop-up duration, open on hover, size, color, Wado, lyrics, each panel (Devices, Weather, Focus, Today, Notes, Clipboard, Shelf), copied images in the clipboard, weather city, °C/°F, focus and break lengths, focus sound |
 | **Behavior** | Windows taskbar mode (hide completely, auto-hide, leave visible), dock auto-hide, bounce while opening, start with Windows, icons asking for attention (bounce / red dot / off, once / until opened), Windows notifications, unread counts |
 | **Dock items** | Pin list (drag to reorder, add an `.exe` or `.lnk`, remove, restore defaults), hidden apps, Recycle Bin options, the Explorer **Pin to Windock** menu |
 | **Launcher** | On/off, shortcut, number of results, also search files |

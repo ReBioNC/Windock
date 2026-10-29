@@ -304,7 +304,7 @@ internal sealed partial class IslandWindow
 
     // ---- clipboard and shelf ----
 
-    private FrameworkElement ClipboardPage(IReadOnlyList<string> items)
+    private FrameworkElement ClipboardPage(IReadOnlyList<ClipItem> items)
     {
         var panel = new StackPanel { Margin = new Thickness(14, 4, 14, 6) };
         var header = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
@@ -328,14 +328,14 @@ internal sealed partial class IslandWindow
         panel.Children.Add(header);
         if (items.Count == 0)
         {
-            panel.Children.Add(Text("Text you copy shows up here (kept only until Windock closes).", 13, brush: Secondary));
+            panel.Children.Add(Text("Text and images you copy show up here (kept only until Windock closes).", 13, brush: Secondary));
             return panel;
         }
         for (var i = 0; i < Math.Min(items.Count, MaxClipRows); i++)
         {
             var index = i;
             var row = new Border { CornerRadius = new CornerRadius(8), Padding = new Thickness(8, 3, 8, 3), Background = Brushes.Transparent, Cursor = Cursors.Hand };
-            row.Child = Text(ClipboardHistory.Preview(items[i]), 13, brush: i == 0 ? Brushes.White : Secondary);
+            row.Child = ClipRow(items[i], i == 0 ? Brushes.White : Secondary);
             row.MouseEnter += (_, _) => row.Background = RowHover;
             row.MouseLeave += (_, _) => row.Background = Brushes.Transparent;
             row.MouseLeftButtonUp += (_, e) =>
@@ -347,6 +347,25 @@ internal sealed partial class IslandWindow
             panel.Children.Add(row);
         }
         return panel;
+    }
+
+    /// A text as one line; a picture as a small thumbnail with its size.
+    private FrameworkElement ClipRow(ClipItem item, Brush brush)
+    {
+        if (item.Picture is not ClipPicture picture) return Text(ClipboardHistory.Preview(item.Text ?? ""), 13, brush: brush);
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        var thumbnail = new Border
+        {
+            CornerRadius = new CornerRadius(3),
+            Height = 18,
+            Margin = new Thickness(0, 0, 8, 0),
+            ClipToBounds = true,
+            Background = new ImageBrush(picture.Thumbnail) { Stretch = Stretch.UniformToFill },
+            Width = Math.Min(64, 18.0 * item.Width / Math.Max(1, item.Height)),
+        };
+        row.Children.Add(thumbnail);
+        row.Children.Add(Text($"Image  {item.Width} × {item.Height}", 13, brush: brush));
+        return row;
     }
 
     private FrameworkElement ShelfPage(IReadOnlyList<ShelfItem> items)

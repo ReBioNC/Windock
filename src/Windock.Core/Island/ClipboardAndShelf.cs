@@ -3,26 +3,48 @@ using System.Text.Json.Nodes;
 
 namespace Windock.Core.Island;
 
-/// Texts copied recently, newest first. Kept in memory only (never written to disk).
+/// One copy: a text, or a picture. ImageKey identifies the picture's content (the same image copied twice has the
+/// same key); Picture is the app's own image data, which the history only holds on to.
+public sealed record ClipItem(string? Text, string? ImageKey = null, object? Picture = null, int Width = 0, int Height = 0)
+{
+    public bool IsImage => ImageKey is not null;
+
+    public bool SameAs(ClipItem other) => IsImage ? ImageKey == other.ImageKey : !other.IsImage && Text == other.Text;
+}
+
+/// Texts and pictures copied recently, newest first. Kept in memory only (never written to disk). Pictures take
+/// far more memory than texts, so only the newest few are kept.
 public sealed class ClipboardHistory
 {
-    public const int MaxItems = 20, MaxLength = 10_000;
+    public const int MaxItems = 20, MaxLength = 10_000, MaxImages = 5;
 
-    private readonly List<string> _items = new();
+    private readonly List<ClipItem> _items = new();
 
-    public IReadOnlyList<string> Items => _items;
+    public IReadOnlyList<ClipItem> Items => _items;
 
     /// A copy again moves it to the top; blank text is ignored; very long text is cut.
     public bool Add(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return false;
         if (text.Length > MaxLength) text = text[..MaxLength];
-        if (_items.Count > 0 && _items[0] == text) return false;
-        _items.Remove(text);
-        _items.Insert(0, text);
+        return Add(new ClipItem(text));
+    }
+
+    public bool AddImage(string key, object picture, int width, int height) =>
+        !string.IsNullOrEmpty(key) && Add(new ClipItem(null, key, picture, width, height));
+
+    private bool Add(ClipItem item)
+    {
+        if (_items.Count > 0 && _items[0].SameAs(item)) return false;
+        _items.RemoveAll(i => i.SameAs(item));
+        _items.Insert(0, item);
         if (_items.Count > MaxItems) _items.RemoveRange(MaxItems, _items.Count - MaxItems);
+        var images = _items.Where(i => i.IsImage).Skip(MaxImages).ToList();
+        _items.RemoveAll(images.Contains);
         return true;
     }
+
+    public void RemoveImages() => _items.RemoveAll(i => i.IsImage);
 
     public void Clear() => _items.Clear();
 

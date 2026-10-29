@@ -141,7 +141,8 @@ public static class SettingsJson
                 TasksPanel: Get(island, "tasksPanel", di.TasksPanel),
                 NotesPanel: Get(island, "notesPanel", di.NotesPanel),
                 ClipboardPanel: Get(island, "clipboardPanel", di.ClipboardPanel),
-                ShelfPanel: Get(island, "shelfPanel", di.ShelfPanel)),
+                ShelfPanel: Get(island, "shelfPanel", di.ShelfPanel),
+                ClipboardImages: Get(island, "clipboardImages", di.ClipboardImages)),
             Animations = new AnimationSettings(
                 Effect: GetEnum(animations, "effect", d.Animations.Effect),
                 AnimateRestore: Get(animations, "animateRestore", d.Animations.AnimateRestore),
@@ -274,6 +275,7 @@ public static class SettingsJson
                 ["notesPanel"] = s.Island.NotesPanel,
                 ["clipboardPanel"] = s.Island.ClipboardPanel,
                 ["shelfPanel"] = s.Island.ShelfPanel,
+                ["clipboardImages"] = s.Island.ClipboardImages,
             },
             ["animations"] = new JsonObject
             {

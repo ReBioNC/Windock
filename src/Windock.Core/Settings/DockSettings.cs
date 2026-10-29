@@ -56,7 +56,8 @@ public sealed record IslandSettings(
     bool DevicesPanel = true, bool WeatherPanel = true, string City = "", TemperatureUnit Unit = TemperatureUnit.Celsius,
     WeatherPlace? Place = null, bool Mascot = true, bool Lyrics = true,
     bool FocusPanel = true, int FocusMinutes = 25, int ShortBreakMinutes = 5, int LongBreakMinutes = 15, int FocusSessions = 4, bool FocusSound = true,
-    bool TasksPanel = true, bool NotesPanel = true, bool ClipboardPanel = true, bool ShelfPanel = true)
+    bool TasksPanel = true, bool NotesPanel = true, bool ClipboardPanel = true, bool ShelfPanel = true,
+    bool ClipboardImages = true)
 {
     public static readonly IslandSettings Default = new(
         Enabled: true, Visibility: IslandVisibility.AutoHide, ShowClock: true, ShowDate: true, ShowBattery: true,

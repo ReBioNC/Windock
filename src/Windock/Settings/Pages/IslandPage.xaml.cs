@@ -29,6 +29,7 @@ internal partial class IslandPage : UserControl
         PageSync.OnToggle(TasksPanel, on => Edit(s => s with { TasksPanel = on }));
         PageSync.OnToggle(NotesPanel, on => Edit(s => s with { NotesPanel = on }));
         PageSync.OnToggle(ClipboardPanel, on => Edit(s => s with { ClipboardPanel = on }));
+        PageSync.OnToggle(ClipboardImages, on => Edit(s => s with { ClipboardImages = on }));
         PageSync.OnToggle(ShelfPanel, on => Edit(s => s with { ShelfPanel = on }));
         PageSync.OnToggle(FocusSound, on => Edit(s => s with { FocusSound = on }));
         FocusMinutes.ValueChanged += (_, e) => Edit(s => s with { FocusMinutes = (int)Math.Round(e.NewValue) });
@@ -86,6 +87,8 @@ internal partial class IslandPage : UserControl
         TasksPanel.IsChecked = s.TasksPanel;
         NotesPanel.IsChecked = s.NotesPanel;
         ClipboardPanel.IsChecked = s.ClipboardPanel;
+        ClipboardImages.IsChecked = s.ClipboardImages;
+        ClipboardImages.IsEnabled = s.ClipboardPanel;
         ShelfPanel.IsChecked = s.ShelfPanel;
         FocusOptions.IsEnabled = s.FocusPanel;
         FocusMinutes.Value = s.FocusMinutes;

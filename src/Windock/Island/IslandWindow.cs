@@ -19,7 +19,7 @@ internal sealed record IslandView(
     IslandEvent? Event,
     IReadOnlyList<IslandPanel> Panels, int Page, IReadOnlyList<DeviceEntry>? Devices, WeatherView Weather,
     bool Charging, WadoMood? Mood, LyricsView Lyrics, FocusView? Focus, TasksView Tasks, NotesView Notes,
-    IReadOnlyList<string> Clipboard, IReadOnlyList<ShelfItem> Shelf);
+    IReadOnlyList<ClipItem> Clipboard, IReadOnlyList<ShelfItem> Shelf);
 
 /// A file or folder on the shelf; Icon arrives a moment after it is added.
 internal sealed record ShelfItem(string Path, string Name, ImageSource? Icon);

@@ -48,7 +48,7 @@ internal sealed class IslandController : IDisposable
     private readonly IslandNotebook _notebook;
     private readonly ClipboardHistory _clipboard = new();
     private ClipboardWatcher? _clipboardWatcher;
-    private IReadOnlyList<string> _clipboardView = Array.Empty<string>();
+    private IReadOnlyList<ClipItem> _clipboardView = Array.Empty<ClipItem>();
     private IReadOnlyList<ShelfItem>? _shelfView;
     private readonly Dictionary<string, System.Windows.Media.ImageSource> _shelfIcons = new(StringComparer.OrdinalIgnoreCase);
     private readonly IconProvider _icons;
@@ -183,12 +183,15 @@ internal sealed class IslandController : IDisposable
             };
             _window.ClipboardChosen += index =>
             {
-                if (index < _clipboard.Items.Count) ClipboardWatcher.Copy(_clipboard.Items[index]);
+                if (index >= _clipboard.Items.Count) return;
+                var item = _clipboard.Items[index];
+                if (item.Picture is ClipPicture picture) ClipboardWatcher.Copy(picture);
+                else if (item.Text is { } text) ClipboardWatcher.Copy(text);
             };
             _window.ClipboardCleared += () =>
             {
                 _clipboard.Clear();
-                _clipboardView = Array.Empty<string>();
+                _clipboardView = Array.Empty<ClipItem>();
                 Render();
             };
             _window.ShelfDragEntered += () =>
@@ -309,13 +312,23 @@ internal sealed class IslandController : IDisposable
         {
             _clipboardWatcher = new ClipboardWatcher(_messages, _ui, _log);
             _clipboardWatcher.TextCopied += OnTextCopied;
+            _clipboardWatcher.ImageCopied += OnImageCopied;
         }
         else if (!s.ClipboardPanel && _clipboardWatcher is not null)
         {
             _clipboardWatcher.Dispose();
             _clipboardWatcher = null;
             _clipboard.Clear();
-            _clipboardView = Array.Empty<string>();
+            _clipboardView = Array.Empty<ClipItem>();
+        }
+        if (_clipboardWatcher is not null && _clipboardWatcher.IncludeImages != s.ClipboardImages)
+        {
+            _clipboardWatcher.IncludeImages = s.ClipboardImages;
+            if (!s.ClipboardImages)
+            {
+                _clipboard.RemoveImages();
+                _clipboardView = _clipboard.Items.ToList();
+            }
         }
         if (s.ShelfPanel) RequestShelfIcons();
         if (s.DeviceEvents && _devices is null)
@@ -625,7 +638,16 @@ internal sealed class IslandController : IDisposable
 
     private void OnTextCopied(string text)
     {
-        if (!_clipboard.Add(text)) return;
+        if (_clipboard.Add(text)) ClipboardChanged();
+    }
+
+    private void OnImageCopied(ClipPicture picture)
+    {
+        if (_clipboard.AddImage(picture.Key, picture, picture.Width, picture.Height)) ClipboardChanged();
+    }
+
+    private void ClipboardChanged()
+    {
         _clipboardView = _clipboard.Items.ToList();
         if (_model.Expanded) Render();
     }
